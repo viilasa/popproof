@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProofPop Debug Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+        .section {
+            background: #2a2a2a;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #00ff00;
+        }
+        .error {
+            border-left-color: #ff0000;
+            color: #ff6b6b;
+        }
+        .success {
+            border-left-color: #00ff00;
+        }
+        .warning {
+            border-left-color: #ffaa00;
+            color: #ffaa00;
+        }
+        h2 { margin-top: 0; }
+        pre {
+            background: #000;
+            padding: 10px;
+            overflow-x: auto;
+            border-radius: 3px;
+        }
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #00cc00;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 ProofPop Debug Console</h1>
+    
+    <div class="section">
+        <h2>Step 1: Check if functions are deployed</h2>
+        <button onclick="testFunctions()">Test All Functions</button>
+        <pre id="function-test">Click button to test...</pre>
+    </div>
+    
+    <div class="section">
+        <h2>Step 2: Load Pixel Script</h2>
+        <button onclick="loadPixel()">Load Pixel Manually</button>
+        <pre id="pixel-load">Waiting...</pre>
+    </div>
+    
+    <div class="section">
+        <h2>Step 3: Console Logs</h2>
+        <pre id="console-logs">No logs yet...</pre>
+    </div>
+    
+    <div class="section">
+        <h2>Step 4: Network Requests</h2>
+        <pre id="network-logs">Monitoring network...</pre>
+    </div>
+
+    <script>
+        // Capture all console logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        const logs = [];
+        
+        function addToLog(type, ...args) {
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+            logs.push(`[${type}] ${message}`);
+            updateConsoleLogs();
+        }
+        
+        console.log = function(...args) {
+            addToLog('LOG', ...args);
+            originalLog.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            addToLog('ERROR', ...args);
+            originalError.apply(console, args);
+        };
+        
+        console.warn = function(...args) {
+            addToLog('WARN', ...args);
+            originalWarn.apply(console, args);
+        };
+        
+        function updateConsoleLogs() {
+            document.getElementById('console-logs').textContent = logs.join('\n') || 'No logs yet...';
+        }
+        
+        // Test all functions
+        async function testFunctions() {
+            const output = document.getElementById('function-test');
+            output.textContent = 'Testing functions...\n\n';
+            
+            const baseUrl = 'https://ghiobuubmnvlaukeyuwe.supabase.co/functions/v1';
+            const tests = [
+                { name: 'pixel-loader', method: 'GET' },
+                { name: 'engine', method: 'GET' },
+                { name: 'verify-pixel', method: 'POST', body: { site_id: '1808e26c-e195-4fcf-8eb1-95a4be718b39', url: window.location.href } },
+                { name: 'track-event', method: 'POST', body: { site_id: '1808e26c-e195-4fcf-8eb1-95a4be718b39', event_type: 'test', url: window.location.href } },
+                { name: 'get-widgets', method: 'GET', query: '?site_id=1808e26c-e195-4fcf-8eb1-95a4be718b39' }
+            ];
+            
+            for (const test of tests) {
+                try {
+                    const url = `${baseUrl}/${test.name}${test.query || ''}`;
+                    const options = {
+                        method: test.method,
+                        headers: { 'Content-Type': 'application/json' }
+                    };
+                    
+                    if (test.body) {
+                        options.body = JSON.stringify(test.body);
+                    }
+                    
+                    const response = await fetch(url, options);
+                    const status = response.status;
+                    const statusText = response.statusText;
+                    
+                    if (status === 200 || status === 201) {
+                        output.textContent += `✅ ${test.name}: ${status} ${statusText}\n`;
+                    } else {
+                        output.textContent += `⚠️  ${test.name}: ${status} ${statusText}\n`;
+                        const text = await response.text();
+                        output.textContent += `   Response: ${text.substring(0, 100)}...\n`;
+                    }
+                } catch (error) {
+                    output.textContent += `❌ ${test.name}: ${error.message}\n`;
+                }
+            }
+            
+            output.textContent += '\n✅ Function tests complete!';
+        }
+        
+        // Load pixel manually
+        function loadPixel() {
+            const output = document.getElementById('pixel-load');
+            output.textContent = 'Loading pixel script...\n';
+            
+            const script = document.createElement('script');
+            script.src = 'https://ghiobuubmnvlaukeyuwe.supabase.co/functions/v1/pixel-loader';
+            script.setAttribute('data-site-id', '1808e26c-e195-4fcf-8eb1-95a4be718b39');
+            script.async = true;
+            script.defer = true;
+            
+            script.onload = function() {
+                output.textContent += '✅ Pixel script loaded successfully!\n';
+                output.textContent += 'Check console logs above for ProofPop messages.\n';
+            };
+            
+            script.onerror = function(error) {
+                output.textContent += '❌ Failed to load pixel script!\n';
+                output.textContent += `Error: ${error}\n`;
+                output.textContent += '\nPossible causes:\n';
+                output.textContent += '1. Functions not deployed\n';
+                output.textContent += '2. Wrong Supabase URL\n';
+                output.textContent += '3. CORS issues\n';
+                output.textContent += '4. Network connectivity\n';
+            };
+            
+            document.head.appendChild(script);
+            output.textContent += 'Script tag added to page...\n';
+        }
+        
+        // Monitor network requests
+        const originalFetch = window.fetch;
+        window.fetch = function(...args) {
+            const url = args[0];
+            const networkLog = document.getElementById('network-logs');
+            networkLog.textContent += `\n🌐 Fetch: ${url}`;
+            
+            return originalFetch.apply(this, args).then(response => {
+                networkLog.textContent += ` → ${response.status} ${response.statusText}`;
+                return response;
+            }).catch(error => {
+                networkLog.textContent += ` → ERROR: ${error.message}`;
+                throw error;
+            });
+        };
+        
+        // Listen for ProofPop events
+        window.addEventListener('proofpop:pixel-verified', (e) => {
+            console.log('✅ ProofPop Event: pixel-verified', e.detail);
+        });
+        
+        window.addEventListener('proofpop:engine-loaded', (e) => {
+            console.log('✅ ProofPop Event: engine-loaded', e.detail);
+        });
+        
+        window.addEventListener('proofpop:ready', (e) => {
+            console.log('✅ ProofPop Event: ready', e.detail);
+        });
+        
+        window.addEventListener('proofpop:engine-error', (e) => {
+            console.error('❌ ProofPop Event: engine-error', e.detail);
+        });
+        
+        // Auto-test on load
+        console.log('Debug page loaded. Starting automatic tests...');
+        setTimeout(() => {
+            console.log('Testing functions...');
+            testFunctions();
+        }, 1000);
+        
+        setTimeout(() => {
+            console.log('Loading pixel...');
+            loadPixel();
+        }, 2000);
+    </script>
+</body>
+</html>

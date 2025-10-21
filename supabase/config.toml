@@ -1,0 +1,14 @@
+[functions.pixel-loader]
+verify_jwt = false
+
+[functions.engine]
+verify_jwt = false
+
+[functions.get-widgets]
+verify_jwt = false
+
+[functions.verify-pixel]
+verify_jwt = false
+
+[functions.track-event]
+verify_jwt = false

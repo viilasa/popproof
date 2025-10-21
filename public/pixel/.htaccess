@@ -1,0 +1,9 @@
+# Redirect all requests to index.js
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /pixel/
+RewriteRule ^index\.js$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /pixel/index.js [L]
+</IfModule>

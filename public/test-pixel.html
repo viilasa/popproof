@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProofPop Pixel Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        
+        .section h2 {
+            color: #444;
+            margin-top: 0;
+            border-bottom: 2px solid #06b6d4;
+            padding-bottom: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #06b6d4;
+            box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+        }
+        
+        .btn {
+            background: #06b6d4;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .btn:hover {
+            background: #0891b2;
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: #6b7280;
+        }
+        
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+        
+        .btn-success {
+            background: #10b981;
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+        }
+        
+        .btn-warning {
+            background: #f59e0b;
+        }
+        
+        .btn-warning:hover {
+            background: #d97706;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+        
+        .status.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #93c5fd;
+        }
+        
+        .log-container {
+            background: #1f2937;
+            color: #f3f4f6;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+        
+        .log-entry.error {
+            color: #fca5a5;
+        }
+        
+        .log-entry.success {
+            color: #86efac;
+        }
+        
+        .log-entry.info {
+            color: #93c5fd;
+        }
+    </style>
+    
+    <!-- ProofPop Pixel Code v2.0 -->
+    <!-- UPDATED - Uses pixel-loader for proper two-step loading -->
+<script src="https://ghiobuubmnvlaukeyuwe.supabase.co/functions/v1/pixel-loader" data-site-id="1808e26c-e195-4fcf-8eb1-95a4be718b39" async defer></script>
+    <!-- END ProofPop Pixel Code -->
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 ProofPop Pixel Test</h1>
+        <p class="subtitle">Test the pixel integration and social proof notifications</p>
+        
+        <div class="status info">
+            <strong>Widget Status:</strong> <span id="widget-status">Initializing...</span><br>
+            <strong>Site Key:</strong> <span id="site-key">Loading...</span><br>
+            <strong>Session ID:</strong> <span id="session-id">Loading...</span>
+        </div>
+    </div>
+
+    <!-- Form-based Event Testing -->
+    <div class="container">
+        <div class="section">
+            <h2>📝 Form-based Event Testing</h2>
+            <p>These forms will automatically trigger events when submitted:</p>
+            
+            <div class="form-group">
+                <h3>Newsletter Signup</h3>
+                <form data-proof-track="newsletter_signup">
+                    <div class="form-group">
+                        <label>Name:</label>
+                        <input type="text" name="name" placeholder="John Doe" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email:</label>
+                        <input type="email" name="email" placeholder="john@example.com" required>
+                    </div>
+                    <button type="submit" class="btn">Subscribe to Newsletter</button>
+                </form>
+            </div>
+            
+            <div class="form-group">
+                <h3>User Registration</h3>
+                <form data-proof-track="signup">
+                    <div class="form-group">
+                        <label>Full Name:</label>
+                        <input type="text" name="name" placeholder="Jane Smith" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email:</label>
+                        <input type="email" name="email" placeholder="jane@example.com" required>
+                    </div>
+                    <button type="submit" class="btn">Create Account</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Button-based Event Testing -->
+    <div class="container">
+        <div class="section">
+            <h2>🛒 Button-based Event Testing</h2>
+            <p>These buttons will trigger events when clicked:</p>
+            
+            <div class="form-group">
+                <h3>Purchase Events</h3>
+                <button class="btn btn-success" 
+                        data-proof-purchase
+                        data-customer-name="Sarah Wilson"
+                        data-product-name="Premium Widget"
+                        data-amount="29.99"
+                        data-currency="USD"
+                        data-location="New York">
+                    Purchase Premium Widget ($29.99)
+                </button>
+                
+                <button class="btn btn-success" 
+                        data-proof-event="purchase"
+                        data-customer-name="Mike Chen"
+                        data-product-name="Enterprise Plan"
+                        data-amount="99.99"
+                        data-currency="USD"
+                        data-location="San Francisco">
+                    Purchase Enterprise Plan ($99.99)
+                </button>
+            </div>
+            
+            <div class="form-group">
+                <h3>Review Events</h3>
+                <button class="btn btn-warning" 
+                        data-proof-event="review"
+                        data-customer-name="Emma Davis"
+                        data-product-name="Premium Widget"
+                        data-rating="5"
+                        data-review-text="Amazing product! Highly recommended."
+                        data-location="London">
+                    Leave 5-Star Review
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual Event Testing -->
+    <div class="container">
+        <div class="section">
+            <h2>⚡ Manual Event Testing</h2>
+            <p>Test events programmatically using the ProofPop API:</p>
+            
+            <div class="form-group">
+                <h3>Quick Test Events</h3>
+                <button class="btn" onclick="testSignup()">Test Signup Event</button>
+                <button class="btn" onclick="testPurchase()">Test Purchase Event</button>
+                <button class="btn" onclick="testReview()">Test Review Event</button>
+                <button class="btn" onclick="testNotification()">Test Notification</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debug Controls -->
+    <div class="container">
+        <div class="section">
+            <h2>🔧 Debug Controls</h2>
+            <button class="btn btn-secondary" onclick="showWidgetInfo()">Show Widget Info</button>
+            <button class="btn btn-secondary" onclick="showCustomerData()">Show Customer Data</button>
+            <button class="btn btn-secondary" onclick="toggleLogs()">Toggle Logs</button>
+        </div>
+    </div>
+
+    <!-- Event Log -->
+    <div class="container">
+        <div class="section">
+            <h2>📋 Event Log</h2>
+            <div class="log-container" id="event-log">
+                <div class="log-entry info">Event log initialized...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let logVisible = true;
+        
+        // Wait for ProofPop to be ready
+        window.addEventListener('proofpop:ready', (event) => {
+            updateWidgetStatus();
+            log('ProofPop widget ready', 'success');
+        });
+
+        // Listen for ProofPop events
+        window.addEventListener('proofpop:pixel-verified', (event) => {
+            updateStatus('✅ Pixel verified successfully!', 'success');
+            addLog('Pixel verification successful', 'success');
+            console.log('Verification details:', event.detail);
+        });
+
+        window.addEventListener('proofpop:engine-loaded', (event) => {
+            updateStatus('🚀 Engine loaded successfully!', 'success');
+            addLog('Widget engine loaded', 'success');
+        });
+
+        window.addEventListener('proofpop:ready', (event) => {
+            updateStatus('🎉 Widgets loaded and ready!', 'success');
+            addLog(`Widgets ready (${event.detail.widgetCount} loaded)`, 'success');
+        });
+
+        window.addEventListener('proofpop:notification', (event) => {
+            addLog(`Notification shown: ${event.detail.title}`, 'info');
+        });
+
+        window.addEventListener('proofpop:event-tracked', (event) => {
+            addLog(`Event tracked: ${event.detail.eventType}`, 'info');
+        });
+
+        window.addEventListener('proofpop:engine-error', (event) => {
+            updateStatus('❌ Engine failed to load', 'error');
+            addLog('Engine loading failed', 'error');
+        });
+
+        function updateWidgetStatus() {
+            if (window.socialProofWidget) {
+                document.getElementById('widget-status').textContent = 'Active ✅';
+                document.getElementById('site-key').textContent = window.socialProofWidget.getSiteKey() || 'N/A';
+                document.getElementById('session-id').textContent = window.socialProofWidget.getSessionId() || 'N/A';
+            } else {
+                document.getElementById('widget-status').textContent = 'Not Ready ❌';
+            }
+        }
+
+        function log(message, type = 'info') {
+            const logContainer = document.getElementById('event-log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            
+            console.log(`[ProofPop Test] ${message}`);
+        }
+
+        // Test functions
+        function testSignup() {
+            if (!window.socialProofWidget) return alert('ProofPop not ready');
+            
+            const data = {
+                name: 'Test User ' + Math.floor(Math.random() * 1000),
+                email: 'test' + Math.floor(Math.random() * 1000) + '@example.com',
+                location: 'Test City'
+            };
+            
+            window.socialProofWidget.trackSignup(data);
+            log(`Signup event sent: ${data.name}`, 'info');
+        }
+
+        function testPurchase() {
+            if (!window.socialProofWidget) return alert('ProofPop not ready');
+            
+            const data = {
+                customer_name: 'Buyer ' + Math.floor(Math.random() * 1000),
+                product_name: 'Test Product',
+                amount: (Math.random() * 100 + 10).toFixed(2),
+                currency: 'USD',
+                location: 'Purchase City'
+            };
+            
+            window.socialProofWidget.trackPurchase(data);
+            log(`Purchase event sent: ${data.customer_name} bought ${data.product_name}`, 'info');
+        }
+
+        function testReview() {
+            if (!window.socialProofWidget) return alert('ProofPop not ready');
+            
+            const data = {
+                customer_name: 'Reviewer ' + Math.floor(Math.random() * 1000),
+                product_name: 'Test Product',
+                rating: Math.floor(Math.random() * 5) + 1,
+                review_text: 'Great product! Very satisfied.',
+                location: 'Review City'
+            };
+            
+            window.socialProofWidget.trackReview(data);
+            log(`Review event sent: ${data.customer_name} rated ${data.rating} stars`, 'info');
+        }
+
+        function testNotification() {
+            if (!window.socialProofWidget || !window.socialProofWidget.debug) {
+                return alert('ProofPop debug not available');
+            }
+            
+            window.socialProofWidget.debug.testNotification('Test Notification', 'This is a test notification');
+            log('Test notification triggered', 'info');
+        }
+
+        // Debug functions
+        function showWidgetInfo() {
+            if (!window.socialProofWidget) return alert('ProofPop not ready');
+            
+            const info = {
+                siteKey: window.socialProofWidget.getSiteKey(),
+                sessionId: window.socialProofWidget.getSessionId(),
+                config: window.socialProofWidget.getConfig(),
+                notifications: window.socialProofWidget.getNotifications()
+            };
+            
+            console.log('Widget Info:', info);
+            log('Widget info logged to console', 'info');
+        }
+
+        function showCustomerData() {
+            if (!window.socialProofWidget || !window.socialProofWidget.debug) {
+                return alert('ProofPop debug not available');
+            }
+            
+            const data = window.socialProofWidget.debug.getCustomerData();
+            console.log('Customer Data:', data);
+            log('Customer data logged to console', 'info');
+        }
+
+        function toggleLogs() {
+            logVisible = !logVisible;
+            document.getElementById('event-log').style.display = logVisible ? 'block' : 'none';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            log('Test page loaded', 'info');
+            updateWidgetStatus();
+        });
+    </script>
+</body>
+</html>
