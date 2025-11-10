@@ -3,7 +3,11 @@ import { useState, useRef, useEffect } from 'react';
 import { Bell, Globe, ChevronDown, Plus, Languages, User, LogOut } from 'lucide-react';
 import { useAuth } from './auth/AuthProvider';
 
-export function Header() {
+interface HeaderProps {
+  onSectionChange?: (section: string) => void;
+}
+
+export function Header({ onSectionChange }: HeaderProps = {}) {
   const { user, signOut } = useAuth();
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
@@ -128,7 +132,7 @@ export function Header() {
                   <button
                     onClick={() => {
                       setShowUserDropdown(false);
-                      // Navigate to profile page - you can implement this
+                      onSectionChange?.('settings');
                     }}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center space-x-2"
                   >

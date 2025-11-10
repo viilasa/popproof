@@ -174,9 +174,17 @@ export function RuleBasedNotificationCreator({
           name: ruleName,
           type: 'notification',
           is_active: true,
+          notification_time_range: ruleConfig.timeWindowHours,
           config: {
             template_id: selectedTemplate.id,
             template_name: selectedTemplate.name,
+            
+            // Triggers configuration (required by Edge Function)
+            triggers: {
+              events: {
+                eventTypes: ruleConfig.eventTypes
+              }
+            },
             
             // Rule configuration
             rules: {

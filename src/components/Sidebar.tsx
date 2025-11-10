@@ -30,8 +30,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
     {
       category: 'ACCOUNT',
       items: [
-        { id: 'account', label: 'Profile', icon: User },
-        { id: 'billing', label: 'Billing', icon: CreditCard },
+       
         { id: 'help', label: 'Help', icon: HelpCircle },
       ]
     }

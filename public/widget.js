@@ -18,6 +18,8 @@
       this.apiBaseUrl = apiBaseUrl || 'https://ghiobuubmnvlaukeyuwe.supabase.co/functions/v1';
       this.lastEventId = null;
       this.activeNotifications = [];
+      this.design = null;
+      this.displaySettings = null;
       this.fetchInterval = null;
       this.verificationInterval = null;
       this.isInitialized = false;
@@ -455,13 +457,63 @@
       this.container.className = 'sp-widget-container';
       this.container.setAttribute('aria-live', 'polite');
       this.container.setAttribute('aria-label', 'Social proof notifications');
+      
+      // Start with default position
+      this.container.style.position = 'fixed';
+      this.container.style.zIndex = '10000';
+      this.container.style.bottom = '20px';
+      this.container.style.left = '20px';
+      
       document.body.appendChild(this.container);
+    }
+    
+    updateContainerPosition() {
+      if (!this.container) return;
+      
+      // Use desktop position only (no responsive logic)
+      let position = this.design?.position || 'bottom-left';
+      
+      if (CONFIG.DEBUG) {
+        console.log('[ProofPop] Position:', position);
+      }
+      
+      const offsetX = this.design?.offset_x || 20;
+      const offsetY = this.design?.offset_y || 20;
+      
+      // Reset
+      this.container.style.top = 'auto';
+      this.container.style.bottom = 'auto';
+      this.container.style.left = 'auto';
+      this.container.style.right = 'auto';
+      this.container.style.transform = 'none';
+      
+      if (position.includes('bottom')) {
+        this.container.style.bottom = `${offsetY}px`;
+      } else if (position.includes('top')) {
+        this.container.style.top = `${offsetY}px`;
+      }
+      
+      if (position.includes('left')) {
+        this.container.style.left = `${offsetX}px`;
+      } else if (position.includes('right')) {
+        this.container.style.right = `${offsetX}px`;
+      }
+      
+      if (position === 'center') {
+        this.container.style.left = '50%';
+        this.container.style.transform = 'translateX(-50%)';
+      }
     }
 
     async fetchEvents() {
-      if (!this.clientId) return;
+      if (!this.clientId) {
+        if (CONFIG.DEBUG) console.log('[ProofPop] No clientId, skipping fetch');
+        return;
+      }
 
       try {
+        if (CONFIG.DEBUG) console.log('[ProofPop] Fetching events from API...');
+        
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), CONFIG.API_TIMEOUT);
 
@@ -479,17 +531,45 @@
         clearTimeout(timeoutId);
 
         if (!response.ok) {
+          console.error('[ProofPop] API Error - HTTP', response.status);
           throw new Error(`HTTP ${response.status}`);
         }
 
         const data = await response.json();
         
+        if (CONFIG.DEBUG) {
+          console.log('[ProofPop] API Response:', {
+            success: data.success,
+            eventCount: data.events?.length || 0,
+            hasDesign: !!data.design,
+            hasDisplay: !!data.display
+          });
+        }
+        
+        // Update design settings if provided
+        if (data.design) {
+          this.design = data.design;
+        }
+        
+        // Update display settings (including responsive settings)
+        if (data.display) {
+          this.displaySettings = data.display;
+        }
+        
+        // Update container position if design settings provided
+        if (data.design) {
+          this.updateContainerPosition();
+        }
+        
         if (data.success && data.events && Array.isArray(data.events)) {
+          if (CONFIG.DEBUG) console.log('[ProofPop] Processing', data.events.length, 'events');
           this.processEvents(data.events);
+        } else {
+          if (CONFIG.DEBUG) console.log('[ProofPop] No events to process');
         }
       } catch (error) {
-        // Fail silently as requested
-        console.debug('Social proof widget fetch failed:', error.message);
+        // Log error for debugging
+        console.error('[ProofPop] Fetch error:', error.message);
       }
     }
 
@@ -540,6 +620,11 @@
       const notification = document.createElement('div');
       notification.className = 'sp-notification';
       
+      // Apply design settings if available
+      if (this.design) {
+        this.applyDesignStyles(notification, this.design);
+      }
+      
       const title = this.formatEventTitle(event);
       const content = this.formatEventContent(event);
       const meta = this.formatEventMeta(event);
@@ -554,6 +639,55 @@
       `;
 
       return notification;
+    }
+    
+    applyDesignStyles(element, design) {
+      // Layout - Apply mobile-specific max width if on mobile and set
+      if (this.isMobile && this.displaySettings && this.displaySettings.responsive && this.displaySettings.responsive.mobile_max_width) {
+        element.style.maxWidth = `${this.displaySettings.responsive.mobile_max_width}px`;
+      } else if (design.max_width) {
+        element.style.maxWidth = `${design.max_width}px`;
+      }
+      
+      if (design.min_width) element.style.minWidth = `${design.min_width}px`;
+      
+      // Border
+      if (design.border_radius !== undefined) element.style.borderRadius = `${design.border_radius}px`;
+      if (design.border_width !== undefined) element.style.borderWidth = `${design.border_width}px`;
+      if (design.border_color) element.style.borderColor = design.border_color;
+      
+      // Left accent
+      if (design.border_left_accent) {
+        element.style.borderLeftWidth = `${design.border_left_accent_width || 4}px`;
+        element.style.borderLeftColor = design.border_left_accent_color || '#3B82F6';
+      }
+      
+      // Shadow
+      if (design.shadow_enabled !== false && design.shadow_size) {
+        const shadowMap = {
+          'sm': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+          'md': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+          'lg': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+          'xl': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          '2xl': '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+        };
+        element.style.boxShadow = shadowMap[design.shadow_size] || shadowMap['lg'];
+      }
+      
+      // Glassmorphism
+      if (design.glassmorphism) {
+        element.style.backdropFilter = `blur(${design.backdrop_blur || 10}px)`;
+      }
+      
+      // Background
+      if (design.background_gradient) {
+        const direction = design.gradient_direction || 'to-br';
+        const start = design.gradient_start || '#ffffff';
+        const end = design.gradient_end || '#f3f4f6';
+        element.style.background = `linear-gradient(${direction}, ${start}, ${end})`;
+      } else if (design.background_color) {
+        element.style.backgroundColor = design.background_color;
+      }
     }
 
     formatEventTitle(event) {

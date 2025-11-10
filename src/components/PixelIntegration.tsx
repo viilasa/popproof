@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Copy, CheckCircle, AlertCircle, ArrowLeft, ExternalLink, Globe, Loader2, X, Activity } from 'lucide-react';
+import { Copy, CheckCircle, AlertCircle, ArrowLeft, ExternalLink, Globe, Loader2, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { IntegrationsSection } from './IntegrationsSection';
 
 interface PixelIntegrationProps {
   selectedSite: {
@@ -33,8 +34,7 @@ export function PixelIntegration({ selectedSite, onBack }: PixelIntegrationProps
   const [iframeError, setIframeError] = useState(false);
   const [iframeKey, setIframeKey] = useState(Date.now()); // Used to force iframe reload
   const [verificationWindow, setVerificationWindow] = useState<Window | null>(null);
-  const [recentEvents, setRecentEvents] = useState<any[]>([]);
-  const [verificationAttempts, setVerificationAttempts] = useState<any[]>([]);
+  const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
 
   const copyToClipboard = async (text: string, id: string) => {
     try {
@@ -50,7 +50,6 @@ export function PixelIntegration({ selectedSite, onBack }: PixelIntegrationProps
   useEffect(() => {
     if (selectedSite?.id) {
       checkPixelVerificationStatus();
-      fetchRecentActivity();
       
       // Set up real-time subscription for verification updates
       const channel = supabase
@@ -62,15 +61,6 @@ export function PixelIntegration({ selectedSite, onBack }: PixelIntegrationProps
           filter: `site_id=eq.${selectedSite.id}`
         }, () => {
           checkPixelVerificationStatus();
-          fetchRecentActivity();
-        })
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'events',
-          filter: `site_id=eq.${selectedSite.id}`
-        }, () => {
-          fetchRecentActivity();
         })
         .subscribe();
       
@@ -79,30 +69,6 @@ export function PixelIntegration({ selectedSite, onBack }: PixelIntegrationProps
       };
     }
   }, [selectedSite?.id]);
-  
-  // Fetch recent activity
-  const fetchRecentActivity = async () => {
-    if (!selectedSite?.id) return;
-    
-    // Fetch recent events
-    const { data: events } = await supabase
-      .from('events')
-      .select('*')
-      .eq('site_id', selectedSite.id)
-      .order('timestamp', { ascending: false })
-      .limit(5);
-    
-    // Fetch verification attempts
-    const { data: verifications } = await supabase
-      .from('pixel_verifications')
-      .select('*')
-      .eq('site_id', selectedSite.id)
-      .order('created_at', { ascending: false })
-      .limit(5);
-    
-    if (events) setRecentEvents(events);
-    if (verifications) setVerificationAttempts(verifications);
-  };
   
   // Add a timeout to detect if iframe fails to load due to CORS or other issues
   useEffect(() => {
@@ -589,19 +555,6 @@ export function PixelIntegration({ selectedSite, onBack }: PixelIntegrationProps
                 </div>
               </div>
             </div>
-            
-            <button
-              onClick={verifyPixel}
-              disabled={pixelStatus === 'checking'}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2 text-sm"
-            >
-              {pixelStatus === 'checking' ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <CheckCircle className="w-4 h-4" />
-              )}
-              <span>Verify in New Window</span>
-            </button>
           </div>
         </div>
       </div>
@@ -646,18 +599,6 @@ export function PixelIntegration({ selectedSite, onBack }: PixelIntegrationProps
                 </p>
               </div>
             </div>
-            
-            {pixelStatus === 'active' && (
-              <a
-                href="/demo.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-              >
-                <ExternalLink className="w-4 h-4" />
-                <span>View Demo</span>
-              </a>
-            )}
           </div>
           
           {errorMessage && (
@@ -686,326 +627,185 @@ export function PixelIntegration({ selectedSite, onBack }: PixelIntegrationProps
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-          {/* Installation Instructions */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <span className="text-blue-600 font-bold">2</span>
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-semibold text-gray-900">Pixel Installation</h2>
-                    <p className="text-sm text-gray-600">Complete these steps to activate social proof on your website</p>
-                  </div>
-                </div>
-              </div>
+        {/* Main Content - Platform Selection or Installation Steps */}
+        {!selectedPlatform ? (
+          // Step 1: Platform Selection
+          <div className="mb-8">
+            <IntegrationsSection 
+              siteId={selectedSite.id} 
+              onPlatformSelect={(platformId) => setSelectedPlatform(platformId)}
+            />
+          </div>
+        ) : (
+          // Step 2: Installation Steps for Selected Platform
+          <div className="mb-8">
+            {/* Back Button */}
+            <button
+              onClick={() => setSelectedPlatform(null)}
+              className="inline-flex items-center space-x-2 text-gray-600 hover:text-gray-900 mb-6 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Platform Selection</span>
+            </button>
 
-              <div className="p-6 space-y-8">
-                {/* Step 1 */}
-                <div className="relative">
-                  <div className="flex items-start space-x-4">
-                    <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
-                      1
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">
-                        Copy the Pixel Code
-                      </h3>
-                      <p className="text-gray-600 mb-4">
-                        Copy the code snippet below to integrate the social proof widget into your website.
-                      </p>
-                      
-                      <div className="relative">
-                        <div className="flex items-center justify-between bg-gray-800 rounded-t-lg px-4 py-2 border-b border-gray-700">
-                          <span className="text-xs text-gray-400">Pixel Code</span>
-                          <button
-                            onClick={() => copyToClipboard(pixelCode, 'pixel-code')}
-                            className="p-2 text-gray-400 hover:text-gray-200 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors flex items-center space-x-1"
-                          >
-                            <Copy className="w-4 h-4" />
-                            <span className="text-xs">Copy</span>
-                          </button>
-                        </div>
-                        <pre className="bg-gray-900 text-gray-100 p-4 rounded-b-lg overflow-x-auto text-sm font-mono border border-t-0 border-gray-700 max-h-[150px] whitespace-pre-wrap break-all">
-                          <code>{pixelCode}</code>
-                          <div className="mt-3 text-xs text-gray-400">This code will track page visits and verify your site.</div>
-                        </pre>
-                        {copiedCode === 'pixel-code' && (
-                          <div className="absolute top-2 right-14 bg-green-600 text-white px-3 py-1 rounded-lg text-xs font-medium">
-                            Copied!
-                          </div>
-                        )}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+              {/* Installation Instructions */}
+              <div className="lg:col-span-2">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <span className="text-blue-600 font-bold">2</span>
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-semibold text-gray-900">Pixel Installation</h2>
+                        <p className="text-sm text-gray-600">Complete these steps to activate social proof on your website</p>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Step 2 */}
-                <div className="relative">
-                  <div className="flex items-start space-x-4">
-                    <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
-                      2
+                  <div className="p-6 space-y-8">
+                    {/* Step 1 */}
+                    <div className="relative">
+                      <div className="flex items-start space-x-4">
+                        <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+                          1
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">
+                            Copy the Pixel Code
+                          </h3>
+                          <p className="text-gray-600 mb-4">
+                            Copy the code snippet below to integrate the social proof widget into your website.
+                          </p>
+                          
+                          <div className="relative">
+                            <div className="flex items-center justify-between bg-gray-800 rounded-t-lg px-4 py-2 border-b border-gray-700">
+                              <span className="text-xs text-gray-400">Pixel Code</span>
+                              <button
+                                onClick={() => copyToClipboard(pixelCode, 'pixel-code')}
+                                className="p-2 text-gray-400 hover:text-gray-200 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors flex items-center space-x-1"
+                              >
+                                <Copy className="w-4 h-4" />
+                                <span className="text-xs">Copy</span>
+                              </button>
+                            </div>
+                            <pre className="bg-gray-900 text-gray-100 p-4 rounded-b-lg overflow-x-auto text-sm font-mono border border-t-0 border-gray-700 max-h-[150px] whitespace-pre-wrap break-all">
+                              <code>{pixelCode}</code>
+                              <div className="mt-3 text-xs text-gray-400">This code will track page visits and verify your site.</div>
+                            </pre>
+                            {copiedCode === 'pixel-code' && (
+                              <div className="absolute top-2 right-14 bg-green-600 text-white px-3 py-1 rounded-lg text-xs font-medium">
+                                Copied!
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">
-                        Paste Before Closing &lt;/head&gt; Tag
-                      </h3>
-                      <p className="text-gray-600 mb-4">
-                        Add the code to every page where you want to display social proof notifications, right before the closing &lt;/head&gt; tag.
-                      </p>
-                      
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <div className="flex items-start space-x-3">
-                          <div className="flex-shrink-0">
-                            <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
-                              <CheckCircle className="w-3 h-3 text-blue-600" />
+
+                    {/* Step 2 */}
+                    <div className="relative">
+                      <div className="flex items-start space-x-4">
+                        <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+                          2
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">
+                            Paste Before Closing &lt;/head&gt; Tag
+                          </h3>
+                          <p className="text-gray-600 mb-4">
+                            Add the code to every page where you want to display social proof notifications, right before the closing &lt;/head&gt; tag.
+                          </p>
+                          
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div className="flex items-start space-x-3">
+                              <div className="flex-shrink-0">
+                                <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
+                                  <CheckCircle className="w-3 h-3 text-blue-600" />
+                                </div>
+                              </div>
+                              <div>
+                                <h4 className="font-medium text-blue-900 mb-1">Pro Tip</h4>
+                                <p className="text-sm text-blue-800">
+                                  For best performance, place the script in your site's template or header file so it loads on all pages automatically.
+                                </p>
+                              </div>
                             </div>
                           </div>
-                          <div>
-                            <h4 className="font-medium text-blue-900 mb-1">Pro Tip</h4>
-                            <p className="text-sm text-blue-800">
-                              For best performance, place the script in your site's template or header file so it loads on all pages automatically.
-                            </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Step 3 */}
+                    <div className="relative">
+                      <div className="flex items-start space-x-4">
+                        <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+                          3
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">
+                            Check Verification Status
+                          </h3>
+                          <p className="text-gray-600 mb-4">
+                            Check the verification status indicator at the top of this page to confirm if your pixel is active and working correctly.
+                          </p>
+                          
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div className="flex items-start space-x-3">
+                              <div className="flex-shrink-0">
+                                <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
+                                  <CheckCircle className="w-3 h-3 text-blue-600" />
+                                </div>
+                              </div>
+                              <div>
+                                <h4 className="font-medium text-blue-900 mb-1">Status Indicator</h4>
+                                <p className="text-sm text-blue-800">
+                                  Look for the status indicator next to your site name at the top. A green dot means your pixel is active and tracking successfully.
+                                </p>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-
-                {/* Step 3 */}
-                <div className="relative">
-                  <div className="flex items-start space-x-4">
-                    <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
-                      3
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">
-                        Verify Installation
-                      </h3>
-                      <p className="text-gray-600 mb-4">
-                        Use the "Verify Pixel" button above to confirm your installation is working correctly.
-                        {lastSeenAt && (
-                          <span className="block mt-2 text-sm">
-                            <span className="font-medium">Last seen:</span> {new Date(lastSeenAt).toLocaleString()}
-                          </span>
-                        )}
-                      </p>
-                      
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <button
-                          onClick={verifyPixel}
-                          disabled={pixelStatus === 'checking'}
-                          className="inline-flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                          {pixelStatus === 'checking' ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <CheckCircle className="w-4 h-4" />
-                          )}
-                          <span>Verify in New Window</span>
-                        </button>
-                        
-                        {selectedSite.domain && (
-                          <button
-                            onClick={openVerificationWindow}
-                            className="inline-flex items-center justify-center space-x-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors ml-2"
-                          >
-                            <Globe className="w-4 h-4" />
-                            <span>Open Website</span>
-                          </button>
-                        )}
-                        
-                        
-                        <a
-                          href="/demo.html"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center space-x-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                          <span>View Demo</span>
-                        </a>
-                        
-                        {selectedSite.domain && (
-                          <button
-                            onClick={openVerificationWindow}
-                            className="inline-flex items-center justify-center space-x-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors ml-2"
-                          >
-                            <Globe className="w-4 h-4" />
-                            <span>Open Site</span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </div>
-            </div>
-          </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Site Information */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <Globe className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Site Details</h3>
-                  <p className="text-sm text-gray-600">Configuration information</p>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Site Name</label>
-                  <p className="text-sm text-gray-900 mt-1">{selectedSite.name}</p>
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Domain</label>
-                  <p className="text-sm text-gray-900 mt-1">{selectedSite.domain || 'Not specified'}</p>
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Client ID</label>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono flex-1 truncate">
-                      {selectedSite.public_key}
-                    </code>
-                    <button
-                      onClick={() => copyToClipboard(selectedSite.public_key, 'client-id')}
-                      className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+              {/* Sidebar */}
+              <div className="space-y-6">
+                {/* Help & Support */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <h3 className="font-semibold text-gray-900 mb-4">Need Help?</h3>
+                  <div className="space-y-3">
+                    <a
+                      href="#"
+                      className="flex items-center space-x-3 text-sm text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-50"
                     >
-                      <Copy className="w-4 h-4" />
-                    </button>
+                      <span>📚</span>
+                      <span>Documentation</span>
+                    </a>
+                    <a
+                      href="#"
+                      className="flex items-center space-x-3 text-sm text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-50"
+                    >
+                      <span>💬</span>
+                      <span>Live Chat Support</span>
+                    </a>
+                    <a
+                      href="#"
+                      className="flex items-center space-x-3 text-sm text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-50"
+                    >
+                      <span>📧</span>
+                      <span>Email Support</span>
+                    </a>
                   </div>
-                  {copiedCode === 'client-id' && (
-                    <p className="text-xs text-green-600 mt-1">Copied to clipboard!</p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Real-time Activity */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-900">Live Activity</h3>
-                <div className="flex items-center">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></div>
-                  <span className="text-xs text-gray-600">Real-time</span>
-                </div>
-              </div>
-              
-              {/* Verification Attempts */}
-              {verificationAttempts.length > 0 && (
-                <div className="mb-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Recent Verifications</h4>
-                  <div className="space-y-2">
-                    {verificationAttempts.slice(0, 3).map((attempt) => (
-                      <div key={attempt.id} className="flex items-center justify-between text-xs bg-gray-50 p-2 rounded">
-                        <div className="flex items-center">
-                          {attempt.status === 'success' ? (
-                            <CheckCircle className="w-3 h-3 text-green-600 mr-2" />
-                          ) : (
-                            <AlertCircle className="w-3 h-3 text-yellow-600 mr-2" />
-                          )}
-                          <span className="text-gray-700 capitalize">{attempt.status}</span>
-                        </div>
-                        <span className="text-gray-500">
-                          {new Date(attempt.created_at).toLocaleTimeString()}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {/* Recent Events */}
-              {recentEvents.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Recent Events</h4>
-                  <div className="space-y-2">
-                    {recentEvents.slice(0, 3).map((event) => (
-                      <div key={event.id} className="flex items-center justify-between text-xs bg-blue-50 p-2 rounded">
-                        <div className="flex items-center">
-                          <Activity className="w-3 h-3 text-blue-600 mr-2" />
-                          <span className="text-gray-700 capitalize">{event.event_type?.replace('_', ' ')}</span>
-                        </div>
-                        <span className="text-gray-500">
-                          {new Date(event.timestamp).toLocaleTimeString()}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {verificationAttempts.length === 0 && recentEvents.length === 0 && (
-                <div className="text-center py-4">
-                  <Activity className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">No activity yet</p>
-                  <p className="text-xs text-gray-400 mt-1">Install the pixel to see live data</p>
-                </div>
-              )}
-            </div>
-
-            {/* Help & Support */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Need Help?</h3>
-              <div className="space-y-3">
-                <a
-                  href="#"
-                  className="flex items-center space-x-3 text-sm text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-50"
-                >
-                  <span>📚</span>
-                  <span>Documentation</span>
-                </a>
-                <a
-                  href="#"
-                  className="flex items-center space-x-3 text-sm text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-50"
-                >
-                  <span>💬</span>
-                  <span>Live Chat Support</span>
-                </a>
-                <a
-                  href="#"
-                  className="flex items-center space-x-3 text-sm text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-50"
-                >
-                  <span>📧</span>
-                  <span>Email Support</span>
-                </a>
-              </div>
-            </div>
-
-            {/* Quick Stats */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Widget Features</h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  <span className="text-gray-700">Real-time notifications</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  <span className="text-gray-700">Mobile responsive</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  <span className="text-gray-700">Lightweight (&lt;10KB)</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  <span className="text-gray-700">Customizable design</span>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -38,7 +38,7 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Header />
+      <Header onSectionChange={setActiveSection} />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
         <div className="flex-1 overflow-auto">

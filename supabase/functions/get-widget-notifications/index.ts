@@ -40,10 +40,74 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch widgets for the site
+    console.log('Querying widgets for:', { widgetId, siteId });
+    
+    // Fetch widgets for the site with design settings
     let widgetsQuery = supabase
       .from('widgets')
-      .select('*')
+      .select(`
+        *,
+        position,
+        offset_x,
+        offset_y,
+        max_width,
+        min_width,
+        border_radius,
+        border_width,
+        border_color,
+        border_left_accent,
+        border_left_accent_width,
+        border_left_accent_color,
+        shadow_enabled,
+        shadow_size,
+        glassmorphism,
+        backdrop_blur,
+        background_color,
+        background_gradient,
+        gradient_start,
+        gradient_end,
+        gradient_direction,
+        display_duration,
+        fade_in_duration,
+        fade_out_duration,
+        animation_type,
+        progress_bar,
+        progress_bar_color,
+        progress_bar_position,
+        show_timestamp,
+        timestamp_format,
+        timestamp_prefix,
+        show_location,
+        location_format,
+        show_user_avatar,
+        show_event_icon,
+        show_value,
+        value_format,
+        currency_code,
+        currency_position,
+        notification_time_range,
+        custom_time_range_hours,
+        anonymize_names,
+        anonymization_style,
+        hide_emails,
+        hide_phone_numbers,
+        mask_ip_addresses,
+        gdpr_compliant,
+        clickable,
+        click_action,
+        click_url,
+        click_url_target,
+        close_button,
+        close_button_position,
+        pause_on_hover,
+        expand_on_hover,
+        mobile_position,
+        mobile_max_width,
+        hide_on_mobile,
+        hide_on_desktop,
+        stack_on_mobile,
+        reduced_motion_support
+      `)
       .eq('is_active', true);
 
     if (widgetId) {
@@ -53,6 +117,12 @@ Deno.serve(async (req) => {
     }
 
     const { data: widgets, error: widgetsError } = await widgetsQuery;
+
+    console.log('Widgets query result:', { 
+      count: widgets?.length, 
+      error: widgetsError,
+      widgets: widgets?.map(w => ({ id: w.id, name: w.name, is_active: w.is_active, site_id: w.site_id }))
+    });
 
     if (widgetsError) {
       console.error('Error fetching widgets:', widgetsError);
@@ -67,10 +137,16 @@ Deno.serve(async (req) => {
     }
 
     if (!widgets || widgets.length === 0) {
+      console.log('⚠️ NO WIDGETS FOUND - Check if widgets exist and are active for this site');
       return new Response(JSON.stringify({
         success: true,
         widgets: [],
-        notifications: []
+        notifications: [],
+        debug: {
+          queried_site_id: siteId,
+          queried_widget_id: widgetId,
+          message: 'No active widgets found for this site'
+        }
       }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -82,14 +158,97 @@ Deno.serve(async (req) => {
 
     for (const widget of widgets) {
       const config = widget.config || {};
-      const rules = config.rules || {};
       const display = config.display || {};
+
+      const displaySettings = {
+        duration: {
+          displayDuration: widget.display_duration ?? display?.duration?.displayDuration ?? 8,
+          fadeInDuration: widget.fade_in_duration ?? display?.duration?.fadeInDuration ?? 300,
+          fadeOutDuration: widget.fade_out_duration ?? display?.duration?.fadeOutDuration ?? 300,
+          animationType: widget.animation_type ?? display?.duration?.animationType ?? 'slide',
+          progressBar: widget.progress_bar ?? display?.duration?.progressBar ?? true,
+          progressBarColor: widget.progress_bar_color ?? display?.duration?.progressBarColor ?? '#3B82F6',
+          progressBarPosition: widget.progress_bar_position ?? display?.duration?.progressBarPosition ?? 'top',
+        },
+        content: {
+          showTimestamp: widget.show_timestamp ?? display?.content?.showTimestamp ?? true,
+          timestampFormat: widget.timestamp_format ?? display?.content?.timestampFormat ?? 'relative',
+          timestampPrefix: widget.timestamp_prefix ?? display?.content?.timestampPrefix ?? '• ',
+          showLocation: widget.show_location ?? display?.content?.showLocation ?? true,
+          locationFormat: widget.location_format ?? display?.content?.locationFormat ?? 'city',
+          showUserAvatar: widget.show_user_avatar ?? display?.content?.showUserAvatar ?? false,
+          showEventIcon: widget.show_event_icon ?? display?.content?.showEventIcon ?? true,
+          showValue: widget.show_value ?? display?.content?.showValue ?? true,
+          valueFormat: widget.value_format ?? display?.content?.valueFormat ?? 'currency',
+          currency: widget.currency_code ?? display?.content?.currency ?? 'USD',
+          currencyPosition: widget.currency_position ?? display?.content?.currencyPosition ?? 'before',
+          notificationTimeRange: widget.notification_time_range ?? display?.content?.notificationTimeRange ?? 168,
+          customTimeRangeHours: widget.custom_time_range_hours ?? display?.content?.customTimeRangeHours ?? undefined,
+          showCustomerName: display?.content?.showCustomerName ?? true,
+          showRating: display?.content?.showRating ?? true,
+          showReviewContent: display?.content?.showReviewContent ?? true,
+        },
+        privacy: {
+          anonymizeNames: widget.anonymize_names ?? display?.privacy?.anonymizeNames ?? false,
+          anonymizationStyle: widget.anonymization_style ?? display?.privacy?.anonymizationStyle ?? 'first-initial',
+          hideEmails: widget.hide_emails ?? display?.privacy?.hideEmails ?? true,
+          hidePhoneNumbers: widget.hide_phone_numbers ?? display?.privacy?.hidePhoneNumbers ?? true,
+          maskIpAddresses: widget.mask_ip_addresses ?? display?.privacy?.maskIpAddresses ?? true,
+          gdprCompliant: widget.gdpr_compliant ?? display?.privacy?.gdprCompliant ?? true,
+        },
+        interaction: {
+          clickable: widget.clickable ?? display?.interaction?.clickable ?? false,
+          clickAction: widget.click_action ?? display?.interaction?.clickAction ?? 'none',
+          clickUrl: widget.click_url ?? display?.interaction?.clickUrl ?? null,
+          clickUrlTarget: widget.click_url_target ?? display?.interaction?.clickUrlTarget ?? '_blank',
+          closeButton: widget.close_button ?? display?.interaction?.closeButton ?? false,
+          closeButtonPosition: widget.close_button_position ?? display?.interaction?.closeButtonPosition ?? 'top-right',
+          pauseOnHover: widget.pause_on_hover ?? display?.interaction?.pauseOnHover ?? true,
+          expandOnHover: widget.expand_on_hover ?? display?.interaction?.expandOnHover ?? false,
+        },
+        responsive: {
+          mobilePosition: widget.mobile_position ?? display?.responsive?.mobilePosition ?? null,
+          mobileMaxWidth: widget.mobile_max_width ?? display?.responsive?.mobileMaxWidth ?? null,
+          hideOnMobile: widget.hide_on_mobile ?? display?.responsive?.hideOnMobile ?? false,
+          hideOnDesktop: widget.hide_on_desktop ?? display?.responsive?.hideOnDesktop ?? false,
+          stackOnMobile: widget.stack_on_mobile ?? display?.responsive?.stackOnMobile ?? true,
+          reducedMotionSupport: widget.reduced_motion_support ?? display?.responsive?.reducedMotionSupport ?? true,
+        }
+      };
       
-      // Extract rule parameters
-      const eventTypes = rules.eventTypes || ['purchase', 'signup', 'form_submit'];
-      const timeWindowHours = rules.timeWindowHours || 24;
-      const minValue = rules.minValue || 0;
-      const excludeTestEvents = rules.excludeTestEvents !== false;
+      // Fetch notification rules from the notification_rules table (just like duration settings!)
+      const { data: notificationRules } = await supabase
+        .from('notification_rules')
+        .select('*')
+        .eq('widget_id', widget.id)
+        .eq('is_active', true)
+        .order('priority', { ascending: false })
+        .limit(1)
+        .single();
+      
+      // Extract rule parameters from notification_rules table (or fallback to config)
+      const rules = config.rules || {};
+      const triggersConfig = config.triggers || {};
+      const eventsConfig = triggersConfig.events || {};
+      const eventTypes = notificationRules?.event_types || 
+                        eventsConfig.eventTypes || 
+                        rules.eventTypes || 
+                        ['purchase', 'signup', 'form_submit'];
+      
+      console.log('Widget event types for', widget.id, ':', eventTypes);
+      
+      // Get time range from display settings (with fallbacks)
+      let timeWindowHours = widget.notification_time_range || 168; // Default to 7 days
+      if (timeWindowHours === 0 && widget.custom_time_range_hours) {
+        timeWindowHours = widget.custom_time_range_hours;
+      }
+      // Fallback to notification_rules if display setting not set
+      if (!widget.notification_time_range) {
+        timeWindowHours = notificationRules?.time_window_hours || rules.timeWindowHours || 168;
+      }
+      
+      const minValue = notificationRules?.min_value || rules.minValue || 0;
+      const excludeTestEvents = notificationRules?.exclude_test_events ?? rules.excludeTestEvents ?? true;
 
       // Calculate time threshold
       const timeThreshold = new Date();
@@ -100,12 +259,12 @@ Deno.serve(async (req) => {
       console.log('Event types:', eventTypes);
       console.log('Time threshold:', thresholdISO);
 
-      // Build query for events
+      // Build query for events - check event_type column (not type)
       let eventsQuery = supabase
         .from('events')
         .select('*')
         .eq('site_id', widget.site_id)
-        .in('type', eventTypes)
+        .in('event_type', eventTypes)
         .gte('timestamp', thresholdISO)
         .order('timestamp', { ascending: false })
         .limit(limit);
@@ -154,8 +313,17 @@ Deno.serve(async (req) => {
             break;
             
           case 'form_submit':
-            title = metadata.customer_name || metadata.user_name || 'Someone';
-            message = `submitted ${metadata.form_type || 'a form'}`;
+            // Check multiple possible name fields in form submissions
+            title = metadata.customer_name || 
+                    metadata.user_name || 
+                    metadata.name || 
+                    metadata.full_name || 
+                    metadata.fullName ||
+                    metadata.first_name || 
+                    metadata.firstName ||
+                    (metadata.first_name && metadata.last_name ? `${metadata.first_name} ${metadata.last_name}` : null) ||
+                    'Someone';
+            message = `submitted ${metadata.form_type || metadata.form_name || 'a form'}`;
             icon = '📝';
             if (metadata.location) {
               message += ` from ${metadata.location}`;
@@ -174,9 +342,23 @@ Deno.serve(async (req) => {
             icon = '🛒';
             break;
             
+          case 'visitor_active':
+            // For live visitor count widgets
+            title = `${metadata.visitor_count || '1'} ${metadata.visitor_count === 1 ? 'person' : 'people'}`;
+            message = 'viewing this right now';
+            icon = '👥';
+            break;
+            
+          case 'page_view':
+            // For active sessions
+            title = metadata.customer_name || metadata.user_name || 'Someone';
+            message = `is browsing ${metadata.page_title || 'this site'}`;
+            icon = '👁️';
+            break;
+            
           default:
             title = metadata.customer_name || metadata.user_name || 'Someone';
-            message = eventType.replace('_', ' ');
+            message = eventType.replace(/_/g, ' ');
             icon = '🔔';
         }
 
@@ -192,6 +374,10 @@ Deno.serve(async (req) => {
         else if (diffMins < 1440) timeAgo = `${Math.floor(diffMins / 60)} ${Math.floor(diffMins / 60) === 1 ? 'hour' : 'hours'} ago`;
         else timeAgo = `${Math.floor(diffMins / 1440)} ${Math.floor(diffMins / 1440) === 1 ? 'day' : 'days'} ago`;
 
+        const displayDuration = displaySettings.duration.displayDuration;
+        const showTimestamp = displaySettings.content.showTimestamp;
+        const showLocation = displaySettings.content.showLocation && !!metadata.location;
+
         return {
           id: event.id,
           widget_id: widget.id,
@@ -202,19 +388,120 @@ Deno.serve(async (req) => {
           location: metadata.location || null,
           timestamp: event.timestamp,
           timeAgo,
-          displayDuration: display.displayDuration || 8,
-          showTimestamp: display.showTimestamp !== false,
-          showLocation: display.showLocation !== false && !!metadata.location,
+          displayDuration,
+          fadeInDuration: displaySettings.duration.fadeInDuration,
+          fadeOutDuration: displaySettings.duration.fadeOutDuration,
+          animationType: displaySettings.duration.animationType,
+          showTimestamp,
+          showLocation,
+          showUserAvatar: displaySettings.content.showUserAvatar,
+          showEventIcon: displaySettings.content.showEventIcon,
+          showValue: displaySettings.content.showValue,
+          valueFormat: displaySettings.content.valueFormat,
+          currency: displaySettings.content.currency,
+          currencyPosition: displaySettings.content.currencyPosition,
+          timestampFormat: displaySettings.content.timestampFormat,
+          timestampPrefix: displaySettings.content.timestampPrefix,
+          progressBar: displaySettings.duration.progressBar,
+          progressBarColor: displaySettings.duration.progressBarColor,
+          progressBarPosition: displaySettings.duration.progressBarPosition,
+          privacy: displaySettings.privacy,
+          interaction: displaySettings.interaction,
+          responsive: displaySettings.responsive,
           metadata: metadata
         };
       });
+
+      // Extract all trigger settings
+      const triggerBehavior = triggersConfig.behavior || {};
+      const triggerFrequency = triggersConfig.frequency || {};
+      const triggerAdvanced = triggersConfig.advanced || {};
+      
+      // DEBUG: Log trigger settings
+      console.log('DEBUG Widget', widget.id, 'trigger settings:', {
+        hasConfig: !!config,
+        hasTriggers: !!triggersConfig,
+        hasBehavior: !!triggerBehavior,
+        showAfterDelay: triggerBehavior.showAfterDelay,
+        fullBehavior: triggerBehavior
+      });
+      
+      const showAfterDelay = triggerBehavior.showAfterDelay ?? 3;
+      const displayFrequency = triggerFrequency.displayFrequency || 'all_time';
+      const maxNotificationsPerSession = triggerFrequency.maxNotificationsPerSession ?? 3;
+      const urlPatterns = triggerAdvanced.urlPatterns || { include: [], exclude: [], matchTypes: [] };
 
       widgetNotifications.push({
         widget_id: widget.id,
         widget_name: widget.name || config.name,
         widget_type: config.template_id || widget.type,
+        display: displaySettings,
         notifications: notifications,
-        count: notifications.length
+        count: notifications.length,
+        // Trigger settings
+        show_after_delay: showAfterDelay,
+        display_frequency: displayFrequency,
+        max_notifications_per_session: maxNotificationsPerSession,
+        url_patterns: urlPatterns,
+        // Include design settings
+        position: widget.position,
+        offset_x: widget.offset_x,
+        offset_y: widget.offset_y,
+        max_width: widget.max_width,
+        min_width: widget.min_width,
+        border_radius: widget.border_radius,
+        border_width: widget.border_width,
+        border_color: widget.border_color,
+        border_left_accent: widget.border_left_accent,
+        border_left_accent_width: widget.border_left_accent_width,
+        border_left_accent_color: widget.border_left_accent_color,
+        shadow_enabled: widget.shadow_enabled,
+        shadow_size: widget.shadow_size,
+        glassmorphism: widget.glassmorphism,
+        backdrop_blur: widget.backdrop_blur,
+        background_color: widget.background_color,
+        background_gradient: widget.background_gradient,
+        gradient_start: widget.gradient_start,
+        gradient_end: widget.gradient_end,
+        gradient_direction: widget.gradient_direction,
+        display_duration: widget.display_duration,
+        fade_in_duration: widget.fade_in_duration,
+        fade_out_duration: widget.fade_out_duration,
+        animation_type: widget.animation_type,
+        progress_bar: widget.progress_bar,
+        progress_bar_color: widget.progress_bar_color,
+        progress_bar_position: widget.progress_bar_position,
+        show_timestamp: widget.show_timestamp,
+        timestamp_format: widget.timestamp_format,
+        timestamp_prefix: widget.timestamp_prefix,
+        show_location: widget.show_location,
+        location_format: widget.location_format,
+        show_user_avatar: widget.show_user_avatar,
+        show_event_icon: widget.show_event_icon,
+        show_value: widget.show_value,
+        value_format: widget.value_format,
+        currency_code: widget.currency_code,
+        currency_position: widget.currency_position,
+        anonymize_names: widget.anonymize_names,
+        anonymization_style: widget.anonymization_style,
+        hide_emails: widget.hide_emails,
+        hide_phone_numbers: widget.hide_phone_numbers,
+        mask_ip_addresses: widget.mask_ip_addresses,
+        gdpr_compliant: widget.gdpr_compliant,
+        clickable: widget.clickable,
+        click_action: widget.click_action,
+        click_url: widget.click_url,
+        click_url_target: widget.click_url_target,
+        close_button: widget.close_button,
+        close_button_position: widget.close_button_position,
+        pause_on_hover: widget.pause_on_hover,
+        expand_on_hover: widget.expand_on_hover,
+        mobile_position: widget.mobile_position,
+        mobile_max_width: widget.mobile_max_width,
+        hide_on_mobile: widget.hide_on_mobile,
+        hide_on_desktop: widget.hide_on_desktop,
+        stack_on_mobile: widget.stack_on_mobile,
+        reduced_motion_support: widget.reduced_motion_support
       });
     }
 

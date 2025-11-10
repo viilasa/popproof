@@ -80,8 +80,39 @@ Deno.serve((req) => {
     // ============================================
     // EVENT TRACKING FUNCTION
     // ============================================
+    // Deduplication: Track recent events to prevent duplicates
+    const recentEvents = [];
+    const MAX_RECENT_EVENTS = 50;
+    const DUPLICATE_WINDOW_MS = 3000; // 3 seconds
+    
     const trackEvent = async (eventType, eventData = {}) => {
         try {
+            // Create event signature for deduplication
+            const eventSignature = JSON.stringify({
+                type: eventType,
+                name: eventData.customer_name || eventData.user_name,
+                rating: eventData.rating,
+                text: (eventData.review_text || eventData.review_content || '').substring(0, 50)
+            });
+            
+            // Check for recent duplicates
+            const now = Date.now();
+            const isDuplicate = recentEvents.some(function(recent) {
+                return recent.signature === eventSignature && 
+                       (now - recent.timestamp) < DUPLICATE_WINDOW_MS;
+            });
+            
+            if (isDuplicate) {
+                console.log('ProofPop: Duplicate event detected, skipping:', eventType);
+                return;
+            }
+            
+            // Add to recent events (keep list size manageable)
+            recentEvents.push({ signature: eventSignature, timestamp: now });
+            if (recentEvents.length > MAX_RECENT_EVENTS) {
+                recentEvents.shift();
+            }
+            
             const payload = {
                 site_id: siteId,
                 session_id: sessionId,
@@ -132,13 +163,34 @@ Deno.serve((req) => {
     // ============================================
     // FORM TRACKING
     // ============================================
+    // Track recently submitted forms to prevent duplicates
+    const recentFormSubmissions = new Map();
+    
     const setupFormTracking = () => {
         document.addEventListener('submit', (e) => {
             const form = e.target;
             if (!form || form.tagName !== 'FORM') return;
             
+            // Skip forms that are manually tracked
+            if (form.getAttribute('data-proofpop-manual') === 'true') {
+                console.log('ProofPop: Form marked as manual tracking, skipping auto-track');
+                return;
+            }
+            
             // Check if form has opt-out attribute
             if (form.hasAttribute('data-proofpop-ignore')) return;
+            
+            // Prevent duplicate submissions (within 2 seconds)
+            const formId = form.id || form.name || 'form-' + Math.random();
+            const now = Date.now();
+            const lastSubmit = recentFormSubmissions.get(formId);
+            
+            if (lastSubmit && (now - lastSubmit) < 2000) {
+                console.log('ProofPop: Duplicate form submission detected, skipping');
+                return;
+            }
+            
+            recentFormSubmissions.set(formId, now);
             
             // Determine form type (use getAttribute to avoid DOM element returns)
             const formType = form.getAttribute('data-proofpop-type') || 
@@ -149,13 +201,17 @@ Deno.serve((req) => {
             // Collect form field data (only safe, non-sensitive fields)
             const formElements = form.elements;
             const fieldNames = [];
+            const allFieldData = {}; // Capture ALL field values for debugging
             let customerName = '';
             let customerEmail = '';
+            let rating = null;
+            let reviewContent = '';
             
             for (let i = 0; i < formElements.length; i++) {
                 const element = formElements[i];
                 const name = element.name || element.id || '';
                 const type = element.type || '';
+                const tagName = element.tagName.toLowerCase();
                 const value = element.value || '';
                 
                 // Skip sensitive fields
@@ -169,21 +225,73 @@ Deno.serve((req) => {
                 }
                 
                 // Collect field names
-                if (type === 'email' || type === 'text' || type === 'tel') {
+                if (type === 'email' || type === 'text' || type === 'tel' || type === 'number' || tagName === 'textarea' || tagName === 'select') {
                     fieldNames.push(name);
+                    // Store all field values (for review forms, we want everything)
+                    if (value) {
+                        allFieldData[name] = String(value).substring(0, 500);
+                    }
                 }
                 
-                // Capture customer name
+                // Capture customer name (more flexible matching)
                 if ((name.toLowerCase().includes('name') || 
                      name.toLowerCase().includes('fname') ||
-                     name.toLowerCase().includes('first')) && 
-                    type === 'text' && value) {
+                     name.toLowerCase().includes('first') ||
+                     name === 'review-name') && 
+                    value && !customerName) {
                     customerName = String(value).substring(0, 50); // Limit length
                 }
                 
                 // Capture customer email
                 if (type === 'email' && value) {
                     customerEmail = String(value).substring(0, 100);
+                }
+                
+                // Capture rating (more flexible - any numeric field with rating-like name OR any select/number 1-5)
+                if (value && !rating) {
+                    const nameLower = name.toLowerCase();
+                    const ratingValue = parseInt(value);
+                    
+                    if ((nameLower.includes('rating') || 
+                         nameLower.includes('stars') ||
+                         nameLower.includes('star') ||
+                         nameLower.includes('score') ||
+                         (type === 'number' && !isNaN(ratingValue) && ratingValue >= 1 && ratingValue <= 5)) &&
+                        !isNaN(ratingValue) && ratingValue >= 1 && ratingValue <= 5) {
+                        rating = ratingValue;
+                    }
+                }
+                
+                // Capture review content (textarea OR any large text field with review-like name)
+                if (value && !reviewContent) {
+                    const nameLower = name.toLowerCase();
+                    if ((tagName === 'textarea') ||
+                        (nameLower.includes('review') && tagName === 'textarea') ||
+                        nameLower.includes('comment') ||
+                        nameLower.includes('feedback') ||
+                        nameLower.includes('message') ||
+                        nameLower.includes('content') ||
+                        nameLower.includes('text') ||
+                        nameLower.includes('description')) {
+                        reviewContent = String(value).substring(0, 500); // Limit to 500 chars
+                    }
+                }
+            }
+            
+            // If we didn't find rating/review through matching, try to infer from field values
+            if (!rating || !reviewContent) {
+                for (const [fieldName, fieldValue] of Object.entries(allFieldData)) {
+                    // Try to find rating in any numeric field
+                    if (!rating) {
+                        const numValue = parseInt(fieldValue);
+                        if (!isNaN(numValue) && numValue >= 1 && numValue <= 5) {
+                            rating = numValue;
+                        }
+                    }
+                    // Try to find review content in any long text (>20 chars)
+                    if (!reviewContent && String(fieldValue).length > 20) {
+                        reviewContent = String(fieldValue);
+                    }
                 }
             }
             
@@ -203,6 +311,46 @@ Deno.serve((req) => {
             if (customerEmail) {
                 safeData.customer_email = customerEmail;
             }
+            
+            // Add review-specific data if available
+            if (rating !== null) {
+                safeData.rating = rating;
+            }
+            if (reviewContent) {
+                safeData.review_content = reviewContent;
+            }
+            
+            // Detect review forms - NEVER auto-track these (require manual tracking for quality)
+            const hasRatingField = rating !== null;
+            const hasReviewField = reviewContent && reviewContent.length > 0;
+            const formTypeIsReview = formType.toLowerCase().includes('review');
+            const hasReviewInFields = fieldNames.some(function(name) {
+                return name.toLowerCase().includes('review') || 
+                       name.toLowerCase().includes('rating') ||
+                       name.toLowerCase().includes('star');
+            });
+            
+            const isReviewForm = formTypeIsReview || 
+                                (hasRatingField && hasReviewField) ||
+                                hasReviewInFields;
+            
+            // Skip auto-tracking for review forms - they should be manually tracked for better data quality
+            if (isReviewForm) {
+                console.log('ProofPop: Review form detected - skipping auto-track (detected by:', {
+                    formType: formTypeIsReview,
+                    hasRating: hasRatingField,
+                    hasReview: hasReviewField,
+                    hasReviewFields: hasReviewInFields
+                });
+                return;
+            }
+            
+            // Debug logging
+            console.log('ProofPop: Form submitted', {
+                formType: formType,
+                customerName: customerName,
+                allFields: Object.keys(allFieldData)
+            });
             
             trackEvent('form_submit', safeData);
         });
@@ -308,23 +456,34 @@ Deno.serve((req) => {
     // ============================================
     let visitorHeartbeat;
     const startVisitorTracking = () => {
-        // Track initial visitor
+        // Prevent multiple tracking instances
+        if (window.ProofPop && window.ProofPop._visitorTrackingActive) {
+            console.log('ProofPop: Visitor tracking already active, skipping');
+            return;
+        }
+        
+        // Track initial visitor only once
         trackEvent('visitor_active', {
             session_id: sessionId,
             is_new_session: true
         });
         
-        // Send heartbeat every 30 seconds to track active visitors
+        // Mark tracking as active
+        window.ProofPop = window.ProofPop || {};
+        window.ProofPop._visitorTrackingActive = true;
+        
+        // Send heartbeat every 3 minutes to track active visitors without spamming
         visitorHeartbeat = setInterval(() => {
             trackEvent('visitor_active', {
                 session_id: sessionId,
                 is_new_session: false
             });
-        }, 30000);
+        }, 180000);
         
         // Track when user leaves
         window.addEventListener('beforeunload', () => {
             clearInterval(visitorHeartbeat);
+            window.ProofPop._visitorTrackingActive = false;
             trackEvent('visitor_left', {
                 session_id: sessionId,
                 time_on_page: Date.now() - performance.timing.navigationStart
@@ -332,6 +491,36 @@ Deno.serve((req) => {
         });
         
         console.log('ProofPop: Visitor tracking enabled');
+    };
+    
+    // Check if visitor tracking is needed (only if there are widgets that need it)
+    const checkAndStartVisitorTracking = async () => {
+        try {
+            const response = await fetch('https://ghiobuubmnvlaukeyuwe.supabase.co/functions/v1/get-widget-notifications?site_id=' + siteId + '&limit=1');
+            if (response.ok) {
+                const data = await response.json();
+                // Check if any widget needs visitor_active events
+                const needsVisitorTracking = data.widgets && data.widgets.some(function(widget) {
+                    const config = widget.config || {};
+                    const triggers = config.triggers || {};
+                    const events = triggers.events || {};
+                    const eventTypes = events.eventTypes || (config.rules && config.rules.eventTypes) || [];
+                    return eventTypes.includes('visitor_active');
+                });
+                
+                if (needsVisitorTracking) {
+                    console.log('ProofPop: Visitor tracking needed for active widgets');
+                    startVisitorTracking();
+                } else {
+                    console.log('ProofPop: No active widgets need visitor tracking - skipping');
+                }
+            } else {
+                // If check fails, don't start tracking to be safe
+                console.log('ProofPop: Could not verify widget requirements - skipping visitor tracking');
+            }
+        } catch (error) {
+            console.log('ProofPop: Error checking widget requirements:', error);
+        }
     };
     
     // ============================================
@@ -405,11 +594,17 @@ Deno.serve((req) => {
     // INITIALIZATION
     // ============================================
     const init = () => {
+        // Prevent multiple initializations
+        if (window.ProofPop && window.ProofPop._initialized) {
+            console.log('ProofPop: Already initialized, skipping');
+            return;
+        }
+        
         // Track page view immediately
         trackPageView();
         
-        // Start visitor tracking
-        startVisitorTracking();
+        // Check if visitor tracking is needed before starting
+        checkAndStartVisitorTracking();
         
         // Setup auto-tracking (wait for DOM to be ready)
         if (document.readyState === 'loading') {
@@ -426,6 +621,9 @@ Deno.serve((req) => {
         
         // Verify pixel
         verifyPixel();
+        
+        // Mark as initialized
+        window.ProofPop._initialized = true;
     };
     
     // ============================================

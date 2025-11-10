@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Search, Plus, Eye, EyeOff, Users, BarChart3, Edit3, Menu, Globe, Trash2, ShoppingBag, Bell, Code } from 'lucide-react';
-import { RuleBasedNotificationCreator } from './RuleBasedNotificationCreator';
+import { TemplateSelector } from './TemplateSelector';
 import { AddSiteModal } from './AddSiteModal';
 import { PixelIntegration } from './PixelIntegration';
 import { ConfirmationModal } from './ConfirmationModal';
-import { WidgetEditor } from './WidgetEditor';
+import { WidgetEditorWithPreview } from './WidgetEditor/index';
 import { supabase } from '../lib/supabase';
+import Account from '../pages/Account';
+import Analytics from '../pages/Analytics';
 
 interface MainContentProps {
   activeSection: string;
@@ -465,14 +467,13 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
 
   if (activeSection === 'create-notification') {
     return (
-      <RuleBasedNotificationCreator 
-        onNotificationCreated={async (widgetId?: string) => {
-          // Refresh notifications and wait for it to complete
-          await fetchNotifications();
-          console.log('Notifications refreshed after widget creation');
-          
-          // Navigate back to notifications page to see the new widget
-          onSectionChange('notifications');
+      <TemplateSelector 
+        onTemplateSelected={(widgetId: string) => {
+          // Open the newly created widget in the enhanced editor immediately
+          console.log('Opening newly created widget in enhanced editor:', widgetId);
+          setSelectedWidgetId(widgetId);
+          localStorage.setItem('lastWidgetId', widgetId);
+          onSectionChange('edit-widget');
         }}
         onBack={() => onSectionChange('notifications')}
         userId={userId}
@@ -678,7 +679,11 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
               notifications.map((notification) => {
                 const IconComponent = getNotificationIcon(notification.preview.icon);
                 return (
-                  <div key={notification.id} className="border-b border-gray-200 px-6 py-6 hover:bg-gray-50 transition-colors">
+                  <div 
+                    key={notification.id} 
+                    onClick={() => editWidget(notification.id)}
+                    className="border-b border-gray-200 px-6 py-6 hover:bg-gray-50 transition-colors cursor-pointer group"
+                  >
                     {/* Mobile Layout */}
                     <div className="lg:hidden space-y-4">
                       <div className="flex items-start justify-between">
@@ -692,7 +697,10 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                           </div>
                         </div>
                         <button
-                          onClick={() => toggleNotificationStatus(notification.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleNotificationStatus(notification.id);
+                          }}
                           className={`w-11 h-6 rounded-full relative transition-colors ${
                             notification.status === 'active' ? 'bg-blue-600' : 'bg-gray-300'
                           }`}
@@ -722,14 +730,20 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                         </div>
                         <div className="flex items-center space-x-2">
                           <button 
-                            onClick={() => editWidget(notification.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              editWidget(notification.id);
+                            }}
                             className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
                             title="Edit Widget"
                           >
                             <Edit3 className="w-4 h-4 text-gray-400 hover:text-blue-600" />
                           </button>
                           <button 
-                            onClick={() => deleteNotification(notification.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteNotification(notification.id);
+                            }}
                             className="p-2 hover:bg-red-50 rounded-lg transition-colors"
                           >
                             <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-600" />
@@ -791,7 +805,10 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                         <div className="flex items-center space-x-3">
                           {/* Toggle Switch */}
                           <button
-                            onClick={() => toggleNotificationStatus(notification.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleNotificationStatus(notification.id);
+                            }}
                             className={`w-11 h-6 rounded-full relative cursor-pointer shadow-inner transition-colors ${
                               notification.status === 'active' ? 'bg-blue-600' : 'bg-gray-300'
                             }`}
@@ -803,14 +820,20 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                         </div>
                         <div className="flex items-center space-x-1">
                           <button 
-                            onClick={() => editWidget(notification.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              editWidget(notification.id);
+                            }}
                             className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
                             title="Edit Widget"
                           >
                             <Edit3 className="w-4 h-4 text-gray-400 hover:text-blue-600" />
                           </button>
                           <button 
-                            onClick={() => deleteNotification(notification.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteNotification(notification.id);
+                            }}
                             className="p-2 hover:bg-red-50 rounded-lg transition-colors"
                           >
                             <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-600" />
@@ -1112,7 +1135,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
     console.log('Rendering widget editor for widget ID:', selectedWidgetId);
     return (
       <>
-        <WidgetEditor 
+        <WidgetEditorWithPreview 
           widgetId={selectedWidgetId}
           onBack={() => {
             // Clear the widget ID and go back to notifications
@@ -1138,6 +1161,16 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
         />
       </>
     );
+  }
+
+  // Account settings screen
+  if (activeSection === 'settings') {
+    return <Account onNavigate={onSectionChange} />;
+  }
+
+  // Analytics screen
+  if (activeSection === 'analytics' && userId) {
+    return <Analytics userId={userId} />;
   }
 
   // Default content for other sections

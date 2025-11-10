@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProofPop Widget Tester - E-commerce Demo</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+   <!-- ProofPop Pixel Code for https://stunning-salamander-60bf35.netlify.app/ -->
+<script src="https://ghiobuubmnvlaukeyuwe.supabase.co/functions/v1/pixel-loader" data-site-id="48bf66cb-8842-422f-a66f-a3a341a00ec1" async defer></script>
+<!-- END ProofPop Pixel Code -->
+
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <h1>🚀 ProofPop Store</h1>
+                    <span class="badge">Widget Tester</span>
+                </div>
+                <nav class="nav">
+                    <a href="#products">Products</a>
+                    <a href="#reviews">Reviews</a>
+                    <a href="#contact">Contact</a>
+                    <div class="cart-icon">
+                        🛒 <span id="cart-count">0</span>
+                    </div>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h2 class="hero-title">Test All ProofPop Widgets</h2>
+                <p class="hero-subtitle">Complete E-commerce Testing Environment</p>
+                <div class="hero-stats">
+                    <div class="stat">
+                        <span class="stat-number" id="visitor-count">0</span>
+                        <span class="stat-label">Live Visitors</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number" id="purchase-count">0</span>
+                        <span class="stat-label">Recent Purchases</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number" id="signup-count">0</span>
+                        <span class="stat-label">New Signups</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Products Section -->
+    <section id="products" class="products-section">
+        <div class="container">
+            <h2 class="section-title">Premium Products</h2>
+            <p class="section-subtitle">Test Purchase & Cart Activity Widgets</p>
+            
+            <div class="products-grid">
+                <!-- Product 1 -->
+                <div class="product-card">
+                    <div class="product-badge">Best Seller</div>
+                    <div class="product-image">
+                        <div class="product-image-placeholder">📦</div>
+                    </div>
+                    <div class="product-content">
+                        <h3 class="product-title">Starter Plan</h3>
+                        <p class="product-description">Perfect for small businesses starting their social proof journey</p>
+                        <div class="product-features">
+                            <span>✓ 10,000 notifications/mo</span>
+                            <span>✓ 3 widget types</span>
+                            <span>✓ Basic analytics</span>
+                        </div>
+                        <div class="product-footer">
+                            <span class="product-price">$29<span>/month</span></span>
+                            <button class="btn btn-primary" onclick="testPurchase('Starter Plan', 29)">Buy Now</button>
+                            <button class="btn btn-secondary" onclick="testAddToCart('Starter Plan', 29)">Add to Cart</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Product 2 -->
+                <div class="product-card featured">
+                    <div class="product-badge">Most Popular</div>
+                    <div class="product-image">
+                        <div class="product-image-placeholder">🎯</div>
+                    </div>
+                    <div class="product-content">
+                        <h3 class="product-title">Pro Plan</h3>
+                        <p class="product-description">Advanced features for growing businesses</p>
+                        <div class="product-features">
+                            <span>✓ 50,000 notifications/mo</span>
+                            <span>✓ All widget types</span>
+                            <span>✓ Advanced analytics</span>
+                            <span>✓ Priority support</span>
+                        </div>
+                        <div class="product-footer">
+                            <span class="product-price">$99<span>/month</span></span>
+                            <button class="btn btn-primary" onclick="testPurchase('Pro Plan', 99)">Buy Now</button>
+                            <button class="btn btn-secondary" onclick="testAddToCart('Pro Plan', 99)">Add to Cart</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Product 3 -->
+                <div class="product-card">
+                    <div class="product-badge">Enterprise</div>
+                    <div class="product-image">
+                        <div class="product-image-placeholder">🏢</div>
+                    </div>
+                    <div class="product-content">
+                        <h3 class="product-title">Enterprise Plan</h3>
+                        <p class="product-description">Custom solutions for large organizations</p>
+                        <div class="product-features">
+                            <span>✓ Unlimited notifications</span>
+                            <span>✓ Custom widgets</span>
+                            <span>✓ White-label</span>
+                            <span>✓ Dedicated support</span>
+                        </div>
+                        <div class="product-footer">
+                            <span class="product-price">$299<span>/month</span></span>
+                            <button class="btn btn-primary" onclick="testPurchase('Enterprise Plan', 299)">Buy Now</button>
+                            <button class="btn btn-secondary" onclick="testAddToCart('Enterprise Plan', 299)">Add to Cart</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Reviews Section -->
+    <section id="reviews" class="reviews-section">
+        <div class="container">
+            <h2 class="section-title">Customer Reviews</h2>
+            <p class="section-subtitle">Test Review Widget</p>
+            
+            <div class="reviews-grid">
+                <!-- Existing Reviews -->
+                <div class="review-card">
+                    <div class="review-header">
+                        <div class="review-avatar">JD</div>
+                        <div>
+                            <h4>John Doe</h4>
+                            <div class="stars">⭐⭐⭐⭐⭐</div>
+                        </div>
+                    </div>
+                    <p>"Amazing product! The widgets increased our conversions by 45%."</p>
+                </div>
+
+                <div class="review-card">
+                    <div class="review-header">
+                        <div class="review-avatar">SM</div>
+                        <div>
+                            <h4>Sarah Miller</h4>
+                            <div class="stars">⭐⭐⭐⭐⭐</div>
+                        </div>
+                    </div>
+                    <p>"Best social proof tool I've ever used. Highly recommended!"</p>
+                </div>
+
+                <div class="review-card">
+                    <div class="review-header">
+                        <div class="review-avatar">MJ</div>
+                        <div>
+                            <h4>Mike Johnson</h4>
+                            <div class="stars">⭐⭐⭐⭐⭐</div>
+                        </div>
+                    </div>
+                    <p>"Game changer for our e-commerce store. Simple and effective."</p>
+                </div>
+            </div>
+
+            <!-- Review Submission Form -->
+            <div class="review-form-container">
+                <h3>Leave a Review (Test Review Widget)</h3>
+                <form id="review-form" class="review-form">
+                    <input type="text" id="review-name" placeholder="Your Name" required>
+                    <div class="rating-input">
+                        <label>Rating:</label>
+                        <select id="review-rating" required>
+                            <option value="5">⭐⭐⭐⭐⭐ (5 stars)</option>
+                            <option value="4">⭐⭐⭐⭐ (4 stars)</option>
+                            <option value="3">⭐⭐⭐ (3 stars)</option>
+                            <option value="2">⭐⭐ (2 stars)</option>
+                            <option value="1">⭐ (1 star)</option>
+                        </select>
+                    </div>
+                    <textarea id="review-text" placeholder="Your review..." rows="4" required></textarea>
+                    <button type="submit" class="btn btn-primary">Submit Review</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact/Form Section -->
+    <section id="contact" class="contact-section">
+        <div class="container">
+            <div class="contact-grid">
+                <!-- Contact Form -->
+                <div class="contact-card">
+                    <h2 class="section-title">Contact Us</h2>
+                    <p class="section-subtitle">Test Form Submission Widget</p>
+                    
+                    <form id="contact-form" class="contact-form">
+                        <input type="text" name="name" placeholder="Your Name" required>
+                        <input type="email" name="email" placeholder="Your Email" required>
+                        <input type="tel" name="phone" placeholder="Phone Number">
+                        <textarea name="message" placeholder="Your Message" rows="4" required></textarea>
+                        <button type="submit" class="btn btn-primary">Send Message</button>
+                    </form>
+                </div>
+
+                <!-- Newsletter Signup -->
+                <div class="contact-card">
+                    <h2 class="section-title">Newsletter</h2>
+                    <p class="section-subtitle">Test Signup Widget</p>
+                    
+                    <form id="newsletter-form" class="newsletter-form">
+                        <input type="text" name="name" placeholder="Full Name" required>
+                        <input type="email" name="email" placeholder="Email Address" required>
+                        <button type="submit" class="btn btn-primary">Sign Up</button>
+                    </form>
+
+                    <div class="signup-benefits">
+                        <h4>Benefits of signing up:</h4>
+                        <ul>
+                            <li>✓ Weekly tips and tricks</li>
+                            <li>✓ Exclusive discounts</li>
+                            <li>✓ Early access to features</li>
+                            <li>✓ Free widget templates</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Test Controls Panel -->
+    <div class="test-panel">
+        <button class="test-panel-toggle" onclick="toggleTestPanel()">🧪 Test Controls</button>
+        <div class="test-panel-content" id="test-panel-content">
+            <h3>Widget Testing Controls</h3>
+            <p>Manually trigger widget events for testing</p>
+            
+            <div class="test-buttons">
+                <button onclick="testPurchase('Test Product', 99)" class="test-btn">
+                    🛍️ Test Purchase
+                </button>
+                <button onclick="testAddToCart('Test Product', 49)" class="test-btn">
+                    🛒 Test Add to Cart
+                </button>
+                <button onclick="testSignup()" class="test-btn">
+                    👤 Test Signup
+                </button>
+                <button onclick="testReview()" class="test-btn">
+                    ⭐ Test Review
+                </button>
+                <button onclick="testFormSubmit()" class="test-btn">
+                    📝 Test Form Submit
+                </button>
+                <button onclick="simulateVisitors()" class="test-btn">
+                    👥 Simulate Visitors
+                </button>
+                <button onclick="clearAllEvents()" class="test-btn danger">
+                    🗑️ Clear Stats
+                </button>
+            </div>
+
+            <div class="test-info">
+                <h4>Event Log:</h4>
+                <div id="event-log" class="event-log"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>ProofPop Widget Tester</h4>
+                    <p>Comprehensive testing environment for all widget types</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Tested Widgets</h4>
+                    <ul>
+                        <li>✓ Purchase Notifications</li>
+                        <li>✓ Cart Activity</li>
+                        <li>✓ Form Submissions</li>
+                        <li>✓ Signups</li>
+                        <li>✓ Reviews</li>
+                        <li>✓ Live Visitors</li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Instructions</h4>
+                    <p>Use the buttons to test each widget type. Check the event log for confirmation.</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 ProofPop. All rights reserved. | Built for comprehensive widget testing</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="test-script.js"></script>
+</body>
+</html>

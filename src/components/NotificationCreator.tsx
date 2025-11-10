@@ -188,27 +188,46 @@ export function NotificationCreator({ onNotificationCreated, userId, selectedSit
         throw new Error('Template not found');
       }
 
+      // Map template ID to event types
+      const templateEventTypeMap: Record<string, string[]> = {
+        'live-visitors': ['page_view'],
+        'recent-signup': ['signup'],
+        'newsletter-subscriber': ['newsletter_signup'],
+        'product-purchased': ['purchase'],
+        'customer-reviews': ['review']
+      };
+      
+      const eventTypes = templateEventTypeMap[templateId] || ['purchase'];
+
       // Create a widget record in the database
       const { data: widgetData, error: widgetError } = await supabase
         .from('widgets')
         .insert([{
           user_id: userId,
+          site_id: selectedSiteId,
           name: template.title,
-          // Use a valid enum value for the widget type
-          // The enum likely has values like 'recent_purchase', 'signup', etc.
-          type: 'recent_purchase', 
+          type: 'notification',
+          is_active: true,
+          notification_time_range: 168,
           config: {
             template_id: templateId,
-            original_type: template.id, // Store the original template ID in config
+            original_type: template.id,
             title: template.title,
             description: template.description,
             preview: template.preview,
             color: template.color,
             bgColor: template.bgColor,
-            // Store site ID in the config object instead
-            site_id: selectedSiteId
-          },
-          is_active: true
+            triggers: {
+              events: {
+                eventTypes: eventTypes
+              }
+            },
+            rules: {
+              eventTypes: eventTypes,
+              timeWindowHours: 168,
+              excludeTestEvents: false
+            }
+          }
         }])
         .select('id, name')
         .single();
