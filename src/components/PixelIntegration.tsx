@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Copy, CheckCircle, AlertCircle, ArrowLeft, ExternalLink, Globe, Loader2, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { IntegrationsSection } from './IntegrationsSection';
+import { useAuth } from './auth/AuthProvider';
 
 interface PixelIntegrationProps {
   selectedSite: {
@@ -14,13 +15,7 @@ interface PixelIntegrationProps {
 }
 
 export function PixelIntegration({ selectedSite, onBack }: PixelIntegrationProps) {
-  if (!selectedSite) {
-    return (
-      <div className="flex-1 bg-gray-50 min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-      </div>
-    );
-  }
+  const { user } = useAuth();
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [pixelStatus, setPixelStatus] = useState<'inactive' | 'active' | 'checking'>('inactive');
   const [lastSeenAt, setLastSeenAt] = useState<string | null>(null);
@@ -35,6 +30,15 @@ export function PixelIntegration({ selectedSite, onBack }: PixelIntegrationProps
   const [iframeKey, setIframeKey] = useState(Date.now()); // Used to force iframe reload
   const [verificationWindow, setVerificationWindow] = useState<Window | null>(null);
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
+  const [woocommerceApiKey, setWoocommerceApiKey] = useState<string | null>(null);
+  const [woocommerceKeyLoading, setWoocommerceKeyLoading] = useState(false);
+  const [woocommerceKeyError, setWoocommerceKeyError] = useState<string | null>(null);
+
+  const generateApiKey = () => {
+    return 'sp_' + Array.from(crypto.getRandomValues(new Uint8Array(24)))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  };
 
   const copyToClipboard = async (text: string, id: string) => {
     try {
@@ -94,6 +98,71 @@ export function PixelIntegration({ selectedSite, onBack }: PixelIntegrationProps
       }
     };
   }, [verificationWindow]);
+
+  useEffect(() => {
+    const ensureWooApiKey = async () => {
+      if (selectedPlatform !== 'woocommerce' || !user || !selectedSite) {
+        return;
+      }
+
+      setWoocommerceKeyLoading(true);
+      setWoocommerceKeyError(null);
+
+      try {
+        const { data, error } = await supabase
+          .from('api_keys')
+          .select('id, public_key, is_active')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (error) {
+          throw error;
+        }
+
+        if (data && data.length > 0) {
+          setWoocommerceApiKey(data[0].public_key);
+          return;
+        }
+
+        const newKey = generateApiKey();
+        const { data: inserted, error: insertError } = await supabase
+          .from('api_keys')
+          .insert([
+            {
+              user_id: user.id,
+              name: `WooCommerce - ${selectedSite.domain || selectedSite.name}`,
+              public_key: newKey,
+              domain: selectedSite.domain || null,
+            },
+          ])
+          .select('public_key')
+          .single();
+
+        if (insertError) {
+          throw insertError;
+        }
+
+        setWoocommerceApiKey(inserted.public_key);
+      } catch (error: any) {
+        console.error('Error ensuring WooCommerce API key:', error);
+        setWoocommerceKeyError('Could not generate API key. Please try again from the API Keys section.');
+      } finally {
+        setWoocommerceKeyLoading(false);
+      }
+    };
+
+    ensureWooApiKey();
+  }, [selectedPlatform, user, selectedSite]);
+
+  if (!selectedSite) {
+    return (
+      <div className="flex-1 bg-gray-50 min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+      </div>
+    );
+  }
 
   // Check the pixel verification status from the database
   const checkPixelVerificationStatus = async () => {
@@ -404,10 +473,24 @@ export function PixelIntegration({ selectedSite, onBack }: PixelIntegrationProps
 <script src="https://ghiobuubmnvlaukeyuwe.supabase.co/functions/v1/pixel-loader" data-site-id="${selectedSite.id}" async defer></script>
 <!-- END ProofPop Pixel Code -->`;
 
+  const webhookUrl = 'https://ghiobuubmnvlaukeyuwe.supabase.co/functions/v1/track-event';
+
+  const webhookPayload = `{
+  "site_id": "${selectedSite.id}",
+  "event_type": "purchase",
+  "url": "https://${selectedSite.domain || 'your-site.com'}/thank-you",
+  "event_data": {
+    "customer_name": "John Doe",
+    "product_name": "Premium Plan",
+    "value": 99,
+    "currency": "USD"
+  }
+}`;
+
   return (
-    <div className="flex-1 bg-gray-50 min-h-screen relative">
+    <div className="flex-1 bg-gray-50 min-h-full relative overflow-x-hidden">
       {showWebsitePreview && selectedSite.domain && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <div className="flex items-center space-x-2">
@@ -520,35 +603,35 @@ export function PixelIntegration({ selectedSite, onBack }: PixelIntegrationProps
         </div>
       )}
 
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
+      {/* Page Header - Sticky below main header */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-20">
+        <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14 sm:h-16">
+            <div className="flex items-center space-x-2 sm:space-x-4 overflow-x-auto">
               <button
                 onClick={onBack}
-                className="inline-flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100"
+                className="inline-flex items-center space-x-1 sm:space-x-2 text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-100 active:bg-gray-200 touch-manipulation"
               >
-                <ArrowLeft className="w-5 h-5" />
-                <span className="hidden sm:inline">Back to Sites</span>
+                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="text-sm sm:text-base hidden sm:inline">Back</span>
               </button>
-              <div className="h-6 w-px bg-gray-300 hidden sm:block"></div>
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <div className="h-6 w-px bg-gray-300 hidden md:block"></div>
+              <div className="hidden md:flex items-center space-x-2 text-sm text-gray-600">
                 <span>Sites</span>
                 <span>/</span>
-                <span className="text-blue-600 font-medium">Pixel Integration</span>
+                <span className="text-blue-600 font-medium">Pixel</span>
               </div>
-              <div className="h-6 w-px bg-gray-300 hidden sm:block"></div>
-              <div>
-                <h1 className="text-lg sm:text-xl font-semibold text-gray-900 truncate">
+              <div className="h-6 w-px bg-gray-300 hidden md:block"></div>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-sm sm:text-lg md:text-xl font-semibold text-gray-900 truncate">
                   {selectedSite.domain || selectedSite.name}
                 </h1>
-                <div className="flex items-center space-x-2 mt-1">
-                  <div className={`w-2 h-2 rounded-full ${
+                <div className="flex items-center space-x-1.5 sm:space-x-2 mt-0.5 sm:mt-1">
+                  <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${
                     pixelStatus === 'active' ? 'bg-green-500' : 
                     pixelStatus === 'checking' ? 'bg-yellow-500' : 'bg-red-500'
                   }`}></div>
-                  <span className="text-sm text-gray-600">
+                  <span className="text-xs sm:text-sm text-gray-600">
                     {pixelStatus === 'active' ? 'Active' : 
                      pixelStatus === 'checking' ? 'Checking...' : 'Not Active'}
                   </span>
@@ -560,9 +643,9 @@ export function PixelIntegration({ selectedSite, onBack }: PixelIntegrationProps
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
         {/* Status Banner */}
-        <div className={`rounded-xl p-4 sm:p-6 mb-6 sm:mb-8 border-2 ${
+        <div className={`rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 mb-4 sm:mb-6 md:mb-8 border-2 ${
           pixelStatus === 'active' 
             ? 'bg-green-50 border-green-200' 
             : pixelStatus === 'checking'
@@ -570,26 +653,26 @@ export function PixelIntegration({ selectedSite, onBack }: PixelIntegrationProps
             : 'bg-red-50 border-red-200'
         }`}>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center space-x-3 mb-3 sm:mb-0">
-              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <span className="text-blue-600 font-bold text-sm">1</span>
+            <div className="flex items-start sm:items-center space-x-2 sm:space-x-3 mb-3 sm:mb-0">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-blue-600 font-bold text-xs sm:text-sm">1</span>
               </div>
               {pixelStatus === 'active' ? (
-                <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
+                <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 flex-shrink-0" />
               ) : pixelStatus === 'checking' ? (
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-600 flex-shrink-0"></div>
+                <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-yellow-600 flex-shrink-0"></div>
               ) : (
-                <AlertCircle className="w-6 h-6 text-blue-600 flex-shrink-0" />
+                <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 flex-shrink-0" />
               )}
-              <div>
-                <h3 className={`font-semibold ${
+              <div className="min-w-0 flex-1">
+                <h3 className={`font-semibold text-sm sm:text-base md:text-lg ${
                   pixelStatus === 'active' ? 'text-green-800' :
                   pixelStatus === 'checking' ? 'text-yellow-800' : 'text-blue-800'
                 }`}>
                   {pixelStatus === 'active' ? 'Pixel is Active!' :
                    pixelStatus === 'checking' ? 'Checking Pixel Status...' : 'Ready to Install Pixel'}
                 </h3>
-                <p className={`text-sm ${
+                <p className={`text-xs sm:text-sm mt-0.5 sm:mt-1 ${
                   pixelStatus === 'active' ? 'text-green-700' :
                   pixelStatus === 'checking' ? 'text-yellow-700' : 'text-blue-700'
                 }`}>
@@ -630,7 +713,7 @@ export function PixelIntegration({ selectedSite, onBack }: PixelIntegrationProps
         {/* Main Content - Platform Selection or Installation Steps */}
         {!selectedPlatform ? (
           // Step 1: Platform Selection
-          <div className="mb-8">
+          <div className="mb-4 sm:mb-6 md:mb-8">
             <IntegrationsSection 
               siteId={selectedSite.id} 
               onPlatformSelect={(platformId) => setSelectedPlatform(platformId)}
@@ -638,96 +721,200 @@ export function PixelIntegration({ selectedSite, onBack }: PixelIntegrationProps
           </div>
         ) : (
           // Step 2: Installation Steps for Selected Platform
-          <div className="mb-8">
+          <div className="mb-4 sm:mb-6 md:mb-8">
             {/* Back Button */}
             <button
               onClick={() => setSelectedPlatform(null)}
-              className="inline-flex items-center space-x-2 text-gray-600 hover:text-gray-900 mb-6 transition-colors"
+              className="inline-flex items-center space-x-1.5 sm:space-x-2 text-gray-600 hover:text-gray-900 mb-4 sm:mb-6 transition-colors p-2 -ml-2 rounded-lg hover:bg-gray-100 active:bg-gray-200 touch-manipulation"
             >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to Platform Selection</span>
+              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="text-sm sm:text-base font-medium">Back to Platforms</span>
             </button>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+            <div className="flex flex-col lg:flex-row lg:gap-8">
               {/* Installation Instructions */}
-              <div className="lg:col-span-2">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <span className="text-blue-600 font-bold">2</span>
+              <div className="flex-1 lg:max-w-2xl mb-6 lg:mb-0">
+                <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+                    <div className="flex items-center space-x-2 sm:space-x-3">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <span className="text-blue-600 font-bold text-sm sm:text-base">2</span>
                       </div>
-                      <div>
-                        <h2 className="text-lg font-semibold text-gray-900">Pixel Installation</h2>
-                        <p className="text-sm text-gray-600">Complete these steps to activate social proof on your website</p>
+                      <div className="min-w-0">
+                        <h2 className="text-base sm:text-lg font-semibold text-gray-900">Pixel Installation</h2>
+                        <p className="text-xs sm:text-sm text-gray-600 mt-0.5">Complete these steps to activate social proof</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="p-6 space-y-8">
+                  <div className="p-4 sm:p-6 space-y-6 sm:space-y-8">
                     {/* Step 1 */}
                     <div className="relative">
-                      <div className="flex items-start space-x-4">
-                        <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+                      <div className="flex items-start space-x-3 sm:space-x-4">
+                        <div className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold">
                           1
                         </div>
-                        <div className="flex-1">
-                          <h3 className="text-lg font-medium text-gray-900 mb-2">
-                            Copy the Pixel Code
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-1.5 sm:mb-2">
+                            {selectedPlatform === 'woocommerce'
+                              ? 'Connect WooCommerce with Keys'
+                              : selectedPlatform === 'webhook'
+                              ? 'Connect via Webhook'
+                              : 'Copy the Pixel Code'}
                           </h3>
-                          <p className="text-gray-600 mb-4">
-                            Copy the code snippet below to integrate the social proof widget into your website.
+                          <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
+                            {selectedPlatform === 'woocommerce'
+                              ? 'Use your Site Key and API Key below inside the ProofPop WooCommerce plugin settings.'
+                              : selectedPlatform === 'webhook'
+                              ? 'Send events from your backend to the webhook URL below using the JSON payload.'
+                              : 'Copy the code snippet below to integrate the social proof widget into your website.'}
                           </p>
                           
-                          <div className="relative">
-                            <div className="flex items-center justify-between bg-gray-800 rounded-t-lg px-4 py-2 border-b border-gray-700">
-                              <span className="text-xs text-gray-400">Pixel Code</span>
-                              <button
-                                onClick={() => copyToClipboard(pixelCode, 'pixel-code')}
-                                className="p-2 text-gray-400 hover:text-gray-200 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors flex items-center space-x-1"
-                              >
-                                <Copy className="w-4 h-4" />
-                                <span className="text-xs">Copy</span>
-                              </button>
-                            </div>
-                            <pre className="bg-gray-900 text-gray-100 p-4 rounded-b-lg overflow-x-auto text-sm font-mono border border-t-0 border-gray-700 max-h-[150px] whitespace-pre-wrap break-all">
-                              <code>{pixelCode}</code>
-                              <div className="mt-3 text-xs text-gray-400">This code will track page visits and verify your site.</div>
-                            </pre>
-                            {copiedCode === 'pixel-code' && (
-                              <div className="absolute top-2 right-14 bg-green-600 text-white px-3 py-1 rounded-lg text-xs font-medium">
-                                Copied!
+                          {selectedPlatform === 'woocommerce' ? (
+                            <div className="space-y-4">
+                              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-xs sm:text-sm font-medium text-gray-700">Site Key</span>
+                                  <button
+                                    onClick={() => copyToClipboard(selectedSite.public_key, 'woocommerce-site-key')}
+                                    className="inline-flex items-center px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
+                                  >
+                                    <Copy className="w-3 h-3 mr-1" />
+                                    <span>Copy</span>
+                                  </button>
+                                </div>
+                                <div className="bg-white rounded-md px-3 py-2 border border-gray-200 font-mono text-xs sm:text-sm text-gray-900 break-all">
+                                  {selectedSite.public_key}
+                                </div>
+                                {copiedCode === 'woocommerce-site-key' && (
+                                  <div className="mt-1 text-xs text-green-600">Copied site key</div>
+                                )}
                               </div>
-                            )}
-                          </div>
+
+                              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-xs sm:text-sm font-medium text-gray-700">API Key</span>
+                                  <button
+                                    onClick={() => woocommerceApiKey && copyToClipboard(woocommerceApiKey, 'woocommerce-api-key')}
+                                    className="inline-flex items-center px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                                    disabled={!woocommerceApiKey || woocommerceKeyLoading}
+                                  >
+                                    <Copy className="w-3 h-3 mr-1" />
+                                    <span>Copy</span>
+                                  </button>
+                                </div>
+                                <div className="bg-white rounded-md px-3 py-2 border border-gray-200 font-mono text-xs sm:text-sm text-gray-900 break-all">
+                                  {woocommerceKeyLoading && 'Generating API key...'}
+                                  {!woocommerceKeyLoading && woocommerceApiKey && woocommerceApiKey}
+                                  {!woocommerceKeyLoading && !woocommerceApiKey && !woocommerceKeyError && 'No key available'}
+                                  {woocommerceKeyError && (
+                                    <span className="text-red-600">{woocommerceKeyError}</span>
+                                  )}
+                                </div>
+                                {copiedCode === 'woocommerce-api-key' && (
+                                  <div className="mt-1 text-xs text-green-600">Copied API key</div>
+                                )}
+                              </div>
+
+                              <div className="text-xs sm:text-sm text-gray-600">
+                                Install the ProofPop WooCommerce plugin, then paste the Site Key and API Key into the plugin settings to start sending events.
+                              </div>
+                            </div>
+                          ) : selectedPlatform === 'webhook' ? (
+                            <div className="space-y-4">
+                              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-xs sm:text-sm font-medium text-gray-700">Webhook URL</span>
+                                  <button
+                                    onClick={() => copyToClipboard(webhookUrl, 'webhook-url')}
+                                    className="inline-flex items-center px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
+                                  >
+                                    <Copy className="w-3 h-3 mr-1" />
+                                    <span>Copy</span>
+                                  </button>
+                                </div>
+                                <div className="bg-white rounded-md px-3 py-2 border border-gray-200 font-mono text-xs sm:text-sm text-gray-900 break-all">
+                                  {webhookUrl}
+                                </div>
+                                {copiedCode === 'webhook-url' && (
+                                  <div className="mt-1 text-xs text-green-600">Copied webhook URL</div>
+                                )}
+                              </div>
+
+                              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-xs sm:text-sm font-medium text-gray-700">Example JSON Payload</span>
+                                  <button
+                                    onClick={() => copyToClipboard(webhookPayload, 'webhook-payload')}
+                                    className="inline-flex items-center px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
+                                  >
+                                    <Copy className="w-3 h-3 mr-1" />
+                                    <span>Copy</span>
+                                  </button>
+                                </div>
+                                <pre className="bg-white rounded-md px-3 py-2 border border-gray-200 font-mono text-[11px] sm:text-xs text-gray-900 overflow-x-auto whitespace-pre">
+{webhookPayload}
+                                </pre>
+                                {copiedCode === 'webhook-payload' && (
+                                  <div className="mt-1 text-xs text-green-600">Copied example payload</div>
+                                )}
+                              </div>
+
+                              <div className="text-xs sm:text-sm text-gray-600">
+                                Send a POST request with this JSON body whenever a purchase, signup, or other event happens in your backend. Widgets listening for this event type will turn these into live notifications.
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="relative">
+                              <div className="flex items-center justify-between bg-gray-800 rounded-t-lg px-3 sm:px-4 py-2 border-b border-gray-700">
+                                <span className="text-xs text-gray-400">Pixel Code</span>
+                                <button
+                                  onClick={() => copyToClipboard(pixelCode, 'pixel-code')}
+                                  className="p-2 sm:p-2.5 text-gray-400 hover:text-gray-200 active:text-white bg-gray-700 hover:bg-gray-600 active:bg-gray-500 rounded-lg transition-colors flex items-center space-x-1 touch-manipulation min-h-[44px] sm:min-h-0"
+                                >
+                                  <Copy className="w-4 h-4" />
+                                  <span className="text-xs font-medium">Copy</span>
+                                </button>
+                              </div>
+                              <pre className="bg-gray-900 text-gray-100 p-3 sm:p-4 rounded-b-lg overflow-x-auto text-xs sm:text-sm font-mono border border-t-0 border-gray-700 max-h-[120px] sm:max-h-[150px] whitespace-pre-wrap break-all">
+                                <code>{pixelCode}</code>
+                                <div className="mt-2 sm:mt-3 text-xs text-gray-400">This code will track page visits and verify your site.</div>
+                              </pre>
+                              {copiedCode === 'pixel-code' && (
+                                <div className="absolute top-2 right-2 sm:right-14 bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium shadow-lg">
+                                  ✓ Copied!
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
 
                     {/* Step 2 */}
                     <div className="relative">
-                      <div className="flex items-start space-x-4">
-                        <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+                      <div className="flex items-start space-x-3 sm:space-x-4">
+                        <div className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold">
                           2
                         </div>
-                        <div className="flex-1">
-                          <h3 className="text-lg font-medium text-gray-900 mb-2">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-1.5 sm:mb-2">
                             Paste Before Closing &lt;/head&gt; Tag
                           </h3>
-                          <p className="text-gray-600 mb-4">
+                          <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
                             Add the code to every page where you want to display social proof notifications, right before the closing &lt;/head&gt; tag.
                           </p>
                           
-                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <div className="flex items-start space-x-3">
-                              <div className="flex-shrink-0">
-                                <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
-                                  <CheckCircle className="w-3 h-3 text-blue-600" />
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+                            <div className="flex items-start space-x-2 sm:space-x-3">
+                              <div className="flex-shrink-0 mt-0.5">
+                                <div className="w-5 h-5 sm:w-6 sm:h-6 bg-blue-100 rounded-lg flex items-center justify-center">
+                                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
                                 </div>
                               </div>
-                              <div>
-                                <h4 className="font-medium text-blue-900 mb-1">Pro Tip</h4>
-                                <p className="text-sm text-blue-800">
+                              <div className="min-w-0">
+                                <h4 className="font-medium text-sm sm:text-base text-blue-900 mb-0.5 sm:mb-1">Pro Tip</h4>
+                                <p className="text-xs sm:text-sm text-blue-800">
                                   For best performance, place the script in your site's template or header file so it loads on all pages automatically.
                                 </p>
                               </div>
@@ -739,28 +926,28 @@ export function PixelIntegration({ selectedSite, onBack }: PixelIntegrationProps
 
                     {/* Step 3 */}
                     <div className="relative">
-                      <div className="flex items-start space-x-4">
-                        <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+                      <div className="flex items-start space-x-3 sm:space-x-4">
+                        <div className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold">
                           3
                         </div>
-                        <div className="flex-1">
-                          <h3 className="text-lg font-medium text-gray-900 mb-2">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-1.5 sm:mb-2">
                             Check Verification Status
                           </h3>
-                          <p className="text-gray-600 mb-4">
+                          <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
                             Check the verification status indicator at the top of this page to confirm if your pixel is active and working correctly.
                           </p>
                           
-                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <div className="flex items-start space-x-3">
-                              <div className="flex-shrink-0">
-                                <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
-                                  <CheckCircle className="w-3 h-3 text-blue-600" />
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+                            <div className="flex items-start space-x-2 sm:space-x-3">
+                              <div className="flex-shrink-0 mt-0.5">
+                                <div className="w-5 h-5 sm:w-6 sm:h-6 bg-blue-100 rounded-lg flex items-center justify-center">
+                                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
                                 </div>
                               </div>
-                              <div>
-                                <h4 className="font-medium text-blue-900 mb-1">Status Indicator</h4>
-                                <p className="text-sm text-blue-800">
+                              <div className="min-w-0">
+                                <h4 className="font-medium text-sm sm:text-base text-blue-900 mb-0.5 sm:mb-1">Status Indicator</h4>
+                                <p className="text-xs sm:text-sm text-blue-800">
                                   Look for the status indicator next to your site name at the top. A green dot means your pixel is active and tracking successfully.
                                 </p>
                               </div>
@@ -774,33 +961,35 @@ export function PixelIntegration({ selectedSite, onBack }: PixelIntegrationProps
               </div>
 
               {/* Sidebar */}
-              <div className="space-y-6">
+              <div className="mt-4 sm:mt-6 lg:mt-0 lg:w-80 lg:shrink-0">
+                <div className="lg:sticky lg:top-4 space-y-4 sm:space-y-6">
                 {/* Help & Support */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <h3 className="font-semibold text-gray-900 mb-4">Need Help?</h3>
-                  <div className="space-y-3">
+                <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
+                  <h3 className="font-semibold text-base sm:text-lg text-gray-900 mb-3 sm:mb-4">Need Help?</h3>
+                  <div className="space-y-2 sm:space-y-3">
                     <a
                       href="#"
-                      className="flex items-center space-x-3 text-sm text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-50"
+                      className="flex items-center space-x-2 sm:space-x-3 text-xs sm:text-sm text-gray-600 hover:text-gray-900 active:text-blue-600 transition-colors p-2.5 sm:p-2 rounded-lg hover:bg-gray-50 active:bg-blue-50 touch-manipulation min-h-[44px] sm:min-h-0"
                     >
-                      <span>📚</span>
-                      <span>Documentation</span>
+                      <span className="text-base sm:text-lg">📚</span>
+                      <span className="font-medium">Documentation</span>
                     </a>
                     <a
                       href="#"
-                      className="flex items-center space-x-3 text-sm text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-50"
+                      className="flex items-center space-x-2 sm:space-x-3 text-xs sm:text-sm text-gray-600 hover:text-gray-900 active:text-blue-600 transition-colors p-2.5 sm:p-2 rounded-lg hover:bg-gray-50 active:bg-blue-50 touch-manipulation min-h-[44px] sm:min-h-0"
                     >
-                      <span>💬</span>
-                      <span>Live Chat Support</span>
+                      <span className="text-base sm:text-lg">💬</span>
+                      <span className="font-medium">Live Chat Support</span>
                     </a>
                     <a
                       href="#"
-                      className="flex items-center space-x-3 text-sm text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-lg hover:bg-gray-50"
+                      className="flex items-center space-x-2 sm:space-x-3 text-xs sm:text-sm text-gray-600 hover:text-gray-900 active:text-blue-600 transition-colors p-2.5 sm:p-2 rounded-lg hover:bg-gray-50 active:bg-blue-50 touch-manipulation min-h-[44px] sm:min-h-0"
                     >
-                      <span>📧</span>
-                      <span>Email Support</span>
+                      <span className="text-base sm:text-lg">📧</span>
+                      <span className="font-medium">Email Support</span>
                     </a>
                   </div>
+                </div>
                 </div>
               </div>
             </div>

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, User, CreditCard, Bell, Shield, Key, Trash2, LogOut } from 'lucide-react';
+import { ArrowLeft, User, CreditCard, Bell, Shield, Key, Trash2, LogOut, Eye, EyeOff, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Toast } from '../components/Toast';
 import { useToast } from '../hooks/useToast';
+import { useAuth } from '../components/auth/AuthProvider';
 
 interface UserSettings {
   first_name: string;
@@ -25,10 +26,18 @@ interface AccountProps {
 }
 
 export default function Account({ onNavigate }: AccountProps) {
-  const [activeTab, setActiveTab] = useState<'account' | 'billing'>('account');
+  const [activeTab, setActiveTab] = useState<'account' | 'billing' | 'password'>('account');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { toast, success, error, hideToast } = useToast();
+  const { updatePassword } = useAuth();
+  const [passwordData, setPasswordData] = useState({
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
   const [settings, setSettings] = useState<UserSettings>({
     first_name: '',
     last_name: '',
@@ -119,6 +128,52 @@ export default function Account({ onNavigate }: AccountProps) {
     }
   };
 
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validation
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      error('New passwords do not match.');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 8) {
+      error('Password must be at least 8 characters long.');
+      return;
+    }
+
+    // Check for password strength
+    const hasUpperCase = /[A-Z]/.test(passwordData.newPassword);
+    const hasLowerCase = /[a-z]/.test(passwordData.newPassword);
+    const hasNumber = /[0-9]/.test(passwordData.newPassword);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(passwordData.newPassword);
+
+    if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
+      error('Password must contain uppercase, lowercase, number, and special character.');
+      return;
+    }
+
+    setPasswordLoading(true);
+
+    try {
+      const { error: updateError } = await updatePassword(passwordData.newPassword);
+      
+      if (updateError) {
+        error(updateError.message || 'Failed to update password.');
+      } else {
+        success('Password updated successfully!');
+        setPasswordData({
+          newPassword: '',
+          confirmPassword: '',
+        });
+      }
+    } catch (err) {
+      error('Failed to update password. Please try again.');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     window.location.reload();
@@ -147,13 +202,7 @@ export default function Account({ onNavigate }: AccountProps) {
               </button>
               <h1 className="text-xl font-semibold text-gray-900">Account</h1>
             </div>
-            <button
-              onClick={handleSignOut}
-              className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Sign Out</span>
-            </button>
+            
           </div>
         </div>
       </div>
@@ -203,20 +252,27 @@ export default function Account({ onNavigate }: AccountProps) {
                 </button>
 
                 <div className="pt-4 mt-4 border-t border-gray-200">
-                  <button className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                  <button
+                    onClick={() => setActiveTab('password')}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      activeTab === 'password'
+                        ? 'bg-blue-50 text-blue-600'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
                     <span>Password</span>
                     <Key className="w-4 h-4" />
                   </button>
 
-                  <button className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                  {/* <button className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
                     <span>Two-factor authentication</span>
                     <Shield className="w-4 h-4" />
-                  </button>
+                  </button> */}
 
-                  <button className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                  {/* <button className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
                     <span>Notifications</span>
                     <Bell className="w-4 h-4" />
-                  </button>
+                  </button> */}
                 </div>
 
                 <div className="pt-4 mt-4 border-t border-gray-200">
@@ -335,6 +391,111 @@ export default function Account({ onNavigate }: AccountProps) {
                         {saving ? 'Saving...' : 'Save Changes'}
                       </button>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'password' && (
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">Change Password</h2>
+                  <p className="text-sm text-gray-600 mb-6">
+                    Update your password to keep your account secure.
+                  </p>
+
+                  <div className="max-w-2xl">
+                    <form onSubmit={handlePasswordChange} className="space-y-6">
+                      {/* Password Requirements */}
+                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-sm font-medium text-blue-800 mb-2">
+                          Password Requirements:
+                        </p>
+                        <ul className="text-xs text-blue-700 ml-4 list-disc space-y-1">
+                          <li>At least 8 characters</li>
+                          <li>One uppercase letter</li>
+                          <li>One lowercase letter</li>
+                          <li>One number</li>
+                          <li>One special character (!@#$%^&* etc.)</li>
+                        </ul>
+                      </div>
+
+                      {/* New Password */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          New Password
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showNewPassword ? 'text' : 'password'}
+                            value={passwordData.newPassword}
+                            onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                            className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Enter new password"
+                            required
+                            minLength={8}
+                            disabled={passwordLoading}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowNewPassword(!showNewPassword)}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                            tabIndex={-1}
+                          >
+                            {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Confirm Password */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Confirm New Password
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            value={passwordData.confirmPassword}
+                            onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                            className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Confirm new password"
+                            required
+                            disabled={passwordLoading}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                            tabIndex={-1}
+                          >
+                            {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex space-x-3 pt-4">
+                        <button
+                          type="submit"
+                          disabled={passwordLoading}
+                          className="inline-flex items-center space-x-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+                        >
+                          <Key className="w-4 h-4" />
+                          <span>{passwordLoading ? 'Updating...' : 'Update Password'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPasswordData({ newPassword: '', confirmPassword: '' });
+                            setShowNewPassword(false);
+                            setShowConfirmPassword(false);
+                          }}
+                          disabled={passwordLoading}
+                          className="inline-flex items-center space-x-2 px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                        >
+                          <X className="w-4 h-4" />
+                          <span>Clear</span>
+                        </button>
+                      </div>
+                    </form>
                   </div>
                 </div>
               )}

@@ -858,6 +858,19 @@ Deno.serve((req) => {
             document.body.appendChild(widgetElement);
         }
 
+        // After inserting into the DOM, transition from the initial off-screen state
+        // to the final visible state so the widget actually appears.
+        const finalState = getAnimationFinalState(animationType, position);
+        // Use requestAnimationFrame to ensure initial styles are committed first
+        requestAnimationFrame(() => {
+            if (finalState.transform) {
+                widgetElement.style.transform = finalState.transform;
+            }
+            if (finalState.opacity !== undefined) {
+                widgetElement.style.opacity = finalState.opacity;
+            }
+        });
+
         currentNotificationElement = widgetElement;
         
         // Add click handler

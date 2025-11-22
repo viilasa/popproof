@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from './auth/AuthProvider';
-import { User, Mail, Calendar, Shield, Key, LogOut, Edit3, Save, X } from 'lucide-react';
+import { User, Mail, Calendar, Key, Edit3, Save, X, Eye, EyeOff } from 'lucide-react';
 
 export function UserProfile() {
   const { user, signOut, updatePassword } = useAuth();
@@ -12,10 +12,11 @@ export function UserProfile() {
     email: user?.email || '',
   });
   const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -44,6 +45,7 @@ export function UserProfile() {
     setError(null);
     setSuccess(null);
 
+    // Validation
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       setError('New passwords do not match.');
       return;
@@ -54,17 +56,27 @@ export function UserProfile() {
       return;
     }
 
+    // Check for password strength
+    const hasUpperCase = /[A-Z]/.test(passwordData.newPassword);
+    const hasLowerCase = /[a-z]/.test(passwordData.newPassword);
+    const hasNumber = /[0-9]/.test(passwordData.newPassword);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(passwordData.newPassword);
+
+    if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
+      setError('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.');
+      return;
+    }
+
     setLoading(true);
 
     try {
       const { error } = await updatePassword(passwordData.newPassword);
       
       if (error) {
-        setError(error.message);
+        setError(error.message || 'Failed to update password.');
       } else {
-        setSuccess('Password updated successfully!');
+        setSuccess('Password updated successfully! You can now use your new password to sign in.');
         setPasswordData({
-          currentPassword: '',
           newPassword: '',
           confirmPassword: '',
         });
@@ -77,11 +89,6 @@ export function UserProfile() {
     }
   };
 
-  const handleSignOut = async () => {
-    if (confirm('Are you sure you want to sign out?')) {
-      await signOut();
-    }
-  };
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -247,45 +254,64 @@ export function UserProfile() {
 
               {isChangingPassword ? (
                 <form onSubmit={handlePasswordChange} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Current Password
-                    </label>
-                    <input
-                      type="password"
-                      value={passwordData.currentPassword}
-                      onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      required
-                      disabled={loading}
-                    />
+                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <strong>Password Requirements:</strong>
+                    </p>
+                    <ul className="text-xs text-blue-700 mt-1 ml-4 list-disc space-y-1">
+                      <li>At least 8 characters</li>
+                      <li>One uppercase letter</li>
+                      <li>One lowercase letter</li>
+                      <li>One number</li>
+                      <li>One special character</li>
+                    </ul>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       New Password
                     </label>
-                    <input
-                      type="password"
-                      value={passwordData.newPassword}
-                      onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      required
-                      minLength={8}
-                      disabled={loading}
-                    />
+                    <div className="relative">
+                      <input
+                        type={showNewPassword ? 'text' : 'password'}
+                        value={passwordData.newPassword}
+                        onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter new password"
+                        required
+                        minLength={8}
+                        disabled={loading}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Confirm New Password
                     </label>
-                    <input
-                      type="password"
-                      value={passwordData.confirmPassword}
-                      onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      required
-                      disabled={loading}
-                    />
+                    <div className="relative">
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        value={passwordData.confirmPassword}
+                        onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Confirm new password"
+                        required
+                        disabled={loading}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
                   </div>
                   <div className="flex space-x-3">
                     <button
@@ -301,10 +327,11 @@ export function UserProfile() {
                       onClick={() => {
                         setIsChangingPassword(false);
                         setPasswordData({
-                          currentPassword: '',
                           newPassword: '',
                           confirmPassword: '',
                         });
+                        setError(null);
+                        setSuccess(null);
                       }}
                       className="inline-flex items-center space-x-2 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300"
                     >
@@ -320,27 +347,11 @@ export function UserProfile() {
                     <div>
                       <p className="text-sm text-gray-600">Password</p>
                       <p className="font-medium">••••••••••••</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Shield className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm text-gray-600">Two-Factor Authentication</p>
-                      <p className="font-medium text-orange-600">Not enabled</p>
+                      <p className="text-xs text-gray-500 mt-1">Last updated: {user?.updated_at ? new Date(user.updated_at).toLocaleDateString() : 'Never'}</p>
                     </div>
                   </div>
                 </div>
               )}
-
-              <div className="mt-8 pt-6 border-t border-gray-200">
-                <button
-                  onClick={handleSignOut}
-                  className="inline-flex items-center space-x-2 text-red-600 hover:text-red-700"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>Sign Out</span>
-                </button>
-              </div>
             </div>
           </div>
         </div>

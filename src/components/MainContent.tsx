@@ -909,172 +909,145 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
   if (activeSection === 'sites') {
     return (
       <div className="flex-1 bg-gray-50 min-h-screen">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
             <div className="mb-4 sm:mb-0">
-              <h1 className="text-2xl font-semibold text-gray-900">Your Sites</h1>
-              <p className="text-gray-600 mt-1">Manage your websites and pixel integrations</p>
+              <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">Your Sites</h1>
+              <p className="text-sm sm:text-base text-gray-600 mt-1">Manage your websites and pixel integrations</p>
             </div>
             <button
               onClick={() => setShowAddSiteModal(true)}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="inline-flex items-center px-4 py-2.5 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors text-sm sm:text-base font-medium touch-manipulation min-h-[44px] sm:min-h-0"
             >
-              <Plus className="w-5 h-5 mr-2" />
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
               Add New Site
             </button>
           </div>
 
-          {/* Sites List */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            {loading ? (
-              <div className="p-20 text-center">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
-                <p className="mt-4 text-gray-600">Loading sites...</p>
-              </div>
-            ) : sites.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Site
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Domain
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Created
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Usage
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {sites.map((site) => (
-                      <tr key={site.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
-                              <Globe className="h-5 w-5 text-blue-600" />
-                            </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">{site.name}</div>
-                              <div className="text-sm text-gray-500">ID: {site.public_key.substring(0, 8)}...</div>
-                            </div>
+          {/* Sites Grid */}
+          {loading ? (
+            <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 p-12 sm:p-20 text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+              <p className="mt-4 text-sm sm:text-base text-gray-600">Loading sites...</p>
+            </div>
+          ) : sites.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {sites.map((site) => {
+                const widgetCount = allWidgets.filter(w => w.config.site_id === site.id).length;
+                return (
+                  <div key={site.id} className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 overflow-hidden">
+                    {/* Card Header */}
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 sm:p-5 border-b border-gray-200">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start space-x-3 min-w-0 flex-1">
+                          <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                            <Globe className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                           </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{site.domain || '—'}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {(() => {
-                            // Check if pixel pinged in last 24 hours
-                            const isPixelActive = site.last_ping && 
-                              (new Date().getTime() - new Date(site.last_ping).getTime()) < 24 * 60 * 60 * 1000;
-                            
-                            // Calculate time since last ping
-                            const getTimeSince = () => {
-                              if (!site.last_ping) return null;
-                              const minutes = Math.floor((new Date().getTime() - new Date(site.last_ping).getTime()) / (1000 * 60));
-                              if (minutes < 1) return 'just now';
-                              if (minutes < 60) return `${minutes}m ago`;
-                              const hours = Math.floor(minutes / 60);
-                              if (hours < 24) return `${hours}h ago`;
-                              const days = Math.floor(hours / 24);
-                              return `${days}d ago`;
-                            };
-                            
-                            const timeSince = getTimeSince();
-                            
-                            if (isPixelActive) {
-                              return (
-                                <div className="flex flex-col">
-                                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                    Active
-                                  </span>
-                                  {timeSince && (
-                                    <span className="text-xs text-gray-500 mt-1">{timeSince}</span>
-                                  )}
-                                </div>
-                              );
-                            } else if (site.verified) {
-                              return (
-                                <div className="flex flex-col">
-                                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                    Inactive
-                                  </span>
-                                  {timeSince && (
-                                    <span className="text-xs text-gray-500 mt-1">Last: {timeSince}</span>
-                                  )}
-                                </div>
-                              );
-                            } else {
-                              return (
-                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                                  Pending
-                                </span>
-                              );
-                            }
-                          })()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDate(site.created_at)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {allWidgets.filter(w => w.config.site_id === site.id).length} widgets
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="flex items-center justify-end space-x-2">
-                            <button 
-                              onClick={() => handlePixelIntegration(site)}
-                              className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
-                              title="Pixel Integration"
-                            >
-                              <Code className="w-4 h-4 text-gray-400 hover:text-blue-600" />
-                            </button>
-                            <button 
-                              onClick={() => toggleSiteStatus(site.id, site.is_active)}
-                              className="p-2 hover:bg-green-50 rounded-lg transition-colors"
-                              title={site.is_active ? 'Deactivate Site' : 'Activate Site'}
-                            >
-                              {site.is_active ? (
-                                <Eye className="w-4 h-4 text-gray-400 hover:text-green-600" />
-                              ) : (
-                                <EyeOff className="w-4 h-4 text-gray-400 hover:text-green-600" />
-                              )}
-                            </button>
-                            <button 
-                              onClick={() => deleteSite(site.id)}
-                              className="p-2 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Delete Site"
-                            >
-                              <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-600" />
-                            </button>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">{site.name}</h3>
+                            <p className="text-xs sm:text-sm text-gray-600 truncate mt-0.5">{site.domain || 'No domain set'}</p>
                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="p-20 text-center">
-                <div className="max-w-md mx-auto">
-                  <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Globe className="w-10 h-10 text-blue-600" />
+                        </div>
+                        {(() => {
+                          const isPixelActive = site.last_ping && 
+                            (new Date().getTime() - new Date(site.last_ping).getTime()) < 24 * 60 * 60 * 1000;
+                          
+                          if (isPixelActive) {
+                            return (
+                              <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 border border-green-200">
+                                Active
+                              </span>
+                            );
+                          } else if (site.verified) {
+                            return (
+                              <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">
+                                Inactive
+                              </span>
+                            );
+                          } else {
+                            return (
+                              <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800 border border-gray-200">
+                                Pending
+                              </span>
+                            );
+                          }
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* Card Body */}
+                    <div className="p-4 sm:p-5 space-y-4">
+                      {/* Stats */}
+                      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-xs text-gray-500 mb-1">Widgets</p>
+                          <p className="text-lg sm:text-xl font-bold text-gray-900">{widgetCount}</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-xs text-gray-500 mb-1">Created</p>
+                          <p className="text-xs sm:text-sm font-medium text-gray-900">{formatDate(site.created_at)}</p>
+                        </div>
+                      </div>
+
+                      {/* Site ID */}
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <p className="text-xs text-gray-500 mb-1">Site ID</p>
+                        <p className="text-xs sm:text-sm font-mono text-gray-900">{site.public_key.substring(0, 16)}...</p>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex flex-col space-y-2 pt-2">
+                        <button 
+                          onClick={() => handlePixelIntegration(site)}
+                          className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors text-sm font-medium touch-manipulation"
+                        >
+                          <Code className="w-4 h-4" />
+                          <span>Pixel Integration</span>
+                        </button>
+                        
+                        <div className="grid grid-cols-2 gap-2">
+                          <button 
+                            onClick={() => toggleSiteStatus(site.id, site.is_active)}
+                            className="flex items-center justify-center space-x-1.5 px-3 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 active:bg-gray-300 transition-colors text-xs sm:text-sm font-medium touch-manipulation"
+                          >
+                            {site.is_active ? (
+                              <>
+                                <EyeOff className="w-4 h-4" />
+                                <span>Deactivate</span>
+                              </>
+                            ) : (
+                              <>
+                                <Eye className="w-4 h-4" />
+                                <span>Activate</span>
+                              </>
+                            )}
+                          </button>
+                          
+                          <button 
+                            onClick={() => deleteSite(site.id)}
+                            className="flex items-center justify-center space-x-1.5 px-3 py-2.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 active:bg-red-200 transition-colors text-xs sm:text-sm font-medium touch-manipulation"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <h3 className="text-2xl font-semibold text-gray-900 mb-3">No sites added yet</h3>
-                  <p className="text-gray-600 mb-6 text-lg">
-                    Add your first site to get started with social proof notifications
-                  </p>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 p-12 sm:p-20 text-center">
+              <div className="max-w-md mx-auto">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                  <Globe className="w-8 h-8 sm:w-10 sm:h-10 text-blue-600" />
+                </div>
+                <h3 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2 sm:mb-3">No sites added yet</h3>
+                <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
+                  Add your first site to get started with social proof notifications
+                </p>
                   <button 
                     onClick={() => setShowAddSiteModal(true)}
                     className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
@@ -1082,10 +1055,9 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                     <Plus className="w-5 h-5 mr-2" />
                     Add Your First Site
                   </button>
-                </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         <AddSiteModal
