@@ -38,8 +38,7 @@ export function IntegrationsSection({ siteId, onPlatformSelect }: IntegrationsSe
       icon: 'https://user-images.githubusercontent.com/7554214/153162406-bf8fd16f-aa98-4604-b87b-e13ab4baf604.png',
       category: 'ecommerce',
       status: 'not_connected',
-      setupComplexity: 'medium',
-      comingSoon: true
+      setupComplexity: 'medium'
     },
 
     // CMS Integrations
@@ -79,8 +78,7 @@ export function IntegrationsSection({ siteId, onPlatformSelect }: IntegrationsSe
       icon: 'https://1000logos.net/wp-content/uploads/2022/09/Zapier-Emblem.png',
       category: 'developer',
       status: 'not_connected',
-      setupComplexity: 'medium',
-      comingSoon: true
+      setupComplexity: 'easy'
     },
 
     // Review Platforms
@@ -91,8 +89,7 @@ export function IntegrationsSection({ siteId, onPlatformSelect }: IntegrationsSe
       icon: 'https://w7.pngwing.com/pngs/89/167/png-transparent-google-customer-review-business-company-google-search-engine-optimization-company-text-thumbnail.png',
       category: 'review',
       status: 'not_connected',
-      setupComplexity: 'medium',
-      comingSoon: true
+      setupComplexity: 'medium'
     }
   ];
 

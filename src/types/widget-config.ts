@@ -11,7 +11,7 @@ export interface PositionSettings {
 }
 
 export interface LayoutSettings {
-  layout: 'card' | 'compact' | 'minimal' | 'full-width';
+  layout: 'card' | 'compact' | 'minimal' | 'full-width' | 'ripple' | 'parallax' | 'puzzle' | 'peekaboo' | 'floating-tag' | 'story-pop' | 'frosted-token';
   maxWidth: number; // px
   minWidth: number; // px
 }

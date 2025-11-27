@@ -22,7 +22,7 @@ export function Sidebar({ activeSection, onSectionChange, isMobileMenuOpen, onCl
     {
       category: 'TOOLS',
       items: [
-        { id: 'integrations', label: 'Integrations', icon: Zap },
+        // { id: 'integrations', label: 'Integrations', icon: Zap },
         { id: 'settings', label: 'Settings', icon: Settings },
       ]
     },

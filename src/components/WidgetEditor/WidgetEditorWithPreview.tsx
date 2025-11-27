@@ -243,6 +243,8 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
   }
 
   const displaySettings = config.display;
+  const designPresetId = (config as any)?.designPresetId;
+  const isDesignLocked = Boolean(designPresetId);
   
   // Check multiple possible locations for template_id
   const templateId = (config as any)?.template_id 
@@ -427,18 +429,19 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                 onToggle={() => toggleSection('design')}
               >
                 <div className="space-y-6 pt-4">
-                  {/* Position Settings */}
                   <SettingsSection title="Position" description="Choose where your widget appears on the page">
                     <SettingsGroup>
                       <SettingsRow label="Position" description="Widget placement on screen">
                         <Select
                           value={config?.design.position.position || 'bottom-left'}
-                          onChange={(value) => updateConfig({
-                            design: {
-                              ...config?.design,
-                              position: { ...config?.design.position, position: value as any }
-                            }
-                          })}
+                          onChange={(value) =>
+                            updateConfig({
+                              design: {
+                                ...config?.design,
+                                position: { ...config?.design.position, position: value as any },
+                              },
+                            })
+                          }
                           options={[
                             { value: 'bottom-left', label: 'Bottom Left' },
                             { value: 'bottom-right', label: 'Bottom Right' },
@@ -453,12 +456,14 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                       <SettingsRow label="Offset X" description="Horizontal distance from edge">
                         <NumberInput
                           value={config?.design.position.offsetX || 20}
-                          onChange={(value) => updateConfig({
-                            design: {
-                              ...config?.design,
-                              position: { ...config?.design.position, offsetX: value }
-                            }
-                          })}
+                          onChange={(value) =>
+                            updateConfig({
+                              design: {
+                                ...config?.design,
+                                position: { ...config?.design.position, offsetX: value },
+                              },
+                            })
+                          }
                           min={0}
                           max={200}
                           suffix="px"
@@ -468,283 +473,21 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                       <SettingsRow label="Offset Y" description="Vertical distance from edge">
                         <NumberInput
                           value={config?.design.position.offsetY || 20}
-                          onChange={(value) => updateConfig({
-                            design: {
-                              ...config?.design,
-                              position: { ...config?.design.position, offsetY: value }
-                            }
-                          })}
+                          onChange={(value) =>
+                            updateConfig({
+                              design: {
+                                ...config?.design,
+                                position: { ...config?.design.position, offsetY: value },
+                              },
+                            })
+                          }
                           min={0}
                           max={200}
                           suffix="px"
                         />
                       </SettingsRow>
-
-                      {/* <SettingsRow label="Stack Direction" description="How multiple notifications stack">
-                        <Select
-                          value={config?.design.position.stackDirection || 'vertical'}
-                          onChange={(value) => updateConfig({
-                            design: {
-                              ...config?.design,
-                              position: { ...config?.design.position, stackDirection: value as any }
-                            }
-                          })}
-                          options={[
-                            { value: 'vertical', label: 'Vertical' },
-                            { value: 'horizontal', label: 'Horizontal' },
-                          ]}
-                          className="w-40"
-                        />
-                      </SettingsRow> */}
-
                     </SettingsGroup>
                   </SettingsSection>
-
-                  <Divider />
-
-                  {/* Layout Settings */}
-                  <SettingsSection title="Layout" description="Control the size and style of your widget">
-                    <SettingsGroup>
-                      <SettingsRow label="Layout Style" description="Choose notification style">
-                        <Select
-                          value={config?.design.layout.layout || 'card'}
-                          onChange={(value) => updateConfig({
-                            design: {
-                              ...config?.design,
-                              layout: { ...config?.design.layout, layout: value as any }
-                            }
-                          })}
-                          options={[
-                            { value: 'card', label: 'Card' },
-                            { value: 'compact', label: 'Compact' },
-                            { value: 'minimal', label: 'Minimal' },
-                            { value: 'full-width', label: 'Full Width' },
-                          ]}
-                          className="w-40"
-                        />
-                      </SettingsRow>
-
-                      <SettingsRow label="Max Width" description="Maximum widget width">
-                        <NumberInput
-                          value={config?.design.layout.maxWidth || 280}
-                          onChange={(value) => updateConfig({
-                            design: {
-                              ...config?.design,
-                              layout: { ...config?.design.layout, maxWidth: value }
-                            }
-                          })}
-                          min={180}
-                          max={600}
-                          step={10}
-                          suffix="px"
-                        />
-                      </SettingsRow>
-
-                      <SettingsRow label="Min Width" description="Minimum widget width">
-                        <NumberInput
-                          value={config?.design.layout.minWidth || 240}
-                          onChange={(value) => updateConfig({
-                            design: {
-                              ...config?.design,
-                              layout: { ...config?.design.layout, minWidth: value }
-                            }
-                          })}
-                          min={180}
-                          max={400}
-                          step={10}
-                          suffix="px"
-                        />
-                      </SettingsRow>
-                    </SettingsGroup>
-                  </SettingsSection>
-
-                  <Divider />
-
-                  {/* Border Settings */}
-                  <SettingsSection title="Border" description="Customize border style and accent">
-                    <SettingsGroup>
-                      <SettingsRow label="Border Radius" description="Corner roundness">
-                        <Slider
-                          value={config?.design.border.borderRadius || 12}
-                          onChange={(value) => updateConfig({
-                            design: {
-                              ...config?.design,
-                              border: { ...config?.design.border, borderRadius: value }
-                            }
-                          })}
-                          min={0}
-                          max={30}
-                          suffix="px"
-                        />
-                      </SettingsRow>
-
-                      <SettingsRow label="Border Width" description="Border thickness">
-                        <Slider
-                          value={config?.design.border.borderWidth || 1}
-                          onChange={(value) => updateConfig({
-                            design: {
-                              ...config?.design,
-                              border: { ...config?.design.border, borderWidth: value }
-                            }
-                          })}
-                          min={0}
-                          max={5}
-                          suffix="px"
-                        />
-                      </SettingsRow>
-
-                      <SettingsRow label="Border Color" description="Main border color">
-                        <ColorPicker
-                          value={config?.design.border.borderColor || 'rgba(59, 130, 246, 0.2)'}
-                          onChange={(value) => updateConfig({
-                            design: {
-                              ...config?.design,
-                              border: { ...config?.design.border, borderColor: value }
-                            }
-                          })}
-                        />
-                      </SettingsRow>
-
-                      <SettingsRow label="Left Accent" description="Show colored left border">
-                        <Toggle
-                          checked={config?.design.border.borderLeftAccent ?? true}
-                          onChange={(value) => updateConfig({
-                            design: {
-                              ...config?.design,
-                              border: { ...config?.design.border, borderLeftAccent: value }
-                            }
-                          })}
-                        />
-                      </SettingsRow>
-
-                      {config?.design.border.borderLeftAccent && (
-                        <>
-                          <SettingsRow label="Accent Width" description="Left accent thickness">
-                            <Slider
-                              value={config?.design.border.borderLeftAccentWidth || 4}
-                              onChange={(value) => updateConfig({
-                                design: {
-                                  ...config?.design,
-                                  border: { ...config?.design.border, borderLeftAccentWidth: value }
-                                }
-                              })}
-                              min={1}
-                              max={10}
-                              suffix="px"
-                            />
-                          </SettingsRow>
-
-                          <SettingsRow label="Accent Color" description="Left accent color">
-                            <ColorPicker
-                              value={config?.design.border.borderLeftAccentColor || '#3B82F6'}
-                              onChange={(value) => updateConfig({
-                                design: {
-                                  ...config?.design,
-                                  border: { ...config?.design.border, borderLeftAccentColor: value }
-                                }
-                              })}
-                            />
-                          </SettingsRow>
-                        </>
-                      )}
-                    </SettingsGroup>
-                  </SettingsSection>
-
-                  <Divider />
-
-                  {/* Shadow & Effects */}
-                  <SettingsSection title="Shadow & Effects" description="Add depth and visual effects">
-                    <SettingsGroup>
-                      <SettingsRow label="Shadow Enabled" description="Show drop shadow">
-                        <Toggle
-                          checked={config?.design.shadow.shadowEnabled ?? true}
-                          onChange={(value) => updateConfig({
-                            design: {
-                              ...config?.design,
-                              shadow: { ...config?.design.shadow, shadowEnabled: value }
-                            }
-                          })}
-                        />
-                      </SettingsRow>
-
-                      {config?.design.shadow.shadowEnabled && (
-                        <>
-                          <SettingsRow label="Shadow Size" description="Shadow intensity">
-                            <Select
-                              value={config?.design.shadow.shadowSize || 'lg'}
-                              onChange={(value) => updateConfig({
-                                design: {
-                                  ...config?.design,
-                                  shadow: { ...config?.design.shadow, shadowSize: value as any }
-                                }
-                              })}
-                              options={[
-                                { value: 'sm', label: 'Small' },
-                                { value: 'md', label: 'Medium' },
-                                { value: 'lg', label: 'Large' },
-                                { value: 'xl', label: 'Extra Large' },
-                                { value: '2xl', label: '2X Large' },
-                              ]}
-                              className="w-40"
-                            />
-                          </SettingsRow>
-                        </>
-                      )}
-
-                      <SettingsRow label="Glassmorphism" description="Modern glass effect">
-                        <Toggle
-                          checked={config?.design.shadow.glassmorphism ?? true}
-                          onChange={(value) => updateConfig({
-                            design: {
-                              ...config?.design,
-                              shadow: { ...config?.design.shadow, glassmorphism: value }
-                            }
-                          })}
-                        />
-                      </SettingsRow>
-
-                      {config?.design.shadow.glassmorphism && (
-                        <SettingsRow label="Backdrop Blur" description="Background blur amount (0-30px)">
-                          <Slider
-                            value={config?.design.shadow.backdropBlur ?? 16}
-                            onChange={(value) => updateConfig({
-                              design: {
-                                ...config?.design,
-                                shadow: { ...config?.design.shadow, backdropBlur: value }
-                              }
-                            })}
-                            min={0}
-                            max={30}
-                            suffix="px"
-                          />
-                        </SettingsRow>
-                      )}
-                    </SettingsGroup>
-                  </SettingsSection>
-
-                  {!config?.design?.shadow?.glassmorphism && (
-                    <>
-                      <Divider />
-
-                      {/* Background */}
-                      <SettingsSection title="Background" description="Set background colors and gradients">
-                        <SettingsGroup>
-                          <SettingsRow label="Background Color" description="Main background color">
-                            <ColorPicker
-                              value={config?.design.background.backgroundColor || 'rgba(255, 255, 255, 0.95)'}
-                              onChange={(value) => updateConfig({
-                                design: {
-                                  ...config?.design,
-                                  background: { ...config?.design.background, backgroundColor: value }
-                                }
-                              })}
-                            />
-                          </SettingsRow>
-                        </SettingsGroup>
-                      </SettingsSection>
-                    </>
-                  )}
-
                 </div>
               </AccordionSection>
 
@@ -2101,11 +1844,90 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                     <div
                       className={`relative transition-all duration-300 ${
                         config?.design?.layout?.layout === 'full-width' ? 'w-full' :
+                        config?.design?.layout?.layout === 'ripple' ? 'py-1.5 pl-1.5 pr-6' :
                         config?.design?.layout?.layout === 'compact' ? 'p-2' :
                         config?.design?.layout?.layout === 'minimal' ? 'p-3' :
                         'p-4'
                       }`}
-                      style={{
+                      style={config?.design?.layout?.layout === 'frosted-token' ? {
+                        // Frosted Token layout - transparent container
+                        maxWidth: '280px',
+                        minWidth: '200px',
+                        borderRadius: '0',
+                        border: 'none',
+                        boxShadow: 'none',
+                        backgroundColor: 'transparent',
+                        cursor: 'pointer',
+                        overflow: 'visible',
+                        padding: '0',
+                      } : config?.design?.layout?.layout === 'story-pop' ? {
+                        // Story Pop layout - transparent container (card has its own styles)
+                        maxWidth: '160px',
+                        minWidth: '160px',
+                        borderRadius: '0',
+                        border: 'none',
+                        boxShadow: 'none',
+                        backgroundColor: 'transparent',
+                        cursor: 'pointer',
+                        overflow: 'visible',
+                        padding: '0',
+                      } : config?.design?.layout?.layout === 'floating-tag' ? {
+                        // Floating Tag layout - transparent container (tag has its own styles)
+                        maxWidth: '320px',
+                        minWidth: '200px',
+                        borderRadius: '0',
+                        border: 'none',
+                        boxShadow: 'none',
+                        backgroundColor: 'transparent',
+                        cursor: 'pointer',
+                        overflow: 'visible',
+                        padding: '0',
+                      } : config?.design?.layout?.layout === 'peekaboo' ? {
+                        // Peekaboo layout - transparent container (card has its own styles)
+                        maxWidth: '320px',
+                        minWidth: '280px',
+                        borderRadius: '0',
+                        border: 'none',
+                        boxShadow: 'none',
+                        backgroundColor: 'transparent',
+                        cursor: 'pointer',
+                        overflow: 'visible',
+                        padding: '0',
+                      } : config?.design?.layout?.layout === 'puzzle' ? {
+                        // Puzzle layout - transparent container
+                        maxWidth: '360px',
+                        minWidth: '280px',
+                        borderRadius: '0',
+                        border: 'none',
+                        boxShadow: 'none',
+                        backgroundColor: 'transparent',
+                        cursor: 'pointer',
+                        overflow: 'visible',
+                        padding: '0',
+                      } : config?.design?.layout?.layout === 'parallax' ? {
+                        // Parallax layout - dark glassmorphic card
+                        maxWidth: '320px',
+                        minWidth: '280px',
+                        borderRadius: '12px',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                        backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                        backdropFilter: 'blur(16px)',
+                        WebkitBackdropFilter: 'blur(16px)',
+                        cursor: 'pointer',
+                        overflow: 'visible',
+                        padding: '16px',
+                      } : config?.design?.layout?.layout === 'ripple' ? {
+                        // Ripple layout - clean white pill
+                        maxWidth: '320px',
+                        minWidth: '200px',
+                        borderRadius: '9999px',
+                        border: 'none',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)',
+                        backgroundColor: '#ffffff',
+                        cursor: 'pointer',
+                        overflow: 'hidden',
+                      } : {
                         maxWidth: previewDevice === 'mobile' && config?.display?.responsive?.mobileMaxWidth
                           ? `${config.display.responsive.mobileMaxWidth}px`
                           : config?.design?.layout?.layout === 'full-width' ? '100%' : `${config?.design?.layout?.maxWidth || 280}px`,
@@ -2113,7 +1935,7 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                         borderRadius: `${config?.design?.border?.borderRadius || 12}px`,
                         borderWidth: `${config?.design?.border?.borderWidth || 1}px`,
                         borderColor: config?.design?.shadow?.glassmorphism
-                          ? 'rgba(255, 255, 255, 0.5)' // Brighter border for glass effect
+                          ? 'rgba(255, 255, 255, 0.5)'
                           : config?.design?.border?.borderColor || 'rgba(229, 231, 235, 1)',
                         borderLeftWidth: config?.design?.border?.borderLeftAccent
                           ? `${config?.design?.border?.borderLeftAccentWidth || 4}px`
@@ -2124,19 +1946,19 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                             ? 'rgba(255, 255, 255, 0.3)'
                             : config?.design?.border?.borderColor || 'rgba(229, 231, 235, 1)',
                         boxShadow: config?.design?.shadow?.glassmorphism
-                          ? 'inset 0 1px 1px 0 rgba(255, 255, 255, 0.3), 0 20px 27px rgba(0, 0, 0, 0.05)' // Glass effect with inner glow
+                          ? 'inset 0 1px 1px 0 rgba(255, 255, 255, 0.3), 0 20px 27px rgba(0, 0, 0, 0.05)'
                           : config?.design?.shadow?.shadowEnabled
                             ? getShadowStyle(config?.design?.shadow?.shadowSize || 'lg')
                             : 'none',
                         backgroundColor: config?.design?.shadow?.glassmorphism
-                          ? 'rgba(255, 255, 255, 0.3)' // 30% opacity - highly transparent for glass effect
+                          ? 'rgba(255, 255, 255, 0.3)'
                           : config?.design?.background?.backgroundColor || 'rgba(255, 255, 255, 0.95)',
                         backdropFilter: config?.design?.shadow?.glassmorphism
                           ? `blur(${blurAmount}px)`
                           : 'none',
                         WebkitBackdropFilter: config?.design?.shadow?.glassmorphism
                           ? `blur(${blurAmount}px)`
-                          : 'none', // Safari support
+                          : 'none',
                         cursor: isClickable ? 'pointer' : 'default',
                         overflow: 'hidden',
                       }}
@@ -2174,84 +1996,386 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                         </div>
                       )}
 
-                      <div className={`flex items-start ${
-                        config?.design?.layout?.layout === 'compact' ? 'space-x-2' :
-                        config?.design?.layout?.layout === 'minimal' ? 'space-x-2' :
-                        'space-x-3'
-                      }`}>
-                        {(displaySettings.content.showEventIcon || !displaySettings.content.showUserAvatar) && (
-                          <div className={`${
-                            config?.design?.layout?.layout === 'compact' ? 'w-8 h-8 text-xs' :
-                            config?.design?.layout?.layout === 'minimal' ? 'w-9 h-9 text-sm' :
-                            'w-10 h-10'
-                          } ${config?.design?.shadow?.glassmorphism ? 'bg-blue-600' : 'bg-blue-500'} rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold shadow-md`}>
-                            {displaySettings.content.showUserAvatar ? initials : '✨'}
+                      {/* Frosted Token Layout Preview */}
+                      {config?.design?.layout?.layout === 'frosted-token' ? (
+                        <div className="flex items-center gap-3">
+                          {/* Text label */}
+                          <div className="px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 shadow-lg text-white">
+                            <div className="flex items-baseline gap-1.5 whitespace-nowrap">
+                              <span className="font-bold text-sm">32</span>
+                              <span className="text-xs font-medium opacity-80">purchased today</span>
+                            </div>
                           </div>
-                        )}
-
-                        <div className="flex-1 min-w-0" style={config?.design?.shadow?.glassmorphism ? { textShadow: '0 0 1px rgba(255, 255, 255, 0.5)' } : {}}>
-                          <p className={`${
-                            config?.design?.layout?.layout === 'compact' ? 'text-xs' :
-                            config?.design?.layout?.layout === 'minimal' ? 'text-sm' :
-                            'text-sm'
-                          }`}>
-                            <span className={`font-bold ${config?.design?.shadow?.glassmorphism ? 'text-blue-700' : 'text-blue-600'}`}>
-                              {displaySettings.content.showCustomerName ? sampleName : 'Someone'}
-                            </span>
-                          </p>
-                          <p className={`${
-                            config?.design?.layout?.layout === 'compact' ? 'text-xs' :
-                            config?.design?.layout?.layout === 'minimal' ? 'text-sm' :
-                            'text-sm'
-                          } ${config?.design?.shadow?.glassmorphism ? 'text-gray-900 font-medium' : 'text-gray-700'} ${displaySettings.content.showCustomerName ? 'mt-0.5' : ''}`}>
-                            {sampleEvent}
-                            {valueText && (
-                              <span className={`ml-2 font-bold ${config?.design?.shadow?.glassmorphism ? 'text-gray-950' : 'text-gray-900'}`}>{valueText}</span>
-                            )}
-                          </p>
                           
-                          {/* Rating Stars for Reviews */}
-                          {displaySettings.content.showRating && sampleRating && (
-                            <div className="flex items-center mt-1 space-x-1">
-                              {[...Array(5)].map((_, i) => (
-                                <span key={i} className={`${i < sampleRating ? 'text-yellow-400' : 'text-gray-300'}`}>
-                                  ★
-                                </span>
-                              ))}
+                          {/* Circular token */}
+                          <div className="relative w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-orange-400 to-pink-500 shadow-lg border border-white/20 shrink-0">
+                            {/* Gloss */}
+                            <div className="absolute inset-0 rounded-full bg-gradient-to-b from-white/40 to-transparent opacity-50"></div>
+                            {/* Icon */}
+                            <svg className="relative z-10 text-white drop-shadow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                              <line x1="3" y1="6" x2="21" y2="6"></line>
+                              <path d="M16 10a4 4 0 0 1-8 0"></path>
+                            </svg>
+                            {/* Status dot */}
+                            <div className="absolute top-0 right-0 w-2.5 h-2.5 bg-white rounded-full shadow-sm flex items-center justify-center">
+                              <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div>
                             </div>
-                          )}
-                          
-                          {/* Review Content */}
-                          {displaySettings.content.showReviewContent && sampleReviewContent && (
-                            <p className={`${
-                              config?.design?.layout?.layout === 'compact' ? 'text-xs' :
-                              'text-xs'
-                            } ${config?.design?.shadow?.glassmorphism ? 'text-gray-700' : 'text-gray-600'} mt-2 italic line-clamp-2`}>
-                              "{sampleReviewContent}"
-                            </p>
-                          )}
-                          
-                          {metaLine && (
-                            <div className={`flex items-center space-x-2 mt-2 text-xs ${config?.design?.shadow?.glassmorphism ? 'text-gray-700 font-medium' : 'text-gray-500'}`}>
-                              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                              <span>{metaLine}</span>
-                            </div>
-                          )}
+                          </div>
                         </div>
-                      </div>
+                      ) : config?.design?.layout?.layout === 'story-pop' ? (
+                        /* Story Pop Layout Preview */
+                        <div className="relative w-[120px] h-[165px] rounded-xl overflow-hidden shadow-xl border-2 border-white bg-white">
+                          {/* Close button */}
+                          <button className="absolute top-1.5 right-1.5 z-30 w-4 h-4 bg-black/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white">
+                            <span className="text-[8px] font-bold">×</span>
+                          </button>
+                          
+                          {/* Story content */}
+                          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 z-0">
+                            <div className="w-full h-full flex items-center justify-center">
+                              <div className="w-16 h-16 bg-white/20 rounded-lg flex items-center justify-center">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Gradient overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10 pointer-events-none"></div>
+                          
+                          {/* Text content */}
+                          <div className="absolute bottom-0 left-0 w-full p-2 z-20 text-white">
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <div className="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center text-[8px] font-bold">{initials.charAt(0)}</div>
+                              <span className="text-[10px] font-bold truncate">{displaySettings.content.showCustomerName ? 'Sarah J.' : 'Customer'}</span>
+                            </div>
+                            <p className="text-[9px] font-medium opacity-90 mb-0.5">just bought this!</p>
+                            <p className="text-[7px] opacity-60 uppercase tracking-wider">2s ago</p>
+                          </div>
+                          
+                          {/* Progress bar */}
+                          <div className="absolute top-0 left-0 h-0.5 bg-white/30 w-full z-30">
+                            <div className="h-full bg-white w-3/4"></div>
+                          </div>
+                        </div>
+                      ) : config?.design?.layout?.layout === 'floating-tag' ? (
+                        /* Floating Tag Layout Preview */
+                        <div className="relative flex items-center gap-3 pl-2 pr-4 py-2 rounded-full bg-white/70 backdrop-blur-xl border border-white/40 shadow-lg" style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.05), 0 0 0 1px rgba(0,0,0,0.05)' }}>
+                          {/* Icon */}
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-amber-500/10 backdrop-blur-sm">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M12 3l1.912 5.813a2 2 0 001.272 1.272L21 12l-5.813 1.912a2 2 0 00-1.272 1.272L12 21l-1.912-5.813a2 2 0 00-1.272-1.272L3 12l5.813-1.912a2 2 0 001.272-1.272L12 3z"></path>
+                            </svg>
+                          </div>
+                          
+                          {/* Text */}
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-sm font-medium text-gray-800 tracking-tight">Popular in Design</span>
+                            <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+                            <span className="text-xs text-gray-500 font-medium">120 viewing</span>
+                          </div>
+                          
+                          {/* Ping indicator */}
+                          <div className="absolute -top-1 -right-1">
+                            <span className="flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                            </span>
+                          </div>
+                        </div>
+                      ) : config?.design?.layout?.layout === 'peekaboo' ? (
+                        /* Peekaboo Reveal Layout Preview */
+                        <div className="relative flex items-center gap-3 p-4 pr-12 bg-white rounded-r-3xl rounded-l-xl shadow-lg border border-gray-100" style={{ width: '280px' }}>
+                          {/* Decoration dot */}
+                          <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-white rounded-full shadow-sm flex items-center justify-center border border-gray-100">
+                            <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse"></div>
+                          </div>
+                          
+                          {/* Eye icon with avatar */}
+                          <div className="relative shrink-0">
+                            <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                              </svg>
+                            </div>
+                            <div 
+                              className="absolute top-0 left-0 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-xs font-semibold border-2 border-white shadow-sm"
+                              style={{ transform: 'translateX(16px) translateY(12px) scale(0.75)' }}
+                            >
+                              {initials}
+                            </div>
+                          </div>
+                          
+                          {/* Text */}
+                          <div className="flex flex-col min-w-0">
+                            <div className="flex items-center gap-1 text-lg font-bold text-gray-900 leading-none">
+                              <span>18</span>
+                              <span className="text-sm font-medium text-gray-500">people viewed this</span>
+                            </div>
+                            <div className="text-xs font-medium text-indigo-500 uppercase tracking-wide mt-0.5">
+                              In the last hour
+                            </div>
+                          </div>
+                          
+                          {/* Close button */}
+                          <button className="absolute top-2 right-2 text-gray-300 hover:text-gray-500">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M18 6L6 18M6 6l12 12"/>
+                            </svg>
+                          </button>
+                        </div>
+                      ) : config?.design?.layout?.layout === 'puzzle' ? (
+                        /* Puzzle Reveal Layout Preview */
+                        <div className="flex items-center" style={{ height: '56px', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.15))' }}>
+                          {/* Piece 1: Avatar */}
+                          <div className="relative z-30 flex items-center justify-center w-14 h-14 bg-white rounded-l-2xl rounded-r-md shadow-sm">
+                            <div 
+                              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
+                              style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+                            >
+                              {initials}
+                            </div>
+                            <div className="absolute -right-1.5 w-3 h-3 bg-white rounded-full z-10"></div>
+                          </div>
+                          
+                          {/* Piece 2: Message */}
+                          <div className="relative z-20 -ml-2 flex flex-col justify-center px-6 h-14 bg-gray-900 text-white rounded-md shadow-sm min-w-[160px]">
+                            <div className="flex items-center gap-1 mb-0.5">
+                              <span className="p-0.5 rounded-sm bg-yellow-400 text-gray-900">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                                  <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/>
+                                </svg>
+                              </span>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">purchased</span>
+                            </div>
+                            <div className="text-xs font-medium truncate">
+                              <span className="font-bold text-white">{sampleName}</span>
+                              <span className="text-gray-300"> got Premium Plan</span>
+                            </div>
+                          </div>
+                          
+                          {/* Piece 3: Product */}
+                          <div className="relative z-10 -ml-2 w-14 h-14 bg-white rounded-r-2xl rounded-l-md shadow-sm overflow-hidden">
+                            <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 bg-gray-900 rounded-full z-20"></div>
+                            <div 
+                              className="w-full h-full flex items-center justify-center"
+                              style={{ background: 'linear-gradient(135deg, #fbbf24, #f59e0b)' }}
+                            >
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+                      ) : config?.design?.layout?.layout === 'parallax' ? (
+                        /* Parallax 3D Card Layout Preview */
+                        <div className="relative">
+                          {/* Noise texture overlay */}
+                          <div 
+                            className="absolute inset-0 opacity-20 mix-blend-overlay pointer-events-none rounded-xl"
+                            style={{ 
+                              backgroundImage: 'url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iLjA1Ii8+PC9zdmc+")'
+                            }}
+                          />
+                          
+                          {/* Content container */}
+                          <div className="relative flex items-center gap-4">
+                            {/* Floating product image */}
+                            <div className="flex-shrink-0 relative">
+                              <div 
+                                className="w-16 h-16 rounded-lg overflow-hidden border-2 flex items-center justify-center"
+                                style={{ 
+                                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                                  borderColor: 'rgba(255,255,255,0.2)',
+                                  boxShadow: '0 8px 16px rgba(0,0,0,0.3), 0 0 20px rgba(99,102,241,0.15)'
+                                }}
+                              >
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                                </svg>
+                              </div>
+                              {/* NEW badge */}
+                              <div 
+                                className="absolute -top-1.5 -right-1.5 text-white text-[9px] font-bold px-1.5 py-0.5 rounded"
+                                style={{ 
+                                  background: '#6366f1',
+                                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                  border: '1px solid #818cf8'
+                                }}
+                              >
+                                NEW
+                              </div>
+                            </div>
+                            
+                            {/* Text content */}
+                            <div className="flex-1 min-w-0">
+                              {/* Header with lightning icon */}
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="#facc15">
+                                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                                </svg>
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Just Grabbed</span>
+                              </div>
+                              
+                              {/* Product name */}
+                              <h4 className="text-sm font-bold text-white mb-0.5 truncate">AI Copywriter Pro</h4>
+                              
+                              {/* Buyer info */}
+                              <p className="text-xs text-gray-400 truncate">
+                                by <span className="text-gray-200 font-medium">{sampleName}</span> • Marketing Lead
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Bottom gradient bar */}
+                          <div 
+                            className="absolute bottom-0 left-0 right-0 h-0.5 rounded-b-xl"
+                            style={{ 
+                              background: 'linear-gradient(to right, #6366f1, #a855f7, #ec4899)',
+                              opacity: 0.5
+                            }}
+                          />
+                        </div>
+                      ) : config?.design?.layout?.layout === 'ripple' ? (
+                        /* Ripple Layout Preview - Exact match to design */
+                        <div className="flex items-center gap-3">
+                          {/* Image cluster container (overlapping circles) */}
+                          <div className="relative flex-shrink-0" style={{ width: '56px', height: '44px' }}>
+                            {/* User avatar (front circle - blue/teal) */}
+                            <div 
+                              className="absolute rounded-full border-2 border-white flex items-center justify-center text-white font-semibold shadow-md"
+                              style={{ 
+                                left: 0, 
+                                top: '2px', 
+                                width: '40px', 
+                                height: '40px', 
+                                background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+                                zIndex: 2,
+                                fontSize: '16px'
+                              }}
+                            >
+                              {initials}
+                            </div>
+                            {/* Product image (back circle - yellow) */}
+                            <div 
+                              className="absolute rounded-full border-2 border-white shadow-md"
+                              style={{ 
+                                left: '20px', 
+                                top: '2px', 
+                                width: '40px', 
+                                height: '40px', 
+                                background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+                                zIndex: 1
+                              }}
+                            />
+                            {/* Heart badge */}
+                            <div 
+                              className="absolute bg-white rounded-full flex items-center justify-center shadow"
+                              style={{ left: '24px', bottom: 0, zIndex: 3, width: '16px', height: '16px' }}
+                            >
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="#ef4444">
+                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                              </svg>
+                            </div>
+                          </div>
+                          
+                          {/* Text content */}
+                          <div className="flex flex-col justify-center min-w-0 pr-2">
+                            {/* First line: "Maya from Toronto" */}
+                            <div className="text-sm text-gray-700 whitespace-nowrap">
+                              <span className="font-semibold text-indigo-500">{sampleName}</span>
+                              <span> from {locationText || 'Toronto'}</span>
+                            </div>
+                            {/* Second line: "is looking at this" */}
+                            <div className="text-[13px] text-gray-400 whitespace-nowrap">
+                              {sampleEvent}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Standard layouts (card, compact, minimal, full-width) */
+                        <>
+                          <div className={`flex items-start ${
+                            config?.design?.layout?.layout === 'compact' ? 'space-x-2' :
+                            config?.design?.layout?.layout === 'minimal' ? 'space-x-2' :
+                            'space-x-3'
+                          }`}>
+                            {(displaySettings.content.showEventIcon || !displaySettings.content.showUserAvatar) && (
+                              <div className={`${
+                                config?.design?.layout?.layout === 'compact' ? 'w-8 h-8 text-xs' :
+                                config?.design?.layout?.layout === 'minimal' ? 'w-9 h-9 text-sm' :
+                                'w-10 h-10'
+                              } ${config?.design?.shadow?.glassmorphism ? 'bg-blue-600' : 'bg-blue-500'} rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold shadow-md`}>
+                                {displaySettings.content.showUserAvatar ? initials : '✨'}
+                              </div>
+                            )}
 
-                      <div className={`mt-3 pt-3 flex items-center justify-between text-[11px] ${
-                        config?.design?.shadow?.glassmorphism 
-                          ? 'border-t border-gray-300 text-gray-600 font-medium' 
-                          : 'border-t border-gray-100 text-gray-400'
-                      }`}>
-                        <span>Verified by ProofPop</span>
-                        {displaySettings.interaction.clickable && displaySettings.interaction.clickAction !== 'none' && (
-                          <span className={`font-semibold ${config?.design?.shadow?.glassmorphism ? 'text-blue-700' : 'text-blue-500'}`}>
-                            {displaySettings.interaction.clickAction === 'url' ? 'Opens link' : 'Interactive'}
-                          </span>
-                        )}
-                      </div>
+                            <div className="flex-1 min-w-0" style={config?.design?.shadow?.glassmorphism ? { textShadow: '0 0 1px rgba(255, 255, 255, 0.5)' } : {}}>
+                              <p className={`${
+                                config?.design?.layout?.layout === 'compact' ? 'text-xs' :
+                                config?.design?.layout?.layout === 'minimal' ? 'text-sm' :
+                                'text-sm'
+                              }`}>
+                                <span className={`font-bold ${config?.design?.shadow?.glassmorphism ? 'text-blue-700' : 'text-blue-600'}`}>
+                                  {displaySettings.content.showCustomerName ? sampleName : 'Someone'}
+                                </span>
+                              </p>
+                              <p className={`${
+                                config?.design?.layout?.layout === 'compact' ? 'text-xs' :
+                                config?.design?.layout?.layout === 'minimal' ? 'text-sm' :
+                                'text-sm'
+                              } ${config?.design?.shadow?.glassmorphism ? 'text-gray-900 font-medium' : 'text-gray-700'} ${displaySettings.content.showCustomerName ? 'mt-0.5' : ''}`}>
+                                {sampleEvent}
+                                {valueText && (
+                                  <span className={`ml-2 font-bold ${config?.design?.shadow?.glassmorphism ? 'text-gray-950' : 'text-gray-900'}`}>{valueText}</span>
+                                )}
+                              </p>
+                              
+                              {/* Rating Stars for Reviews */}
+                              {displaySettings.content.showRating && sampleRating && (
+                                <div className="flex items-center mt-1 space-x-1">
+                                  {[...Array(5)].map((_, i) => (
+                                    <span key={i} className={`${i < sampleRating ? 'text-yellow-400' : 'text-gray-300'}`}>
+                                      ★
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                              
+                              {/* Review Content */}
+                              {displaySettings.content.showReviewContent && sampleReviewContent && (
+                                <p className={`${
+                                  config?.design?.layout?.layout === 'compact' ? 'text-xs' :
+                                  'text-xs'
+                                } ${config?.design?.shadow?.glassmorphism ? 'text-gray-700' : 'text-gray-600'} mt-2 italic line-clamp-2`}>
+                                  "{sampleReviewContent}"
+                                </p>
+                              )}
+                              
+                              {metaLine && (
+                                <div className={`flex items-center space-x-2 mt-2 text-xs ${config?.design?.shadow?.glassmorphism ? 'text-gray-700 font-medium' : 'text-gray-500'}`}>
+                                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                                  <span>{metaLine}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className={`mt-3 pt-3 flex items-center justify-between text-[11px] ${
+                            config?.design?.shadow?.glassmorphism 
+                              ? 'border-t border-gray-300 text-gray-600 font-medium' 
+                              : 'border-t border-gray-100 text-gray-400'
+                          }`}>
+                            <span>Verified by ProofPop</span>
+                            {displaySettings.interaction.clickable && displaySettings.interaction.clickAction !== 'none' && (
+                              <span className={`font-semibold ${config?.design?.shadow?.glassmorphism ? 'text-blue-700' : 'text-blue-500'}`}>
+                                {displaySettings.interaction.clickAction === 'url' ? 'Opens link' : 'Interactive'}
+                              </span>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                       );
@@ -2376,6 +2500,13 @@ style.textContent = `
   @keyframes zoom-in {
     from { transform: scale(0.9); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
+  }
+  @keyframes ripple-ring {
+    0% { transform: scale(1); opacity: 0.4; }
+    100% { transform: scale(1.35); opacity: 0; }
+  }
+  .animate-ripple-ring {
+    animation: ripple-ring 2s ease-out infinite;
   }
 `;
 document.head.appendChild(style);
