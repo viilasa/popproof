@@ -614,10 +614,10 @@ export function PixelIntegration({ selectedSite, onBack }: PixelIntegrationProps
 }`;
 
   // Medusa.js subscriber code
-  const medusaSubscriberCode = `// src/subscribers/popproof-notification.ts
+  const medusaSubscriberCode = `// src/subscribers/proofedge-notification.ts
 import { SubscriberArgs, SubscriberConfig } from "@medusajs/medusa";
 
-export default async function popproofHandler({
+export default async function proofedgeHandler({
   data,
   container,
 }: SubscriberArgs<{ id: string }>) {
@@ -626,7 +626,7 @@ export default async function popproofHandler({
     relations: ["items", "customer", "shipping_address"],
   });
 
-  // Send to PopProof webhook
+  // Send to ProofEdge webhook
   await fetch("${webhookUrl}", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -648,7 +648,7 @@ export default async function popproofHandler({
 
 export const config: SubscriberConfig = {
   event: "order.placed",
-  context: { subscriberId: "popproof-notification" },
+  context: { subscriberId: "proofedge-notification" },
 };`;
 
   const medusaStorefrontCode = `<!-- Add to your Medusa storefront (Next.js, Gatsby, etc.) -->
@@ -947,11 +947,11 @@ export const config: SubscriberConfig = {
                               : selectedPlatform === 'webhook'
                               ? 'Send events from your backend to the webhook URL below using the JSON payload.'
                               : selectedPlatform === 'zapier'
-                              ? 'Use Zapier to connect PopProof with 5000+ apps. Send events when triggers fire in your connected apps.'
+                              ? 'Use Zapier to connect ProofEdge with 5000+ apps. Send events when triggers fire in your connected apps.'
                               : selectedPlatform === 'google-reviews'
                               ? 'Display your Google Reviews as social proof notifications. Enter your Place ID and API key below.'
                               : selectedPlatform === 'medusa'
-                              ? 'Add a subscriber to your Medusa backend to send order events to PopProof.'
+                              ? 'Add a subscriber to your Medusa backend to send order events to ProofEdge.'
                               : 'Copy the code snippet below to integrate the social proof widget into your website.'}
                           </p>
                           
@@ -1259,7 +1259,7 @@ export const config: SubscriberConfig = {
                                   <div>
                                     <h4 className="font-medium text-sm text-purple-900 mb-1">Medusa.js Integration</h4>
                                     <p className="text-xs text-purple-800">
-                                      Add a subscriber to your Medusa backend to automatically send order events to PopProof.
+                                      Add a subscriber to your Medusa backend to automatically send order events to ProofEdge.
                                     </p>
                                   </div>
                                 </div>
@@ -1280,7 +1280,7 @@ export const config: SubscriberConfig = {
                                   </button>
                                 </div>
                                 <p className="text-xs text-gray-500 mb-2">
-                                  Create this file in your Medusa backend: <code className="bg-gray-200 px-1 rounded">src/subscribers/popproof-notification.ts</code>
+                                  Create this file in your Medusa backend: <code className="bg-gray-200 px-1 rounded">src/subscribers/proofedge-notification.ts</code>
                                 </p>
                                 <pre className="bg-gray-900 text-gray-100 p-3 rounded-lg overflow-x-auto text-[10px] sm:text-xs font-mono max-h-[200px]">
                                   <code>{medusaSubscriberCode}</code>

@@ -176,7 +176,7 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
             <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
               <div className="w-6 h-6 bg-white rounded-full"></div>
             </div>
-            <span className="text-2xl font-bold text-gray-900">PopProof</span>
+            <span className="text-2xl font-bold text-gray-900">ProofEdge</span>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Create your account</h2>
           <p className="text-gray-600">Start your social proof journey today</p>

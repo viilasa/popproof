@@ -81,7 +81,7 @@ export default function Help() {
       answer: "In the widget editor, go to Display Settings → Page Targeting. You can set rules to show notifications on all pages, specific URLs, or URLs matching certain patterns."
     },
     {
-      question: "Can I use PopProof on multiple websites?",
+      question: "Can I use ProofEdge on multiple websites?",
       answer: "Yes! You can add multiple sites from the Sites section. Each site gets its own unique pixel code and can have different widgets configured."
     },
     {
@@ -112,7 +112,7 @@ export default function Help() {
       content: (
         <div className="space-y-6">
           <p className="text-gray-600">
-            Welcome to PopProof! Follow these steps to start showing social proof notifications on your website.
+            Welcome to ProofEdge! Follow these steps to start showing social proof notifications on your website.
           </p>
           
           <div className="space-y-4">
@@ -166,7 +166,7 @@ export default function Help() {
       content: (
         <div className="space-y-6">
           <p className="text-gray-600">
-            PopProof offers 8 pre-built notification templates, each designed for specific social proof use cases.
+            ProofEdge offers 8 pre-built notification templates, each designed for specific social proof use cases.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -346,7 +346,7 @@ export default function Help() {
       content: (
         <div className="space-y-6">
           <p className="text-gray-600">
-            The PopProof pixel is a small JavaScript snippet that enables notifications on your website.
+            The ProofEdge pixel is a small JavaScript snippet that enables notifications on your website.
           </p>
 
           <div className="space-y-4">
@@ -506,7 +506,7 @@ export default function Help() {
       content: (
         <div className="space-y-6">
           <p className="text-gray-600">
-            Connect PopProof with your existing tools and platforms for automatic event tracking.
+            Connect ProofEdge with your existing tools and platforms for automatic event tracking.
           </p>
 
           <div className="space-y-4">
@@ -523,7 +523,7 @@ export default function Help() {
                   <li>Choose "WooCommerce" from the platform options</li>
                   <li>Copy the webhook URL and API key</li>
                   <li>Add the webhook in WooCommerce → Settings → Advanced → Webhooks</li>
-                  <li>Install the PopProof pixel on your theme</li>
+                  <li>Install the ProofEdge pixel on your theme</li>
                 </ol>
               </div>
             </div>
@@ -660,7 +660,7 @@ export default function Help() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Help Center</h1>
           <p className="text-gray-600">
-            Everything you need to know about using PopProof to boost your conversions with social proof.
+            Everything you need to know about using ProofEdge to boost your conversions with social proof.
           </p>
         </div>
 
@@ -800,7 +800,7 @@ export default function Help() {
               </p>
               <div className="flex flex-wrap gap-3">
                 <a 
-                  href="mailto:support@popproof.io"
+                  href="mailto:support@proofedge.io"
                   className="inline-flex items-center space-x-2 px-4 py-2 bg-white text-blue-600 rounded-lg font-medium text-sm hover:bg-blue-50 transition-colors"
                 >
                   <Mail className="w-4 h-4" />

@@ -22,7 +22,7 @@ export function LoginForm({ onSwitchToRegister, onSwitchToForgotPassword }: Logi
 
   // Load saved email on mount if "Remember me" was checked previously
   useEffect(() => {
-    const savedEmail = localStorage.getItem('popproof_remember_email');
+    const savedEmail = localStorage.getItem('proofedge_remember_email');
     if (savedEmail) {
       setFormData(prev => ({ ...prev, email: savedEmail }));
       setRememberMe(true);
@@ -69,9 +69,9 @@ export function LoginForm({ onSwitchToRegister, onSwitchToForgotPassword }: Logi
       } else {
         // Login successful - handle remember me
         if (rememberMe) {
-          localStorage.setItem('popproof_remember_email', formData.email);
+          localStorage.setItem('proofedge_remember_email', formData.email);
         } else {
-          localStorage.removeItem('popproof_remember_email');
+          localStorage.removeItem('proofedge_remember_email');
         }
       }
     } catch (err) {
@@ -96,7 +96,7 @@ export function LoginForm({ onSwitchToRegister, onSwitchToForgotPassword }: Logi
             <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
               <div className="w-6 h-6 bg-white rounded-full"></div>
             </div>
-            <span className="text-2xl font-bold text-gray-900">PopProof</span>
+            <span className="text-2xl font-bold text-gray-900">ProofEdge</span>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome back</h2>
           <p className="text-gray-600">Sign in to your account to continue</p>
