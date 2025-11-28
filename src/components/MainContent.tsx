@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus, Eye, EyeOff, Users, BarChart3, Edit3, Menu, Globe, Trash2, ShoppingBag, Bell, Code } from 'lucide-react';
+import { Search, Plus, Eye, EyeOff, Users, Edit3, Menu, Globe, Trash2, ShoppingBag, Bell, Code } from 'lucide-react';
 import { TemplateSelector } from './TemplateSelector';
 import { AddSiteModal } from './AddSiteModal';
 import { PixelIntegration } from './PixelIntegration';
@@ -8,6 +8,7 @@ import { WidgetEditorWithPreview } from './WidgetEditor/index';
 import { supabase } from '../lib/supabase';
 import Account from '../pages/Account';
 import Analytics from '../pages/Analytics';
+import Help from '../pages/Help';
 
 interface MainContentProps {
   activeSection: string;
@@ -36,9 +37,8 @@ interface Notification {
   type: string;
   status: 'active' | 'inactive';
   priority: number;
-  views: number;
-  conversions: number;
-  ctr: number;
+  impressions: number;
+  uniqueViewers: number;
   createdAt: string;
   layout_style: string;
   preview: {
@@ -172,25 +172,53 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
 
       console.log('Fetched widgets for site:', widgets);
 
-      const widgetNotifications: Notification[] = widgets?.map((widget, index) => ({
-        id: widget.id,
-        site_id: widget.site_id,
-        name: widget.name || widget.config?.name || 'Unnamed Widget',
-        type: widget.config?.template_id || widget.type || 'custom',
-        status: widget.is_active ? 'active' : 'inactive',
-        priority: index + 1,
-        views: 0, // TODO: Real analytics from notification_analytics table
-        conversions: 0,
-        ctr: 0,
-        createdAt: widget.created_at,
-        layout_style: widget.layout_style || 'card',
-        preview: {
-          icon: widget.config?.template_id || 'bell',
-          title: widget.config?.template_name || widget.name || 'Widget',
-          content: `${widget.config?.template_name || widget.type} notification`,
-          timestamp: new Date(widget.created_at).toLocaleDateString()
+      // Fetch analytics for all widgets
+      const widgetIds = widgets?.map(w => w.id) || [];
+      let analyticsMap: Record<string, { impressions: number; uniqueViewers: Set<string> }> = {};
+      
+      if (widgetIds.length > 0) {
+        const { data: analytics, error: analyticsError } = await supabase
+          .from('notification_analytics')
+          .select('widget_id, action_type, session_id')
+          .in('widget_id', widgetIds)
+          .eq('action_type', 'view');
+        
+        if (!analyticsError && analytics) {
+          // Aggregate analytics by widget_id
+          analytics.forEach((record: { widget_id: string; action_type: string; session_id: string }) => {
+            if (!analyticsMap[record.widget_id]) {
+              analyticsMap[record.widget_id] = { impressions: 0, uniqueViewers: new Set() };
+            }
+            analyticsMap[record.widget_id].impressions++;
+            if (record.session_id) {
+              analyticsMap[record.widget_id].uniqueViewers.add(record.session_id);
+            }
+          });
         }
-      })) || [];
+      }
+
+      const widgetNotifications: Notification[] = widgets?.map((widget, index) => {
+        const stats = analyticsMap[widget.id] || { impressions: 0, uniqueViewers: new Set() };
+        
+        return {
+          id: widget.id,
+          site_id: widget.site_id,
+          name: widget.name || widget.config?.name || 'Unnamed Widget',
+          type: widget.config?.template_id || widget.type || 'custom',
+          status: widget.is_active ? 'active' : 'inactive',
+          priority: index + 1,
+          impressions: stats.impressions,
+          uniqueViewers: stats.uniqueViewers.size,
+          createdAt: widget.created_at,
+          layout_style: widget.layout_style || 'card',
+          preview: {
+            icon: widget.config?.template_id || 'bell',
+            title: widget.config?.template_name || widget.name || 'Widget',
+            content: `${widget.config?.template_name || widget.type} notification`,
+            timestamp: new Date(widget.created_at).toLocaleDateString()
+          }
+        };
+      }) || [];
 
       setNotifications(widgetNotifications);
     } catch (error) {
@@ -632,22 +660,22 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <Users className="h-8 w-8 text-purple-600" />
+                  <Eye className="h-8 w-8 text-purple-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Conversions</p>
-                  <p className="text-2xl font-bold text-gray-900">{notifications.reduce((sum, n) => sum + n.conversions, 0)}</p>
+                  <p className="text-sm font-medium text-gray-600">Total Impressions</p>
+                  <p className="text-2xl font-bold text-gray-900">{notifications.reduce((sum, n) => sum + n.impressions, 0).toLocaleString()}</p>
                 </div>
               </div>
             </div>
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <BarChart3 className="h-8 w-8 text-orange-600" />
+                  <Users className="h-8 w-8 text-orange-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">CTR</p>
-                  <p className="text-2xl font-bold text-gray-900">{(notifications.reduce((sum, n) => sum + n.ctr, 0) / notifications.length).toFixed(1)}%</p>
+                  <p className="text-sm font-medium text-gray-600">Unique Viewers</p>
+                  <p className="text-2xl font-bold text-gray-900">{notifications.reduce((sum, n) => sum + n.uniqueViewers, 0).toLocaleString()}</p>
                 </div>
               </div>
             </div>
@@ -895,8 +923,8 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                       
                       <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center space-x-4">
-                          <span className="text-gray-600">{notification.views} views</span>
-                          <span className="text-gray-600">{notification.conversions} conversions</span>
+                          <span className="text-gray-600">{notification.impressions.toLocaleString()} impressions</span>
+                          <span className="text-gray-600">{notification.uniqueViewers.toLocaleString()} viewers</span>
                         </div>
                         <div className="flex items-center space-x-2">
                           <button 
@@ -1142,8 +1170,8 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                       {/* Performance */}
                       <div className="col-span-2">
                         <div className="text-sm">
-                          <div className="text-gray-900 font-medium">{notification.views.toLocaleString()} views</div>
-                          <div className="text-xs text-gray-500">{notification.conversions} conversions • {notification.ctr}% CTR</div>
+                          <div className="text-gray-900 font-medium">{notification.impressions.toLocaleString()} impressions</div>
+                          <div className="text-xs text-gray-500">{notification.uniqueViewers.toLocaleString()} unique viewers</div>
                         </div>
                       </div>
 
@@ -1490,6 +1518,11 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
   // Analytics screen
   if (activeSection === 'analytics' && userId) {
     return <Analytics userId={userId} />;
+  }
+
+  // Help screen
+  if (activeSection === 'help') {
+    return <Help />;
   }
 
   // Default content for other sections

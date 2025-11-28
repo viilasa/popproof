@@ -108,6 +108,7 @@ export const DEFAULT_TRIGGER_SETTINGS: TriggerSettings = {
   },
   behavior: {
     showAfterDelay: 3,
+    delayBetweenNotifications: 5, // seconds between notifications (default 5s)
     showAfterScroll: 0,
     showOnExitIntent: false,
     showOnInactivity: 0,

@@ -15,6 +15,7 @@ Deno.serve((req) => {
     const VERIFY_PIXEL_URL = 'https://ghiobuubmnvlaukeyuwe.supabase.co/functions/v1/verify-pixel';
     const WIDGET_NOTIFICATIONS_URL = 'https://ghiobuubmnvlaukeyuwe.supabase.co/functions/v1/get-widget-notifications';
     const TRACK_IMPRESSION_URL = 'https://ghiobuubmnvlaukeyuwe.supabase.co/functions/v1/track-impression';
+    const TRACK_ANALYTICS_URL = 'https://ghiobuubmnvlaukeyuwe.supabase.co/functions/v1/track-analytics';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoaW9idXVibW52bGF1a2V5dXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0Njg2MzcsImV4cCI6MjA3MTA0NDYzN30.NR47GOGkExUmoNKQqdhWO4DR7SAQd9W3iZ5r8t1nC7s';
 
     // Find the script tag and get the site_id
@@ -110,6 +111,25 @@ Deno.serve((req) => {
             console.warn('ProofPop: Storage not available, showing notification anyway');
             return true;
         }
+    }
+    
+    // Track analytics event (view, click, close, conversion)
+    function trackAnalytics(widgetId, actionType, metadata = {}) {
+        fetch(TRACK_ANALYTICS_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+            },
+            body: JSON.stringify({
+                widget_id: widgetId,
+                site_id: siteId,
+                action_type: actionType,
+                session_id: sessionId,
+                page_url: window.location.href,
+                metadata: metadata
+            })
+        }).catch(err => console.warn('ProofPop: Analytics tracking failed:', err));
     }
     
     // Verify pixel installation
@@ -381,12 +401,16 @@ Deno.serve((req) => {
                     
                     // Store trigger settings for each widget
                     const showAfterDelay = widgetData.show_after_delay ?? 3;
+                    const delayBetweenNotifications = widgetData.delay_between_notifications ?? 5; // Default 5 seconds
                     widgetTriggerSettings[widgetData.widget_id] = {
                         showAfterDelay: showAfterDelay,
+                        delayBetweenNotifications: delayBetweenNotifications,
                         displayFrequency: widgetData.display_frequency || 'all_time',
                         maxNotificationsPerSession: widgetData.max_notifications_per_session || 3,
                         urlPatterns: widgetData.url_patterns || {}
                     };
+                    
+                    console.log('ProofPop DEBUG: Widget', widgetData.widget_id, 'delay_between_notifications:', delayBetweenNotifications);
                     
                     // Track minimum delay across all widgets for initial display
                     minDelaySeconds = Math.min(minDelaySeconds, showAfterDelay);
@@ -552,16 +576,22 @@ Deno.serve((req) => {
         // Schedule next notification
         const displayDuration = (widgetDisplay.duration?.displayDuration ?? nextNotification.displayDuration ?? 8) * 1000;
         
-        // Use the next widget's trigger delay as the gap between notifications
-        const nextWidgetId = notificationQueue[currentNotificationIndex]?.widget_id;
-        const nextTriggerSettings = nextWidgetId ? widgetTriggerSettings[nextWidgetId] : null;
-        const delayBetween = (nextTriggerSettings?.showAfterDelay ?? 5) * 1000;
+        // Use the widget's delayBetweenNotifications setting for the gap between notifications
+        const currentTriggerSettings = widgetTriggerSettings[widgetId] || {};
+        const delayBetween = (currentTriggerSettings.delayBetweenNotifications ?? 5) * 1000;
+        
+        // DEBUG: Log the delay between notifications setting
+        console.log('ProofPop DEBUG: delayBetween for widget', widgetId, ':', {
+            currentTriggerSettings: currentTriggerSettings,
+            delayBetweenNotifications: currentTriggerSettings.delayBetweenNotifications,
+            delayBetweenMs: delayBetween
+        });
         
         // Add fade-out duration to ensure no overlap
         const fadeOutDuration = (widgetDisplay.duration?.fadeOutDuration ?? nextNotification.fadeOutDuration ?? 300);
         const totalWaitTime = displayDuration + fadeOutDuration + delayBetween;
         
-        console.log('ProofPop: Next notification in', totalWaitTime / 1000, 'seconds (display:', displayDuration / 1000, 's + fadeOut:', fadeOutDuration / 1000, 's + delay:', delayBetween / 1000, 's)');
+        console.log('ProofPop: Next notification in', totalWaitTime / 1000, 'seconds (display:', displayDuration / 1000, 's + fadeOut:', fadeOutDuration / 1000, 's + delayBetween:', delayBetween / 1000, 's)');
         
         setTimeout(() => {
             showNextNotification();
@@ -667,6 +697,14 @@ Deno.serve((req) => {
         const durationSettings = displaySettings.duration || {};
         const contentSettings = displaySettings.content || {};
         const privacySettings = displaySettings.privacy || {};
+
+        // DEBUG: Log duration settings
+        console.log('ProofPop DEBUG: Duration settings for widget', notification.widget_id, ':', {
+            durationSettings: durationSettings,
+            durationSettingsDisplayDuration: durationSettings.displayDuration,
+            notificationDisplayDuration: notification.displayDuration,
+            finalValue: durationSettings.displayDuration ?? notification.displayDuration ?? 8
+        });
 
         const displayDuration = (durationSettings.displayDuration ?? notification.displayDuration ?? 8) * 1000;
         const fadeInDuration = durationSettings.fadeInDuration ?? notification.fadeInDuration ?? 300;
@@ -880,9 +918,9 @@ Deno.serve((req) => {
         
         // Special Ripple Bubble Layout - Exact match to design
         if (isRipple) {
-            // Get product image from metadata if available
-            const productImage = notification.metadata?.product_image || notification.metadata?.image || '';
-            const userAvatar = notification.metadata?.avatar || '';
+            // Get product image from explicit fields first, then metadata
+            const productImage = notification.product_image || notification.metadata?.product_image || notification.metadata?.image || '';
+            const userAvatar = notification.user_avatar || notification.metadata?.avatar || '';
             const locationCity = notification.location || 'Unknown';
             
             // Main content wrapper - horizontal flex
@@ -986,9 +1024,9 @@ Deno.serve((req) => {
             html += '<div style="position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: linear-gradient(to right, #6366f1, #a855f7, #ec4899); opacity: 0.5; border-radius: 0 0 12px 12px;"></div>';
         } else if (isPuzzle) {
             // Puzzle Reveal Layout - Three pieces that snap together
-            const userAvatar = notification.metadata?.avatar || '';
-            const productImage = notification.metadata?.product_image || notification.metadata?.image || '';
-            const productName = notification.metadata?.product_name || notification.metadata?.product || 'Product';
+            const userAvatar = notification.user_avatar || notification.metadata?.avatar || '';
+            const productImage = notification.product_image || notification.metadata?.product_image || notification.metadata?.image || '';
+            const productName = notification.product_name || notification.metadata?.product_name || notification.metadata?.product || 'Product';
             const actionText = notification.metadata?.action || 'purchased';
             const accentColor = notification.metadata?.color || '#facc15'; // Yellow default
             
@@ -1040,10 +1078,48 @@ Deno.serve((req) => {
             html += '</div>'; // End puzzle container
         } else if (isPeekaboo) {
             // Peekaboo Layout - Playful peek animation with blinking eye
-            const userAvatar = notification.metadata?.avatar || '';
-            const viewCount = notification.metadata?.count || notification.metadata?.value || '18';
-            const timeText = notification.metadata?.time || 'last hour';
-            const messageText = notification.metadata?.message || 'people viewed this';
+            // Detect if this is a view-count style notification or a regular notification
+            const isViewCount = notification.event_type === 'page_view' || 
+                               notification.event_type === 'visitor_active' || 
+                               notification.metadata?.visitor_count ||
+                               notification.metadata?.count;
+            
+            const userAvatar = notification.user_avatar || notification.metadata?.avatar || '';
+            
+            // For view count style: show count + "people viewed this"
+            // For regular notifications (form_submit, purchase, etc.): show title + message
+            let primaryText, secondaryText, timeText;
+            
+            if (isViewCount) {
+                primaryText = notification.metadata?.count || notification.metadata?.value || notification.title || '18';
+                secondaryText = notification.metadata?.message || notification.message || 'people viewed this';
+                timeText = notification.metadata?.time || 'last hour';
+            } else {
+                // Regular notification - use title and message
+                primaryText = notification.title || 'Someone';
+                secondaryText = notification.message || 'completed an action';
+                timeText = notification.timeAgo || 'just now';
+            }
+            
+            // Choose icon based on event type
+            let iconSvg;
+            switch (notification.event_type) {
+                case 'form_submit':
+                    iconSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>';
+                    break;
+                case 'purchase':
+                    iconSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>';
+                    break;
+                case 'signup':
+                    iconSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>';
+                    break;
+                case 'review':
+                    iconSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>';
+                    break;
+                default:
+                    // Eye icon for view counts
+                    iconSvg = '<svg class="proofpop-blink" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+            }
             
             // Inject blink animation CSS
             html += '<style>@keyframes proofpop-blink{0%,48%,52%,100%{transform:scaleY(1)}50%{transform:scaleY(0.1)}}.proofpop-blink{animation:proofpop-blink 3s infinite}</style>';
@@ -1056,11 +1132,11 @@ Deno.serve((req) => {
             // Content container
             html += '<div style="position: relative; z-index: 10; display: flex; align-items: center; gap: 12px; width: 100%;">';
             
-            // Avatar group with blinking eye
+            // Avatar group with icon
             html += '<div style="position: relative; flex-shrink: 0;">';
-            // Eye icon
+            // Icon
             html += '<div style="position: relative; z-index: 20; width: 32px; height: 32px; background: #e0e7ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #6366f1;">';
-            html += '<svg class="proofpop-blink" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+            html += iconSvg;
             html += '</div>';
             // User avatar (hidden initially, slides out)
             if (userAvatar) {
@@ -1068,13 +1144,20 @@ Deno.serve((req) => {
             }
             html += '</div>';
             
-            // Text content
+            // Text content - different layout for view count vs regular
             html += '<div style="display: flex; flex-direction: column; min-width: 0;">';
-            html += '<div style="display: flex; align-items: center; gap: 4px; line-height: 1;">';
-            html += '<span style="font-size: 18px; font-weight: 700; color: #111827;">' + viewCount + '</span>';
-            html += '<span style="font-size: 14px; font-weight: 500; color: #6b7280;">' + messageText + '</span>';
-            html += '</div>';
-            html += '<div style="font-size: 12px; font-weight: 500; color: #6366f1; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">In the ' + timeText + '</div>';
+            if (isViewCount) {
+                html += '<div style="display: flex; align-items: center; gap: 4px; line-height: 1;">';
+                html += '<span style="font-size: 18px; font-weight: 700; color: #111827;">' + primaryText + '</span>';
+                html += '<span style="font-size: 14px; font-weight: 500; color: #6b7280;">' + secondaryText + '</span>';
+                html += '</div>';
+                html += '<div style="font-size: 12px; font-weight: 500; color: #6366f1; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">In the ' + timeText + '</div>';
+            } else {
+                // Regular notification layout
+                html += '<div style="font-size: 14px; font-weight: 600; color: #111827; line-height: 1.2;">' + primaryText + '</div>';
+                html += '<div style="font-size: 13px; font-weight: 400; color: #6b7280; line-height: 1.3; margin-top: 2px;">' + secondaryText + '</div>';
+                html += '<div style="font-size: 11px; font-weight: 500; color: #6366f1; margin-top: 4px;">' + timeText + '</div>';
+            }
             html += '</div>';
             
             // Close button
@@ -1085,9 +1168,15 @@ Deno.serve((req) => {
             html += '</div>'; // End content container
         } else if (isFloatingTag) {
             // Floating Tag Layout - Pill-shaped glassmorphic tag with gentle float
-            const tagText = notification.metadata?.text || 'Popular in Design';
-            const subText = notification.metadata?.subtext || notification.metadata?.value || '120 viewing';
-            const iconType = notification.metadata?.iconType || 'sparkles';
+            // For live visitor widgets, use title (count) and message (viewing text)
+            const isLiveVisitor = notification.event_type === 'visitor_active' || notification.metadata?.visitor_count;
+            const tagText = isLiveVisitor 
+                ? (notification.title + ' ' + notification.message)
+                : (notification.metadata?.text || notification.title || 'Popular in Design');
+            const subText = isLiveVisitor 
+                ? null  // Don't show subtext for live visitors since it's already in tagText
+                : (notification.metadata?.subtext || notification.metadata?.value || notification.timeAgo || '');
+            const iconType = isLiveVisitor ? 'trending' : (notification.metadata?.iconType || 'sparkles');
             
             // Determine icon color based on type
             let iconColor = '#f59e0b'; // amber default
@@ -1136,10 +1225,10 @@ Deno.serve((req) => {
             html += '</div>'; // End floating container
         } else if (isStoryPop) {
             // Story Pop Layout - Vertical card with micro-animations like stories
-            const productImage = notification.metadata?.product_image || notification.metadata?.image || '';
-            const userName = notification.metadata?.customer_name || notification.metadata?.name || 'Sarah J.';
+            const productImage = notification.product_image || notification.metadata?.product_image || notification.metadata?.image || '';
+            const userName = notification.customer_name || notification.metadata?.customer_name || notification.metadata?.name || 'Sarah J.';
             const actionText = notification.metadata?.action || 'just bought this!';
-            const timeText = notification.metadata?.time || '2s ago';
+            const timeText = notification.timeAgo || notification.metadata?.time || '2s ago';
             const storyType = notification.metadata?.storyType || 'product-spin';
             
             // Determine accent color based on type
@@ -1224,9 +1313,15 @@ Deno.serve((req) => {
             
         } else if (isFrostedToken) {
             // Frosted Token Layout - Glassmorphic token with breathing animation
-            const countValue = notification.metadata?.count || notification.metadata?.value || '32';
-            const labelText = notification.metadata?.label || 'purchased today';
-            const tokenType = notification.metadata?.tokenType || 'shopping';
+            // For live visitor widgets, use title (count) and message (viewing text)
+            const isLiveVisitor = notification.event_type === 'visitor_active' || notification.metadata?.visitor_count;
+            const countValue = isLiveVisitor 
+                ? notification.title 
+                : (notification.metadata?.count || notification.metadata?.value || notification.title || '32');
+            const labelText = isLiveVisitor 
+                ? notification.message 
+                : (notification.metadata?.label || notification.message || 'purchased today');
+            const tokenType = isLiveVisitor ? 'eye' : (notification.metadata?.tokenType || 'shopping');
             
             // Determine gradient color based on type
             let gradientColor = 'linear-gradient(135deg, #fb923c, #ec4899)'; // orange-pink default
@@ -1345,6 +1440,13 @@ Deno.serve((req) => {
         } else {
             document.body.appendChild(widgetElement);
         }
+        
+        // Track view analytics
+        trackAnalytics(notification.widget_id, 'view', {
+            notification_title: notification.title,
+            notification_message: notification.message,
+            event_type: notification.event_type
+        });
 
         // After inserting into the DOM, transition from the initial off-screen state
         // to the final visible state so the widget actually appears.
@@ -1489,6 +1591,11 @@ Deno.serve((req) => {
             if (closeBtn) {
                 closeBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
+                    // Track close analytics
+                    trackAnalytics(notification.widget_id, 'close', {
+                        notification_title: notification.title,
+                        event_type: notification.event_type
+                    });
                     widgetElement.style.transform = 'translateX(-120%) rotate(-10deg)';
                     setTimeout(() => {
                         if (widgetElement.parentNode) {
@@ -1591,6 +1698,12 @@ Deno.serve((req) => {
                 notification_id: notification.id,
                 notification_type: notification.event_type,
                 widget_id: notification.widget_id
+            });
+            // Track click analytics
+            trackAnalytics(notification.widget_id, 'click', {
+                notification_title: notification.title,
+                notification_message: notification.message,
+                event_type: notification.event_type
             });
         });
 

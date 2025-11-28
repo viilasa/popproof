@@ -655,6 +655,40 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                     </SettingsGroup>
                   </SettingsSection>
 
+                  {/* Delay Between Notifications */}
+                  <SettingsSection
+                    title="Delay Between Notifications"
+                    description="How long to wait before showing the next notification"
+                  >
+                    <SettingsGroup>
+                      <SettingsRow label="Gap Time" description="Time to wait after one notification ends before showing the next">
+                        <Select
+                          value={(config.triggers.behavior.delayBetweenNotifications || 5).toString()}
+                          onChange={(value) => updateConfig({
+                            triggers: {
+                              ...config.triggers,
+                              behavior: { ...config.triggers.behavior, delayBetweenNotifications: parseInt(value) }
+                            }
+                          })}
+                          options={[
+                            { value: '0', label: 'No delay' },
+                            { value: '3', label: '3 seconds' },
+                            { value: '5', label: '5 seconds' },
+                            { value: '10', label: '10 seconds' },
+                            { value: '15', label: '15 seconds' },
+                            { value: '30', label: '30 seconds' },
+                            { value: '60', label: '1 minute' },
+                            { value: '120', label: '2 minutes' },
+                            { value: '180', label: '3 minutes' },
+                            { value: '300', label: '5 minutes' },
+                            { value: '600', label: '10 minutes' },
+                          ]}
+                          className="w-48"
+                        />
+                      </SettingsRow>
+                    </SettingsGroup>
+                  </SettingsSection>
+
                   {/* Display Frequency */}
                   <SettingsSection
                     title="Display frequency"

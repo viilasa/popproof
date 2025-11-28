@@ -111,7 +111,8 @@ export interface TimeTriggerSettings {
 }
 
 export interface BehaviorTriggerSettings {
-  showAfterDelay: number; // seconds
+  showAfterDelay: number; // seconds - delay before showing first notification
+  delayBetweenNotifications: number; // seconds - gap between notifications (e.g., 5s, 60s, 300s for 5min)
   showAfterScroll: number; // percentage (0 = disabled)
   showOnExitIntent: boolean;
   showOnInactivity: number; // seconds (0 = disabled)
@@ -480,47 +481,3 @@ export function isValidWidgetConfig(obj: any): obj is WidgetConfig {
   );
 }
 
-// Export all types
-export type {
-  // Design
-  PositionSettings,
-  LayoutSettings,
-  BorderSettings,
-  ShadowSettings,
-  BackgroundSettings,
-  TypographySettings,
-  IconSettings,
-  
-  // Triggers
-  EventTriggerSettings,
-  TimeTriggerSettings,
-  BehaviorTriggerSettings,
-  FrequencySettings,
-  AdvancedRuleSettings,
-  
-  // Display
-  DurationSettings,
-  ContentDisplaySettings,
-  PrivacySettings,
-  InteractionSettings,
-  ResponsiveSettings,
-  
-  // Branding
-  BrandIdentitySettings,
-  ColorSchemeSettings,
-  MessageTemplateSettings,
-  CustomCSSSettings,
-  LocalizationSettings,
-  SoundSettings,
-  
-  // Webhooks & Auto-capture
-  WebhookConfig,
-  WebhookPayloadSettings,
-  FormCaptureSettings,
-  ClickTrackingSettings,
-  PageEventSettings,
-  EcommerceSettings,
-  IntegrationConfig,
-  APIIntegrationSettings,
-  AnalyticsTrackingSettings,
-};

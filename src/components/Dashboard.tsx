@@ -3,7 +3,6 @@ import { useAuth } from './auth/AuthProvider';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { MainContent } from './MainContent';
-import { HelpButton } from './HelpButton';
 
 export function Dashboard() {
   const { user, loading } = useAuth();
@@ -67,7 +66,6 @@ export function Dashboard() {
           />}
         </div>
       </div>
-      <HelpButton />
     </div>
   );
 }
