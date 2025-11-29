@@ -580,7 +580,7 @@ export default function LandingPage({ onShowLogin, onShowSignup }: LandingPagePr
           </div>
           
           <div className="border-t border-slate-100 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-slate-400 text-sm">© 2024 ProofEdge Inc. All rights reserved.</p>
+            <p className="text-slate-400 text-sm">© 2025 ProofEdge Inc. All rights reserved.</p>
             <div className="flex gap-6">
                <div className="w-5 h-5 bg-slate-200 rounded-full hover:bg-slate-300 cursor-pointer"></div>
                <div className="w-5 h-5 bg-slate-200 rounded-full hover:bg-slate-300 cursor-pointer"></div>
