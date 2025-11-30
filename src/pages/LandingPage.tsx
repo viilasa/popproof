@@ -69,6 +69,31 @@ export default function LandingPage({ onShowLogin, onShowSignup }: LandingPagePr
     };
   }, []);
 
+  // Google Analytics - only loads on LandingPage
+  useEffect(() => {
+    // Load gtag.js script
+    const gtagScript = document.createElement('script');
+    gtagScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-LRM0590QHM';
+    gtagScript.async = true;
+    document.head.appendChild(gtagScript);
+
+    // Initialize gtag
+    const initScript = document.createElement('script');
+    initScript.innerHTML = `
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-LRM0590QHM');
+    `;
+    document.head.appendChild(initScript);
+
+    return () => {
+      // Cleanup: remove scripts when leaving LandingPage
+      document.head.removeChild(gtagScript);
+      document.head.removeChild(initScript);
+    };
+  }, []);
+
   const currentWidget = RECENT_ACTIVITY[activeWidgetIndex];
 
   return (
