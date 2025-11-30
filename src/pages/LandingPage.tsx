@@ -54,6 +54,21 @@ export default function LandingPage({ onShowLogin, onShowSignup }: LandingPagePr
     return () => clearInterval(interval);
   }, []);
 
+  // ProofPop Pixel Code - only loads on LandingPage
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://ghiobuubmnvlaukeyuwe.supabase.co/functions/v1/pixel-loader';
+    script.setAttribute('data-site-id', '3b15fc29-47c4-4900-865a-834640458e19');
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+
+    return () => {
+      // Cleanup: remove script when leaving LandingPage
+      document.head.removeChild(script);
+    };
+  }, []);
+
   const currentWidget = RECENT_ACTIVITY[activeWidgetIndex];
 
   return (
