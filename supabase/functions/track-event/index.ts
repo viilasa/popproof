@@ -84,9 +84,29 @@ Deno.serve(async (req)=>{
     // Ensure timestamp is set
     const timestamp = eventData.timestamp || new Date().toISOString();
     // Get client IP
-    const clientIP = req.headers.get('x-forwarded-for') || 
+    const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
                     req.headers.get('x-real-ip') || 
+                    req.headers.get('cf-connecting-ip') ||
                     'unknown';
+
+    // Try to get location from IP using free geolocation API
+    let geoLocation = { city: '', region: '', country: '' };
+    if (clientIP && clientIP !== 'unknown' && !clientIP.startsWith('127.') && !clientIP.startsWith('192.168.') && !clientIP.startsWith('10.')) {
+      try {
+        const geoResponse = await fetch(`http://ip-api.com/json/${clientIP}?fields=city,regionName,country`);
+        if (geoResponse.ok) {
+          const geoData = await geoResponse.json();
+          geoLocation = {
+            city: geoData.city || '',
+            region: geoData.regionName || '',
+            country: geoData.country || ''
+          };
+          console.log('Geo location resolved:', geoLocation);
+        }
+      } catch (geoError) {
+        console.warn('Failed to get geo location:', geoError);
+      }
+    }
 
     // Build comprehensive metadata with ALL event data
     const metadata: any = {
@@ -99,7 +119,12 @@ Deno.serve(async (req)=>{
       referrer: eventData.referrer,
       domain: domain,
       session_id: eventData.session_id,
-      timestamp: timestamp
+      timestamp: timestamp,
+      // Add geo location data
+      city: geoLocation.city,
+      region: geoLocation.region,
+      country: geoLocation.country,
+      location: geoLocation.city || geoLocation.region || geoLocation.country || ''
     };
     
     // Add all event_data to metadata

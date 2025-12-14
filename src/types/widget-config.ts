@@ -11,7 +11,7 @@ export interface PositionSettings {
 }
 
 export interface LayoutSettings {
-  layout: 'card' | 'compact' | 'minimal' | 'full-width' | 'ripple' | 'parallax' | 'puzzle' | 'peekaboo' | 'floating-tag' | 'story-pop' | 'frosted-token';
+  layout: 'card' | 'compact' | 'minimal' | 'full-width' | 'ripple' | 'parallax' | 'puzzle' | 'peekaboo' | 'floating-tag' | 'story-pop' | 'frosted-token' | 'pill-badge';
   maxWidth: number; // px
   minWidth: number; // px
 }
@@ -146,6 +146,8 @@ export interface AdvancedRuleSettings {
     matchTypes?: ('exact' | 'contains' | 'starts')[]; // match type per URL pattern
   };
   customJsCondition?: string; // advanced: JS expression
+  // Product-specific filtering
+  productSpecificMode: 'off' | 'product_only' | 'product_first'; // off = show all, product_only = only show events for current product, product_first = prioritize current product but fallback to general
 }
 
 export interface TriggerSettings {
@@ -185,6 +187,9 @@ export interface ContentDisplaySettings {
   showCustomerName: boolean; // Show customer/user name
   showRating: boolean; // Show rating stars (for reviews)
   showReviewContent: boolean; // Show review text content
+  // Custom message template for form submissions
+  useCustomFormMessage: boolean; // Toggle for custom form message
+  customFormMessage: string; // e.g., "signed up for the challenge" - name is auto-prepended
 }
 
 export interface PrivacySettings {

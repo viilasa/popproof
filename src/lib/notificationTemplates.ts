@@ -289,6 +289,37 @@ export const notificationTemplates: NotificationTemplate[] = [
       message: 'See what others are doing',
       timestamp: 'Live'
     }
+  },
+
+  // 9. Pill Badge - Daily Stats
+  {
+    id: 'pill_badge',
+    name: 'Pill Badge',
+    description: 'Compact pill showing today\'s activity stats (visitors, purchases, reviews)',
+    icon: 'badge',
+    category: 'activity',
+    defaultRules: {
+      eventTypes: ['page_view'],
+      timeWindowHours: 24, // Today only
+      excludeTestEvents: true,
+      requireLocation: false
+    },
+    displayConfig: {
+      displayDuration: 8, // 8 seconds like other widgets
+      showTimestamp: false,
+      showLocation: false,
+      anonymizeNames: false
+    },
+    messageTemplate: {
+      titleTemplate: '20',
+      messageTemplate: 'visited today',
+      variables: []
+    },
+    preview: {
+      title: '20',
+      message: 'visited today',
+      timestamp: ''
+    }
   }
 ];
 

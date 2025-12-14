@@ -34,12 +34,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Handle OAuth callback - check for access_token in URL hash
+    const handleOAuthCallback = async () => {
+      const hash = window.location.hash;
+      if (hash && hash.includes('access_token')) {
+        // Let Supabase process the hash
+        const { data, error } = await supabase.auth.getSession();
+        if (!error && data.session) {
+          setSession(data.session);
+          setUser(data.session.user);
+          // Clean up the URL
+          window.history.replaceState(null, '', window.location.pathname);
+        }
+        setLoading(false);
+        return;
+      }
+
+      // Get initial session
+      const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-    });
+    };
+
+    handleOAuthCallback();
 
     // Listen for auth changes
     const {
@@ -53,6 +71,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (event === 'PASSWORD_RECOVERY') {
         // Redirect to reset password form
         window.location.hash = '#reset-password';
+      }
+      
+      // Clean URL after successful OAuth sign in
+      if (event === 'SIGNED_IN' && window.location.hash.includes('access_token')) {
+        window.history.replaceState(null, '', window.location.pathname);
       }
     });
 

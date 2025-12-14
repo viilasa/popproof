@@ -420,18 +420,312 @@ Deno.serve((req) => {
     // ============================================
     const setupPlatformTracking = () => {
         // Shopify specific
-        if (platform === 'shopify' && window.Shopify) {
+        if (platform === 'shopify') {
+            // Helper function to find product image with multiple fallbacks
+            const findShopifyProductImage = () => {
+                console.log('ProofPop: Searching for Shopify product image...');
+                
+                // First try: og:image meta tag (most reliable)
+                const ogImage = document.querySelector('meta[property="og:image"]');
+                if (ogImage && ogImage.content && ogImage.content.includes('cdn.shopify')) {
+                    console.log('ProofPop: Found image via og:image');
+                    return ogImage.content;
+                }
+                
+                // Second try: product JSON data (Shopify stores this)
+                try {
+                    // Look for product JSON in script tags
+                    const scripts = document.querySelectorAll('script[type="application/json"]');
+                    for (const script of scripts) {
+                        try {
+                            const data = JSON.parse(script.textContent);
+                            // Check various JSON structures
+                            const img = data?.product?.featured_image ||
+                                       data?.product?.images?.[0]?.src ||
+                                       data?.product?.image?.src ||
+                                       data?.featured_image ||
+                                       data?.images?.[0]?.src ||
+                                       data?.image?.src;
+                            if (img && img.includes('cdn.shopify')) {
+                                console.log('ProofPop: Found image via product JSON');
+                                return img.startsWith('//') ? 'https:' + img : img;
+                            }
+                        } catch (e) {}
+                    }
+                } catch (e) {}
+                
+                // Third try: CSS selectors for common themes
+                const imageSelectors = [
+                    // Main product images
+                    '.product__media img',
+                    '.product-single__photo img',
+                    '.product-featured-media img',
+                    '.product-featured-image img',
+                    '.product__main-photos img',
+                    '.product-gallery img',
+                    '.product-image-main img',
+                    '[data-product-image]',
+                    '[data-product-featured-image]',
+                    '.product-image img',
+                    '.product__image img',
+                    '.featured-image img',
+                    '.product__thumbnail img',
+                    '.product-single__thumbnail img',
+                    '.product-gallery__image img',
+                    '.product img[src*="cdn.shopify"]',
+                    'img[src*="cdn.shopify.com/s/files"]',
+                    '.product__media-item img',
+                    '.media-gallery img',
+                    '.product-single__media img',
+                    '.product-single__photos img',
+                    '.product-photo-container img',
+                    '[class*="product"] img[src*="cdn.shopify"]',
+                    // More generic
+                    'main img[src*="cdn.shopify"]',
+                    '#product img',
+                    '.product-page img',
+                    '[data-section-type="product"] img'
+                ];
+                
+                for (const selector of imageSelectors) {
+                    try {
+                        const img = document.querySelector(selector);
+                        if (img && img.src && img.src.includes('cdn.shopify')) {
+                            console.log('ProofPop: Found image via selector:', selector);
+                            // Get high-res version by removing size parameters
+                            let imgSrc = img.src;
+                            imgSrc = imgSrc.replace(/_\\d+x\\d*\\./, '.');
+                            imgSrc = imgSrc.replace(/_\\d+x\\d*_crop_center\\./, '.');
+                            return imgSrc;
+                        }
+                    } catch (e) {}
+                }
+                
+                // Fourth try: Find the largest Shopify CDN image on the page (likely the product)
+                const allShopifyImgs = document.querySelectorAll('img[src*="cdn.shopify.com"]');
+                let largestImg = null;
+                let largestSize = 0;
+                
+                for (const img of allShopifyImgs) {
+                    // Skip tiny images (icons, logos)
+                    const width = img.naturalWidth || img.width || 0;
+                    const height = img.naturalHeight || img.height || 0;
+                    const size = width * height;
+                    
+                    if (size > largestSize && size > 10000) { // At least 100x100
+                        largestSize = size;
+                        largestImg = img;
+                    }
+                }
+                
+                if (largestImg && largestImg.src) {
+                    console.log('ProofPop: Found largest Shopify image');
+                    return largestImg.src;
+                }
+                
+                // Last resort: any Shopify CDN image
+                const anyShopifyImg = document.querySelector('img[src*="cdn.shopify.com"]');
+                if (anyShopifyImg && anyShopifyImg.src) {
+                    console.log('ProofPop: Found any Shopify CDN image');
+                    return anyShopifyImg.src;
+                }
+                
+                console.log('ProofPop: No product image found');
+                return '';
+            };
+            
+            // Helper function to find product name
+            const findShopifyProductName = () => {
+                const nameSelectors = [
+                    '.product-title',
+                    '.product__title',
+                    '.product-single__title',
+                    'h1.title',
+                    '[data-product-title]',
+                    '.product-info__title',
+                    '.product__info h1',
+                    'h1[itemprop="name"]',
+                    '.product-name h1',
+                    '.product h1',
+                    // More theme-specific selectors
+                    '.product-meta__title',
+                    '.ProductMeta__Title',
+                    '.product-details__title',
+                    '.product-form__title',
+                    '[data-product-info] h1',
+                    '.product-block h1',
+                    'main h1'
+                ];
+                
+                for (const selector of nameSelectors) {
+                    const el = document.querySelector(selector);
+                    if (el && el.textContent) {
+                        // Clean up the text - remove extra whitespace and newlines
+                        const cleanText = el.textContent.replace(/\\s+/g, ' ').trim();
+                        // Make sure it's not a button or action text
+                        if (cleanText && cleanText.length > 2 && 
+                            !cleanText.toLowerCase().includes('add to cart') &&
+                            !cleanText.toLowerCase().includes('buy now') &&
+                            !cleanText.toLowerCase().includes('added')) {
+                            return cleanText;
+                        }
+                    }
+                }
+                
+                // Fallback to og:title
+                const ogTitle = document.querySelector('meta[property="og:title"]');
+                if (ogTitle && ogTitle.content) {
+                    // Clean og:title - often has store name appended
+                    let title = ogTitle.content;
+                    // Remove common suffixes like " - Store Name" or " | Store Name"
+                    title = title.split(' - ')[0].split(' | ')[0].trim();
+                    return title;
+                }
+                
+                // Try product JSON if available
+                try {
+                    const productJson = document.querySelector('[data-product-json], script[type="application/json"][data-product-json]');
+                    if (productJson) {
+                        const data = JSON.parse(productJson.textContent);
+                        if (data.title) return data.title;
+                    }
+                } catch (e) {}
+                
+                return 'Product';
+            };
+            
             // Track add to cart
             document.addEventListener('click', (e) => {
-                const btn = e.target.closest('[name="add"], [data-action="add-to-cart"]');
+                const btn = e.target.closest('[name="add"], [data-action="add-to-cart"], .product-form__submit, .add-to-cart, [type="submit"][name="add"], .btn-addtocart, .add-to-cart-btn, [data-add-to-cart], .quick-add-btn, .add-to-cart-button');
                 if (btn) {
-                    const productName = document.querySelector('.product-title, .product__title, h1')?.textContent?.trim();
+                    // Check if we're on a product page or collection/homepage
+                    const isProductPage = window.location.pathname.includes('/products/');
+                    
+                    let productName, productImage, productPrice;
+                    
+                    if (isProductPage) {
+                        // On product page - use page-level detection
+                        productName = findShopifyProductName();
+                        productImage = findShopifyProductImage();
+                        productPrice = document.querySelector('.product__price, .price, [data-product-price], .product-single__price, .money, [data-price]')?.textContent?.trim();
+                    } else {
+                        // On collection/homepage - find the product card containing the button
+                        const productCard = btn.closest('.product-card, .product-item, .grid-product, .product, .card, [data-product-card], .product-grid-item, .collection-product, article');
+                        
+                        if (productCard) {
+                            // Get image from the product card
+                            const cardImg = productCard.querySelector('img[src*="cdn.shopify"], img');
+                            productImage = cardImg?.src || '';
+                            
+                            // Get name from the product card
+                            const cardTitle = productCard.querySelector('.product-card__title, .product-item__title, .product-title, .card__heading, h3, h2, [data-product-title], a[href*="/products/"]');
+                            productName = cardTitle?.textContent?.replace(/\\s+/g, ' ').trim() || '';
+                            
+                            // Get price from the product card
+                            const cardPrice = productCard.querySelector('.price, .money, .product-price, [data-price]');
+                            productPrice = cardPrice?.textContent?.trim() || '';
+                            
+                            console.log('ProofPop: Found product from card', { productName, productImage, productPrice });
+                        } else {
+                            // Fallback to page-level detection
+                            productName = findShopifyProductName();
+                            productImage = findShopifyProductImage();
+                            productPrice = document.querySelector('.product__price, .price, [data-product-price], .product-single__price, .money, [data-price]')?.textContent?.trim();
+                        }
+                    }
+                    
+                    // Clean up product name
+                    if (productName) {
+                        productName = productName.replace(/\\s+/g, ' ').trim();
+                        // Filter out button text
+                        if (productName.toLowerCase().includes('add') || 
+                            productName.toLowerCase().includes('cart') ||
+                            productName.length < 3) {
+                            productName = 'Product';
+                        }
+                    }
+                    
+                    console.log('ProofPop: Shopify add to cart detected', { productName, productImage, productPrice, isProductPage });
+                    
                     trackEvent('add_to_cart', {
-                        product_name: productName || 'Unknown',
+                        product_name: productName || 'Product',
+                        product_image: productImage || '',
+                        price: productPrice || '',
                         platform: 'shopify'
                     });
                 }
             });
+            
+            // Track Shopify purchases on thank you / order confirmation page
+            const isOrderConfirmation = window.location.pathname.includes('/thank_you') || 
+                                       window.location.pathname.includes('/orders/') ||
+                                       window.location.pathname.includes('order-confirmed') ||
+                                       document.querySelector('.os-order-number, [data-order-id], .thank-you');
+            
+            if (isOrderConfirmation) {
+                console.log('ProofPop: Shopify order confirmation page detected');
+                
+                // Try to get order data from Shopify's checkout object
+                if (window.Shopify && window.Shopify.checkout) {
+                    const checkout = window.Shopify.checkout;
+                    const lineItems = checkout.line_items || [];
+                    
+                    lineItems.forEach((item, index) => {
+                        // Delay each to avoid rate limiting
+                        setTimeout(() => {
+                            trackEvent('purchase', {
+                                customer_name: checkout.billing_address?.first_name || checkout.shipping_address?.first_name || 'Someone',
+                                product_name: item.title || item.name || 'Product',
+                                product_image: item.image_url || item.featured_image?.url || item.image || '',
+                                value: item.price || item.final_price || 0,
+                                quantity: item.quantity || 1,
+                                order_id: checkout.order_id || checkout.token,
+                                location: checkout.billing_address?.city || checkout.shipping_address?.city || '',
+                                currency: checkout.currency || 'USD',
+                                platform: 'shopify'
+                            });
+                        }, index * 500);
+                    });
+                } else {
+                    // Fallback: scrape from page
+                    const orderItems = document.querySelectorAll('.product, .order-summary__section__content .product, [data-order-summary-section] .product, .product-thumbnail');
+                    
+                    orderItems.forEach((item, index) => {
+                        setTimeout(() => {
+                            const name = item.querySelector('.product__description__name, .product-thumbnail__title, .product-name, [data-product-name]')?.textContent?.trim() || 'Product';
+                            const image = item.querySelector('img')?.src || '';
+                            const price = item.querySelector('.product__price, .order-summary__emphasis, [data-product-price]')?.textContent?.trim() || '';
+                            const customerName = document.querySelector('[data-customer-name], .customer-name, .os-header__title')?.textContent?.trim() || 'Someone';
+                            const location = document.querySelector('[data-shipping-city], .address--tight')?.textContent?.trim() || '';
+                            
+                            trackEvent('purchase', {
+                                customer_name: customerName,
+                                product_name: name,
+                                product_image: image,
+                                value: parseFloat(price.replace(/[^0-9.]/g, '')) || 0,
+                                location: location,
+                                platform: 'shopify'
+                            });
+                        }, index * 500);
+                    });
+                }
+            }
+            
+            // Also listen for Shopify's analytics events if available
+            if (window.ShopifyAnalytics && window.ShopifyAnalytics.lib) {
+                const originalTrack = window.ShopifyAnalytics.lib.track;
+                window.ShopifyAnalytics.lib.track = function(eventName, data) {
+                    if (eventName === 'Added Product' || eventName === 'Viewed Product') {
+                        trackEvent(eventName === 'Added Product' ? 'add_to_cart' : 'page_view', {
+                            product_name: data?.name || data?.productName,
+                            product_image: data?.imageUrl || data?.image,
+                            value: data?.price,
+                            platform: 'shopify'
+                        });
+                    }
+                    return originalTrack.apply(this, arguments);
+                };
+            }
         }
         
         // WooCommerce specific
@@ -440,12 +734,34 @@ Deno.serve((req) => {
                 const btn = e.target.closest('.add_to_cart_button, .single_add_to_cart_button');
                 if (btn) {
                     const productName = document.querySelector('.product_title, .entry-title')?.textContent?.trim();
+                    const productImage = document.querySelector('.woocommerce-product-gallery__image img, .wp-post-image')?.src || '';
                     trackEvent('add_to_cart', {
                         product_name: productName || 'Unknown',
+                        product_image: productImage,
                         platform: 'woocommerce'
                     });
                 }
             });
+            
+            // Track WooCommerce order confirmation
+            const isWooOrderConfirmation = document.querySelector('.woocommerce-order-received, .woocommerce-thankyou');
+            if (isWooOrderConfirmation) {
+                const orderItems = document.querySelectorAll('.woocommerce-table--order-details .order_item, .order_details .order_item');
+                orderItems.forEach((item, index) => {
+                    setTimeout(() => {
+                        const name = item.querySelector('.product-name a, .wc-item-meta')?.textContent?.trim() || 'Product';
+                        const image = item.querySelector('img')?.src || '';
+                        const customerName = document.querySelector('.woocommerce-customer-details address')?.textContent?.split('\\n')[0]?.trim() || 'Someone';
+                        
+                        trackEvent('purchase', {
+                            customer_name: customerName,
+                            product_name: name,
+                            product_image: image,
+                            platform: 'woocommerce'
+                        });
+                    }, index * 500);
+                });
+            }
         }
         
         console.log('ProofPop: Platform-specific tracking enabled for:', platform);

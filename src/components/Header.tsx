@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Languages, User, LogOut, Menu } from 'lucide-react';
+import { ChevronDown, User, LogOut, Menu } from 'lucide-react';
 import { useAuth } from './auth/AuthProvider';
 import { useToast } from '../hooks/useToast';
 import { Toast } from './Toast';
@@ -20,13 +20,26 @@ export function Header({ onSectionChange, onMenuToggle }: HeaderProps = {}) {
   const userDropdownRef = useRef<HTMLDivElement>(null);
 
   const languages = [
-    { code: 'en', name: 'English' },
-    { code: 'es', name: 'Español' },
-    { code: 'fr', name: 'French' },
-    { code: 'it', name: 'Italian' },
-    { code: 'nl', name: 'Dutch' },
-    { code: 'tr', name: 'Turkish' }
+    { code: 'en', name: 'English', flag: 'us' },
+    { code: 'es', name: 'Español', flag: 'es' },
+    { code: 'fr', name: 'French', flag: 'fr' },
+    { code: 'it', name: 'Italian', flag: 'it' },
+    { code: 'nl', name: 'Dutch', flag: 'nl' },
+    { code: 'tr', name: 'Turkish', flag: 'tr' }
   ];
+
+  // Get current language flag code
+  const currentFlag = languages.find(l => l.name === selectedLanguage)?.flag || 'us';
+
+  // Flag component using flagcdn.com
+  const FlagIcon = ({ code, className = "w-5 h-4" }: { code: string; className?: string }) => (
+    <img 
+      src={`https://flagcdn.com/w40/${code}.png`}
+      srcSet={`https://flagcdn.com/w80/${code}.png 2x`}
+      alt={`${code} flag`}
+      className={`${className} rounded-sm object-cover`}
+    />
+  );
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -57,26 +70,46 @@ export function Header({ onSectionChange, onMenuToggle }: HeaderProps = {}) {
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 h-14 sm:h-16 flex-shrink-0 z-20">
+    <header className="bg-gray-950 h-14 sm:h-16 flex-shrink-0 z-20 shadow-lg relative">
+      {/* Left bottom cut-out corner - matches sidebar white background */}
+      <div 
+        className="absolute -bottom-3 left-0 w-3 h-3 bg-gray-950 hidden lg:block z-50"
+      ></div>
+      <div 
+        className="absolute -bottom-3 left-0 w-3 h-3 hidden lg:block z-50"
+        style={{ borderTopLeftRadius: '12px', backgroundColor: '#f4f4f4ff' }}
+      ></div>
+      
+      {/* Right bottom cut-out corner - matches main content gray background */}
+      <div 
+        className="absolute -bottom-3 right-0 w-3 h-3 bg-gray-950 hidden lg:block z-50"
+      ></div>
+      <div 
+        className="absolute -bottom-3 right-0 w-3 h-3 hidden lg:block z-50"
+        style={{ borderTopRightRadius: '12px', backgroundColor: '#f4f4f4ff' }}
+      ></div>
+      
       <div className="flex items-center justify-between h-full px-3 sm:px-4 md:px-6 max-w-full">
         {/* Left side - Burger menu and Logo */}
         <div className="flex items-center space-x-3 sm:space-x-6">
           {/* Burger Menu Button - Mobile Only */}
           <button
             onClick={onMenuToggle}
-            className="lg:hidden p-2 -ml-2 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors touch-manipulation"
+            className="lg:hidden p-2 -ml-2 rounded-lg hover:bg-gray-800 active:bg-gray-700 transition-colors touch-manipulation"
             aria-label="Toggle menu"
           >
-            <Menu className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700" />
+            <Menu className="w-5 h-5 sm:w-6 sm:h-6 text-gray-200" />
           </button>
           {/* Logo */}
           <div className="flex items-center space-x-2 sm:space-x-3">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
-              <div className="w-3 h-3 sm:w-4 sm:h-4 bg-white rounded-full"></div>
-            </div>
+            <img 
+              src="https://res.cloudinary.com/ddhhlkyut/image/upload/v1765406050/Proofedge6_dxarbe.svg" 
+              alt="ProofEdge Logo" 
+              className="w-8 h-8 sm:w-10 sm:h-10 object-contain"
+            />
             <div className="hidden sm:block">
-              <span className="text-lg sm:text-xl font-bold text-gray-900">ProofEdge</span>
-              <p className="text-xs text-gray-500 -mt-1 hidden md:block">Social Proof Platform</p>
+              <span className="text-lg sm:text-xl font-bold text-white">ProofEdge</span>
+              <p className="text-xs text-gray-400 -mt-1 hidden md:block">Social Proof Platform</p>
             </div>
           </div>
         </div>
@@ -86,27 +119,28 @@ export function Header({ onSectionChange, onMenuToggle }: HeaderProps = {}) {
           <div className="relative" ref={dropdownRef}>
             <button 
               onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
-              className="hidden md:flex items-center space-x-1 text-sm text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+              className="hidden md:flex items-center space-x-2 text-sm text-gray-300 hover:text-white px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors"
             >
-              <Languages className="w-4 h-4" />
+              <FlagIcon code={currentFlag} className="w-5 h-4" />
               <span>{selectedLanguage}</span>
               <ChevronDown className={`w-3 h-3 transition-transform ${showLanguageDropdown ? 'rotate-180' : ''}`} />
             </button>
             
             {showLanguageDropdown && (
-              <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+              <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
                 <div className="py-1">
                   {languages.map((language) => (
                     <button
                       key={language.code}
                       onClick={() => handleLanguageSelect(language)}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${
+                      className={`w-full text-left px-3 py-2.5 text-sm hover:bg-gray-50 transition-colors flex items-center space-x-3 ${
                         selectedLanguage === language.name 
                           ? 'text-blue-600 bg-blue-50' 
                           : 'text-gray-700'
                       }`}
                     >
-                      {language.name}
+                      <FlagIcon code={language.flag} className="w-6 h-4" />
+                      <span>{language.name}</span>
                     </button>
                   ))}
                 </div>
@@ -117,16 +151,16 @@ export function Header({ onSectionChange, onMenuToggle }: HeaderProps = {}) {
           <div className="relative" ref={userDropdownRef}>
             <button
               onClick={() => setShowUserDropdown(!showUserDropdown)}
-              className="flex items-center space-x-2 sm:space-x-3 hover:bg-gray-50 rounded-lg p-1.5 sm:p-2 transition-colors touch-manipulation"
+              className="flex items-center space-x-2 sm:space-x-3 hover:bg-gray-800 rounded-lg p-1.5 sm:p-2 transition-colors touch-manipulation"
             >
-              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-xs sm:text-sm font-semibold shadow-sm">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-xs sm:text-sm font-semibold shadow-md ring-2 ring-gray-700">
                 {user?.user_metadata?.first_name?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
               </div>
               <div className="hidden lg:block text-sm text-left">
-                <div className="text-gray-900 font-semibold">
+                <div className="text-white font-semibold">
                   {user?.user_metadata?.first_name || user?.email?.split('@')[0] || 'User'}
                 </div>
-                <div className="text-gray-500 text-xs truncate max-w-32">
+                <div className="text-gray-400 text-xs truncate max-w-32">
                   {user?.email}
                 </div>
               </div>

@@ -3,6 +3,7 @@ import { useAuth } from './auth/AuthProvider';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { MainContent } from './MainContent';
+import { Spinner } from './ui/Loaders';
 
 export function Dashboard() {
   const { user, loading } = useAuth();
@@ -16,9 +17,6 @@ export function Dashboard() {
       const urlParams = new URLSearchParams(window.location.search);
       const widgetId = urlParams.get('widgetId');
       
-      console.log('URL parameters:', urlParams.toString());
-      console.log('Widget ID from URL:', widgetId);
-      
       if (widgetId) {
         setWidgetIdFromUrl(widgetId);
         setActiveSection('edit-widget');
@@ -30,14 +28,15 @@ export function Dashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-surface-50 flex flex-col items-center justify-center gap-4">
+        <Spinner size="lg" />
+        <p className="text-sm font-medium text-surface-500 animate-pulse">Loading dashboard...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-surface-50 flex flex-col">
       {/* Fixed Header */}
       <div className="fixed top-0 left-0 right-0 z-50">
         <Header 
@@ -57,7 +56,8 @@ export function Dashboard() {
           isMobileMenuOpen={isMobileMenuOpen}
           onClose={() => setIsMobileMenuOpen(false)}
         />
-        <div className="flex-1 overflow-auto lg:ml-64">
+        {/* Main content - adjusted margin for new sidebar width */}
+        <div className="flex-1 overflow-auto lg:ml-[260px] relative">
           {user && <MainContent 
             activeSection={activeSection} 
             userId={user.id} 

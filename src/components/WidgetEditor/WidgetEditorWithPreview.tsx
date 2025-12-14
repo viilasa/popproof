@@ -488,6 +488,66 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                       </SettingsRow>
                     </SettingsGroup>
                   </SettingsSection>
+
+                  <Divider />
+
+                  <SettingsSection title="Appearance" description="Visual style and effects">
+                    <SettingsGroup>
+                      <SettingsRow label="Glassmorphism" description="Enable frosted glass effect with blur">
+                        <Toggle
+                          checked={config?.design?.shadow?.glassmorphism ?? false}
+                          onChange={(value) =>
+                            updateConfig({
+                              design: {
+                                ...config?.design,
+                                shadow: { 
+                                  ...config?.design?.shadow, 
+                                  glassmorphism: value,
+                                  backdropBlur: value ? 16 : 0,
+                                },
+                              },
+                            })
+                          }
+                        />
+                      </SettingsRow>
+
+                      {config?.design?.shadow?.glassmorphism && (
+                        <SettingsRow label="Blur Amount" description="Intensity of the blur effect">
+                          <Slider
+                            value={config?.design?.shadow?.backdropBlur ?? 16}
+                            onChange={(value) =>
+                              updateConfig({
+                                design: {
+                                  ...config?.design,
+                                  shadow: { ...config?.design?.shadow, backdropBlur: value },
+                                },
+                              })
+                            }
+                            min={0}
+                            max={30}
+                            step={1}
+                          />
+                        </SettingsRow>
+                      )}
+
+                      <SettingsRow label="Border Radius" description="Corner roundness">
+                        <NumberInput
+                          value={config?.design?.border?.borderRadius || 12}
+                          onChange={(value) =>
+                            updateConfig({
+                              design: {
+                                ...config?.design,
+                                border: { ...config?.design?.border, borderRadius: value },
+                              },
+                            })
+                          }
+                          min={0}
+                          max={50}
+                          suffix="px"
+                        />
+                      </SettingsRow>
+                    </SettingsGroup>
+                  </SettingsSection>
                 </div>
               </AccordionSection>
 
@@ -718,6 +778,41 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                           className="w-48"
                         />
                       </SettingsRow>
+                    </SettingsGroup>
+                  </SettingsSection>
+
+                  {/* Product-Specific Filtering */}
+                  <SettingsSection
+                    title="Product-Specific Notifications"
+                    description="Show notifications relevant to the product being viewed"
+                  >
+                    <SettingsGroup>
+                      <SettingsRow 
+                        label="Product Filtering" 
+                        description="On product pages, filter notifications to show only activity for that specific product"
+                      >
+                        <Select
+                          value={config.triggers.advanced?.productSpecificMode || 'off'}
+                          onChange={(value) => updateConfig({
+                            triggers: {
+                              ...config.triggers,
+                              advanced: {
+                                ...config.triggers.advanced,
+                                productSpecificMode: value as 'off' | 'product_only' | 'product_first'
+                              }
+                            }
+                          })}
+                          options={[
+                            { value: 'off', label: 'Show all notifications' },
+                            { value: 'product_only', label: 'Only current product' },
+                            { value: 'product_first', label: 'Prioritize current product' },
+                          ]}
+                          className="w-56"
+                        />
+                      </SettingsRow>
+                      <div className="px-4 py-2 bg-blue-50 rounded-lg text-xs text-blue-700">
+                        <strong>Tip:</strong> When enabled, visitors on a product page (e.g., /products/sneakers) will only see purchase notifications for that specific product, making social proof more relevant and persuasive.
+                      </div>
                     </SettingsGroup>
                   </SettingsSection>
 
@@ -1032,6 +1127,35 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                           })}
                         />
                       </SettingsRow>
+
+                      {/* Custom Form Message Section */}
+                      <SettingsRow label="Custom Form Message" description="Use a custom message for form submissions (e.g., 'signed up for the challenge')">
+                        <Toggle
+                          checked={config.display.content.useCustomFormMessage}
+                          onChange={(value) => updateConfig({
+                            display: {
+                              ...config.display,
+                              content: { ...config.display.content, useCustomFormMessage: value }
+                            }
+                          })}
+                        />
+                      </SettingsRow>
+
+                      {config.display.content.useCustomFormMessage && (
+                        <SettingsRow label="Message Text" description="The name will be auto-prepended (e.g., 'Sneha signed up for the challenge')">
+                          <TextInput
+                            value={config.display.content.customFormMessage || 'signed up'}
+                            onChange={(value) => updateConfig({
+                              display: {
+                                ...config.display,
+                                content: { ...config.display.content, customFormMessage: value }
+                              }
+                            })}
+                            placeholder="signed up for the challenge"
+                            className="w-64"
+                          />
+                        </SettingsRow>
+                      )}
 
                       <SettingsRow label="Show Value">
                         <Toggle
@@ -2030,8 +2154,25 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                         </div>
                       )}
 
-                      {/* Frosted Token Layout Preview */}
-                      {config?.design?.layout?.layout === 'frosted-token' ? (
+                      {/* Pill Badge Layout Preview */}
+                      {config?.design?.layout?.layout === 'pill-badge' ? (
+                        <div className="flex items-center gap-2.5 px-5 py-2.5 bg-white border border-gray-200 rounded-full shadow-sm" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                          {/* Icon */}
+                          <div className="flex items-center justify-center text-blue-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                              <circle cx="9" cy="7" r="4"></circle>
+                              <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                          </div>
+                          {/* Count and label */}
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="font-semibold text-gray-900">8</span>
+                            <span className="text-gray-500 text-sm">visited today</span>
+                          </div>
+                        </div>
+                      ) : config?.design?.layout?.layout === 'frosted-token' ? (
                         <div className="flex items-center gap-3">
                           {/* Text label */}
                           <div className="px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 shadow-lg text-white">
@@ -2328,85 +2469,70 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                           </div>
                         </div>
                       ) : (
-                        /* Standard layouts (card, compact, minimal, full-width) */
+                        /* Standard layouts (card, compact, minimal, full-width) - Matches engine rendering */
                         <>
-                          <div className={`flex items-start ${
-                            config?.design?.layout?.layout === 'compact' ? 'space-x-2' :
-                            config?.design?.layout?.layout === 'minimal' ? 'space-x-2' :
-                            'space-x-3'
-                          }`}>
-                            {(displaySettings.content.showEventIcon || !displaySettings.content.showUserAvatar) && (
-                              <div className={`${
-                                config?.design?.layout?.layout === 'compact' ? 'w-8 h-8 text-xs' :
-                                config?.design?.layout?.layout === 'minimal' ? 'w-9 h-9 text-sm' :
-                                'w-10 h-10'
-                              } ${config?.design?.shadow?.glassmorphism ? 'bg-blue-600' : 'bg-blue-500'} rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold shadow-md`}>
+                          <div className="flex items-start gap-3">
+                            {/* Avatar - matches engine: 48x48 rounded-lg with gradient */}
+                            {(displaySettings.content.showEventIcon || displaySettings.content.showUserAvatar) && (
+                              <div 
+                                className="w-12 h-12 rounded-[10px] flex items-center justify-center flex-shrink-0 text-white font-semibold text-lg"
+                                style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}
+                              >
                                 {displaySettings.content.showUserAvatar ? initials : '✨'}
                               </div>
                             )}
 
-                            <div className="flex-1 min-w-0" style={config?.design?.shadow?.glassmorphism ? { textShadow: '0 0 1px rgba(255, 255, 255, 0.5)' } : {}}>
-                              <p className={`${
-                                config?.design?.layout?.layout === 'compact' ? 'text-xs' :
-                                config?.design?.layout?.layout === 'minimal' ? 'text-sm' :
-                                'text-sm'
-                              }`}>
-                                <span className={`font-bold ${config?.design?.shadow?.glassmorphism ? 'text-blue-700' : 'text-blue-600'}`}>
-                                  {displaySettings.content.showCustomerName ? sampleName : 'Someone'}
-                                </span>
-                              </p>
-                              <p className={`${
-                                config?.design?.layout?.layout === 'compact' ? 'text-xs' :
-                                config?.design?.layout?.layout === 'minimal' ? 'text-sm' :
-                                'text-sm'
-                              } ${config?.design?.shadow?.glassmorphism ? 'text-gray-900 font-medium' : 'text-gray-700'} ${displaySettings.content.showCustomerName ? 'mt-0.5' : ''}`}>
+                            <div className="flex-1 min-w-0">
+                              {/* Customer name - matches engine: 14px font-semibold text-gray-900 */}
+                              {displaySettings.content.showCustomerName && (
+                                <div className="text-sm font-semibold text-gray-900 mb-0.5">
+                                  {sampleName}
+                                </div>
+                              )}
+                              
+                              {/* Action message - matches engine: 13px text-gray-600 */}
+                              <div className="text-[13px] text-gray-600 leading-snug mb-1">
                                 {sampleEvent}
                                 {valueText && (
-                                  <span className={`ml-2 font-bold ${config?.design?.shadow?.glassmorphism ? 'text-gray-950' : 'text-gray-900'}`}>{valueText}</span>
+                                  <span className="ml-1 font-semibold text-emerald-600">{valueText}</span>
                                 )}
-                              </p>
+                              </div>
                               
-                              {/* Rating Stars for Reviews */}
+                              {/* Rating Stars for Reviews - matches engine */}
                               {displaySettings.content.showRating && sampleRating && (
-                                <div className="flex items-center mt-1 space-x-1">
+                                <div className="flex items-center gap-0.5 mb-1">
                                   {[...Array(5)].map((_, i) => (
-                                    <span key={i} className={`${i < sampleRating ? 'text-yellow-400' : 'text-gray-300'}`}>
+                                    <span key={i} className="text-sm" style={{ color: i < sampleRating ? '#FBBF24' : '#D1D5DB' }}>
                                       ★
                                     </span>
                                   ))}
                                 </div>
                               )}
                               
-                              {/* Review Content */}
+                              {/* Review Content - matches engine */}
                               {displaySettings.content.showReviewContent && sampleReviewContent && (
-                                <p className={`${
-                                  config?.design?.layout?.layout === 'compact' ? 'text-xs' :
-                                  'text-xs'
-                                } ${config?.design?.shadow?.glassmorphism ? 'text-gray-700' : 'text-gray-600'} mt-2 italic line-clamp-2`}>
+                                <p className="text-xs text-gray-500 italic leading-snug mb-1 line-clamp-2">
                                   "{sampleReviewContent}"
                                 </p>
                               )}
                               
-                              {metaLine && (
-                                <div className={`flex items-center space-x-2 mt-2 text-xs ${config?.design?.shadow?.glassmorphism ? 'text-gray-700 font-medium' : 'text-gray-500'}`}>
-                                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                                  <span>{metaLine}</span>
-                                </div>
-                              )}
+                              {/* Bottom row: timestamp + location + branding - matches engine */}
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full flex-shrink-0"></span>
+                                {metaLine && (
+                                  <span className="text-[11px] text-gray-500">{metaLine}</span>
+                                )}
+                                {config?.branding?.identity?.showPoweredBy && (
+                                  <>
+                                    <span className="text-gray-300 ml-auto">•</span>
+                                    <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+                                      ProofEdge
+                                    </span>
+                                  </>
+                                )}
+                              </div>
                             </div>
-                          </div>
-
-                          <div className={`mt-3 pt-3 flex items-center justify-between text-[11px] ${
-                            config?.design?.shadow?.glassmorphism 
-                              ? 'border-t border-gray-300 text-gray-600 font-medium' 
-                              : 'border-t border-gray-100 text-gray-400'
-                          }`}>
-                            <span>Verified by ProofPop</span>
-                            {displaySettings.interaction.clickable && displaySettings.interaction.clickAction !== 'none' && (
-                              <span className={`font-semibold ${config?.design?.shadow?.glassmorphism ? 'text-blue-700' : 'text-blue-500'}`}>
-                                {displaySettings.interaction.clickAction === 'url' ? 'Opens link' : 'Interactive'}
-                              </span>
-                            )}
                           </div>
                         </>
                       )}

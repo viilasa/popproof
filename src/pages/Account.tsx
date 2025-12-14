@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, User, CreditCard, Bell, Shield, Key, Trash2, LogOut, Eye, EyeOff, X } from 'lucide-react';
+import { ArrowLeft, User, CreditCard, Bell, Shield, Key, Trash2, LogOut, Eye, EyeOff, X, ChevronRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Toast } from '../components/Toast';
 import { useToast } from '../hooks/useToast';
 import { useAuth } from '../components/auth/AuthProvider';
+import { Card, Button, Spinner, Badge, Avatar } from '../components/ui';
 
 interface UserSettings {
   first_name: string;
@@ -181,28 +182,30 @@ export default function Account({ onNavigate }: AccountProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">Loading...</div>
+      <div className="min-h-screen bg-surface-50 flex flex-col items-center justify-center gap-4 lg:rounded-tl-3xl overflow-hidden">
+        <Spinner size="lg" />
+        <p className="text-sm font-medium text-surface-500">Loading settings...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-surface-50 lg:rounded-tl-3xl overflow-hidden">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-white border-b border-surface-200 lg:rounded-tl-3xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center gap-4">
               <button
                 onClick={() => onNavigate('notifications')}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-surface-100 rounded-xl transition-colors"
               >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
+                <ArrowLeft className="w-5 h-5 text-surface-600" />
               </button>
-              <h1 className="text-xl font-semibold text-gray-900">Account</h1>
+              <div>
+                <h1 className="text-xl font-bold text-surface-900">Account Settings</h1>
+              </div>
             </div>
-            
           </div>
         </div>
       </div>
@@ -211,57 +214,66 @@ export default function Account({ onNavigate }: AccountProps) {
         <div className="grid grid-cols-12 gap-8">
           {/* Left Sidebar */}
           <div className="col-span-12 lg:col-span-3">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <Card padding="md">
               {/* Profile Avatar */}
-              <div className="text-center mb-6 pb-6 border-b border-gray-200">
-                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <span className="text-2xl font-semibold text-blue-600">
-                    {settings.first_name?.[0]?.toUpperCase() || 'U'}
-                  </span>
-                </div>
-                <h3 className="font-medium text-gray-900">
+              <div className="text-center mb-6 pb-6 border-b border-surface-100">
+                <Avatar 
+                  name={settings.first_name || 'User'} 
+                  size="xl" 
+                  className="mx-auto mb-3"
+                />
+                <h3 className="font-semibold text-surface-900">
                   {settings.first_name || 'User'}
                 </h3>
-                <p className="text-sm text-gray-500">Last login: {new Date().toLocaleDateString()}</p>
+                <p className="text-sm text-surface-500 mt-1">Last login: {new Date().toLocaleDateString()}</p>
               </div>
 
               {/* Navigation Menu */}
               <nav className="space-y-1">
                 <button
                   onClick={() => setActiveTab('account')}
-                  className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  className={`w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
                     activeTab === 'account'
-                      ? 'bg-blue-50 text-blue-600'
-                      : 'text-gray-700 hover:bg-gray-50'
+                      ? 'bg-brand-50 text-brand-700'
+                      : 'text-surface-600 hover:bg-surface-50 hover:text-surface-900'
                   }`}
                 >
-                  <span>Account</span>
-                  <User className="w-4 h-4" />
+                  <div className="flex items-center gap-3">
+                    <User className="w-4 h-4" />
+                    <span>Account</span>
+                  </div>
+                  {activeTab === 'account' && <ChevronRight className="w-4 h-4" />}
                 </button>
 
                 <button
                   onClick={() => setActiveTab('billing')}
-                  className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  className={`w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
                     activeTab === 'billing'
-                      ? 'bg-blue-50 text-blue-600'
-                      : 'text-gray-700 hover:bg-gray-50'
+                      ? 'bg-brand-50 text-brand-700'
+                      : 'text-surface-600 hover:bg-surface-50 hover:text-surface-900'
                   }`}
                 >
-                  <span>Billing</span>
-                  <CreditCard className="w-4 h-4" />
+                  <div className="flex items-center gap-3">
+                    <CreditCard className="w-4 h-4" />
+                    <span>Billing</span>
+                  </div>
+                  {activeTab === 'billing' && <ChevronRight className="w-4 h-4" />}
                 </button>
 
-                <div className="pt-4 mt-4 border-t border-gray-200">
+                <div className="pt-4 mt-4 border-t border-surface-100">
                   <button
                     onClick={() => setActiveTab('password')}
-                    className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    className={`w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
                       activeTab === 'password'
-                        ? 'bg-blue-50 text-blue-600'
-                        : 'text-gray-700 hover:bg-gray-50'
+                        ? 'bg-brand-50 text-brand-700'
+                        : 'text-surface-600 hover:bg-surface-50 hover:text-surface-900'
                     }`}
                   >
-                    <span>Password</span>
-                    <Key className="w-4 h-4" />
+                    <div className="flex items-center gap-3">
+                      <Key className="w-4 h-4" />
+                      <span>Password</span>
+                    </div>
+                    {activeTab === 'password' && <ChevronRight className="w-4 h-4" />}
                   </button>
 
                   {/* <button className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
@@ -275,19 +287,21 @@ export default function Account({ onNavigate }: AccountProps) {
                   </button> */}
                 </div>
 
-                <div className="pt-4 mt-4 border-t border-gray-200">
-                  <button className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                    <span>Delete account</span>
-                    <Trash2 className="w-4 h-4" />
+                <div className="pt-4 mt-4 border-t border-surface-100">
+                  <button className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-danger-600 hover:bg-danger-50 rounded-xl transition-colors">
+                    <div className="flex items-center gap-3">
+                      <Trash2 className="w-4 h-4" />
+                      <span>Delete account</span>
+                    </div>
                   </button>
                 </div>
               </nav>
-            </div>
+            </Card>
           </div>
 
           {/* Main Content */}
           <div className="col-span-12 lg:col-span-9">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <Card padding="lg">
               {activeTab === 'account' && (
                 <div>
                   <h2 className="text-xl font-semibold text-gray-900 mb-2">Settings</h2>
@@ -629,7 +643,7 @@ export default function Account({ onNavigate }: AccountProps) {
                   </div>
                 </div>
               )}
-            </div>
+            </Card>
           </div>
         </div>
       </div>

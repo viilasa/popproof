@@ -143,9 +143,11 @@ export function ResetPasswordForm() {
         <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-200">
           <div className="text-center mb-8">
             <div className="flex items-center justify-center space-x-3 mb-4">
-              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                <div className="w-6 h-6 bg-white rounded-full"></div>
-              </div>
+              <img 
+                src="https://res.cloudinary.com/ddhhlkyut/image/upload/v1765406050/Proofedge6_dxarbe.svg" 
+                alt="ProofEdge Logo" 
+                className="w-10 h-10 object-contain"
+              />
               <span className="text-2xl font-bold text-gray-900">ProofEdge</span>
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Set new password</h2>

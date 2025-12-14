@@ -1,5 +1,18 @@
 import { useState } from 'react';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Sparkles, 
+  ShoppingBag, 
+  UserPlus, 
+  Star, 
+  Users, 
+  FileText, 
+  ShoppingCart, 
+  Activity, 
+  Bell, 
+  LayoutGrid,
+  Zap
+} from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { notificationTemplates } from '../lib/notificationTemplates';
 import {
@@ -9,6 +22,7 @@ import {
 } from '../lib/notificationDesignPresets';
 import type { DesignSettings, DisplaySettings } from '../types/widget-config';
 import { DEFAULT_DESIGN_SETTINGS, DEFAULT_DISPLAY_SETTINGS } from '../lib/widgetConfigDefaults';
+import { Card, Badge, Spinner } from './ui';
 
 function isObject(value: any): value is Record<string, any> {
   return value && typeof value === 'object' && !Array.isArray(value);
@@ -60,7 +74,7 @@ export function TemplateSelector({
 }: TemplateSelectorProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<'template' | 'design'>('design');
+  const [mode, setMode] = useState<'template' | 'design'>('template');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<'all' | NotificationTemplateId>('all');
 
@@ -85,6 +99,7 @@ export function TemplateSelector({
     { id: 'cart_activity', label: 'Cart Activity' },
     { id: 'active_sessions', label: 'Active Sessions' },
     { id: 'recent_activity', label: 'Recent Activity' },
+    { id: 'pill_badge', label: 'Pill Badge' },
   ];
 
   const createWidgetWithPreset = async (preset: NotificationDesignPreset) => {
@@ -158,6 +173,9 @@ export function TemplateSelector({
 
       const mergedDesign: DesignSettings = mergeDesignWithDefaults(preset.design || {});
       const mergedDisplay: DisplaySettings = mergeDisplayWithDefaults(preset.display || {});
+
+      // Set delay between notifications - 180 seconds (3 min) for pill badge, 5 seconds for others
+      const delayBetweenNotifications = template.id === 'pill_badge' ? 180 : 5;
 
       // Create widget with complete config including eventTypes from template
       const { data: widget, error: widgetError } = await supabase
@@ -239,6 +257,9 @@ export function TemplateSelector({
             triggers: {
               events: {
                 eventTypes: template.defaultRules?.eventTypes || []
+              },
+              behavior: {
+                delayBetweenNotifications: delayBetweenNotifications
               }
             },
             rules: {
@@ -277,10 +298,10 @@ export function TemplateSelector({
   };
 
   return (
-    <div className="flex-1 bg-gray-50 flex flex-col h-full">
+    <div className="flex-1 bg-surface-50 flex flex-col h-full lg:rounded-tl-3xl overflow-hidden">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
-        <div className="flex items-center space-x-4">
+      <div className="bg-white border-b border-surface-200 px-6 py-5 lg:rounded-tl-3xl">
+        <div className="flex items-center gap-4">
           {(onBack || mode === 'design') && (
             <button
               onClick={() => {
@@ -290,19 +311,24 @@ export function TemplateSelector({
                   onBack();
                 }
               }}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2.5 hover:bg-surface-100 rounded-xl transition-all duration-200"
               title="Go back"
             >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
+              <ArrowLeft className="w-5 h-5 text-surface-600" />
             </button>
           )}
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">
-              {mode === 'template' ? 'Create New Widget' : 'Choose Design & Template'}
-            </h1>
-            <p className="text-sm text-gray-500 mt-0.5">
+          <div className="flex-1">
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl font-bold text-surface-900">
+                {mode === 'template' ? 'Create New Widget' : 'Choose Design & Template'}
+              </h1>
+              <Badge variant="brand" size="sm">
+                {mode === 'template' ? 'Step 1' : 'Step 2'}
+              </Badge>
+            </div>
+            <p className="text-sm text-surface-500 mt-1">
               {mode === 'template'
-                ? 'Choose a template to get started'
+                ? 'Choose a template to get started with your notification'
                 : 'Pick a notification design that will be used on your live site'}
             </p>
           </div>
@@ -312,34 +338,43 @@ export function TemplateSelector({
       {/* Error Alert */}
       {error && (
         <div className="px-6 pt-4">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-800 font-medium">Error</p>
-            <p className="text-red-700 text-sm mt-1">{error}</p>
-          </div>
+          <Card className="!bg-danger-50 !border-danger-200">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-danger-100 rounded-lg">
+                <svg className="w-4 h-4 text-danger-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-danger-800 font-semibold">Error</p>
+                <p className="text-danger-700 text-sm mt-0.5">{error}</p>
+              </div>
+            </div>
+          </Card>
         </div>
       )}
 
       {/* Template Grid */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
         <div className="max-w-6xl mx-auto">
           {mode === 'template' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 stagger-children">
               {notificationTemplates.map((template) => (
                 <button
                   key={template.id}
                   onClick={() => handleTemplateClick(template.id)}
                   disabled={isCreating}
-                  className="p-6 bg-white border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:shadow-lg transition-all text-left group disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-5 bg-white border border-surface-200 rounded-2xl hover:border-brand-400 hover:shadow-soft-lg transition-all duration-300 text-left group disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <div className="flex items-start space-x-4">
-                    <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:from-blue-200 group-hover:to-blue-300 transition-colors">
-                      <span className="text-3xl">{getTemplateIcon(template.icon)}</span>
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-brand-100 to-purple-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:from-brand-200 group-hover:to-purple-200 transition-all duration-300 group-hover:scale-105 shadow-soft-sm">
+                      {getTemplateIcon(template.icon)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 text-lg">
+                      <h3 className="font-semibold text-surface-900 group-hover:text-brand-600 text-base transition-colors">
                         {template.name}
                       </h3>
-                      <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                      <p className="text-sm text-surface-500 mt-1 line-clamp-2">
                         {template.description}
                       </p>
                     </div>
@@ -347,26 +382,25 @@ export function TemplateSelector({
 
                   {/* Category Badge */}
                   <div className="mt-4">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                    <Badge variant="default" size="sm">
                       {template.category.replace('_', ' ')}
-                    </span>
+                    </Badge>
                   </div>
 
-                  {/* Preview */}
-                  <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
-                    <div className="text-xs font-medium text-gray-500 mb-2">Preview:</div>
-                    <div className="flex items-start space-x-2">
-                      <div className="w-7 h-7 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
+                  {/* Preview - Clean Classic Widget */}
+                  <div className="mt-4 p-2.5 bg-white rounded-lg border border-surface-100 shadow-sm">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center flex-shrink-0">
+                        <span className="text-white text-xs font-bold">
+                          {template.preview.title.charAt(0)}
+                        </span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm">
-                          <span className="font-semibold text-blue-600">{template.preview.title}</span>
-                          <span className="text-gray-700 ml-1">{template.preview.message}</span>
+                        <p className="text-[11px] text-surface-800 leading-tight">
+                          <span className="font-semibold">{template.preview.title}</span>
+                          <span className="text-surface-500 ml-1">{template.preview.message}</span>
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">{template.preview.timestamp}</p>
+                        <p className="text-[10px] text-surface-400 mt-0.5">{template.preview.timestamp}</p>
                       </div>
                     </div>
                   </div>
@@ -377,11 +411,12 @@ export function TemplateSelector({
             <div className="space-y-6">
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Choose a notification design</h2>
-                  <p className="text-sm text-gray-500 mt-1">This design will be used on your live site.</p>
+                  <h2 className="text-lg font-bold text-surface-900">Choose a notification design</h2>
+                  <p className="text-sm text-surface-500 mt-1">This design will be used on your live site.</p>
                 </div>
               </div>
 
+              {/* Filter Pills */}
               <div className="flex flex-wrap gap-2 mb-4">
                 {templateTabs.map((tab) => (
                   <button
@@ -389,10 +424,10 @@ export function TemplateSelector({
                     onClick={() => {
                       setActiveFilter(tab.id);
                     }}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                    className={`px-4 py-2 rounded-full text-xs font-medium transition-all duration-200 ${
                       activeFilter === tab.id
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                        ? 'bg-brand-600 text-white shadow-soft-sm'
+                        : 'bg-white text-surface-600 border border-surface-200 hover:bg-surface-50 hover:border-surface-300'
                     }`}
                   >
                     {tab.label}
@@ -400,11 +435,14 @@ export function TemplateSelector({
                 ))}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 stagger-children">
                 {filteredPresets.length === 0 ? (
-                  <div className="text-sm text-gray-500 col-span-full">
-                    No designs available for this notification type yet.
-                  </div>
+                  <Card className="col-span-full text-center py-12">
+                    <div className="w-12 h-12 bg-surface-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                      <Sparkles className="w-6 h-6 text-surface-400" />
+                    </div>
+                    <p className="text-surface-500">No designs available for this notification type yet.</p>
+                  </Card>
                 ) : (
                   filteredPresets.map((preset) => {
                     const template = templatesById[preset.templateId];
@@ -414,24 +452,24 @@ export function TemplateSelector({
                         key={preset.id}
                         onClick={() => createWidgetWithPreset(preset)}
                         disabled={isCreating || !template}
-                        className="p-5 bg-white border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:shadow-lg transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-5 bg-white border border-surface-200 rounded-2xl hover:border-brand-400 hover:shadow-soft-lg transition-all duration-300 text-left disabled:opacity-50 disabled:cursor-not-allowed group"
                       >
                         <div className="flex items-start justify-between mb-3">
                           <div>
-                            <div className="text-xs uppercase tracking-wide text-gray-400 mb-1">
+                            <Badge variant="brand" size="sm" className="mb-2">
                               {template ? template.name : 'Template'}
-                            </div>
-                            <h3 className="font-semibold text-gray-900 text-sm">
+                            </Badge>
+                            <h3 className="font-semibold text-surface-900 text-sm group-hover:text-brand-600 transition-colors">
                               {preset.name}
                             </h3>
-                            <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                            <p className="text-xs text-surface-500 mt-1 line-clamp-2">
                               {preset.description}
                             </p>
                           </div>
                         </div>
 
-                        <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
-                          <div className="text-[11px] font-medium text-gray-500 mb-1">Live preview</div>
+                        <div className="mt-3 p-3 bg-surface-50 rounded-xl border border-surface-100">
+                          <div className="text-[11px] font-medium text-surface-400 mb-1 uppercase tracking-wider">Live preview</div>
                           
                           {/* Special Frosted Token Preview */}
                           {preset.design?.layout?.layout === 'frosted-token' ? (
@@ -676,22 +714,24 @@ export function TemplateSelector({
                               </div>
                             </div>
                           ) : (
-                            /* Standard preview */
-                            <div className="flex items-start space-x-2">
-                              <div className="w-7 h-7 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 text-white text-xs font-semibold">
-                                {template ? getTemplateIcon(template.icon) : '✓'}
+                            /* Classic Clean Preview */
+                            <div className="flex items-center gap-2.5 p-1.5 bg-white rounded-lg border border-surface-100 shadow-sm">
+                              <div className="w-7 h-7 rounded-md bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center flex-shrink-0">
+                                <span className="text-white text-[10px] font-bold">
+                                  {template ? template.preview.title.charAt(0) : 'J'}
+                                </span>
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs">
-                                  <span className="font-semibold text-gray-900">
+                              <div className="flex-1 min-w-0 pr-1">
+                                <p className="text-[10px] text-surface-700 leading-tight truncate">
+                                  <span className="font-semibold text-surface-900">
                                     {template ? template.preview.title : 'John D.'}
                                   </span>
-                                  <span className="text-gray-700 ml-1">
-                                    {template ? template.preview.message : 'purchased Premium Plan for $99'}
+                                  <span className="ml-1">
+                                    {template ? template.preview.message : 'purchased Premium Plan'}
                                   </span>
                                 </p>
-                                <p className="text-[11px] text-gray-500 mt-1">
-                                  {template ? template.preview.timestamp : '2 minutes ago'}
+                                <p className="text-[9px] text-surface-400 mt-0.5">
+                                  {template ? template.preview.timestamp : '2 min ago'}
                                 </p>
                               </div>
                             </div>
@@ -709,29 +749,42 @@ export function TemplateSelector({
 
       {/* Loading Overlay */}
       {isCreating && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-          <div className="bg-white rounded-lg p-6 flex flex-col items-center">
-            <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-            <p className="mt-3 text-gray-900 font-medium">Creating widget...</p>
-          </div>
+        <div className="fixed inset-0 bg-surface-900/60 backdrop-blur-sm z-50 flex items-center justify-center animate-fade-in">
+          <Card className="p-8 flex flex-col items-center shadow-soft-xl">
+            <Spinner size="lg" />
+            <p className="mt-4 text-surface-900 font-semibold">Creating widget...</p>
+            <p className="text-sm text-surface-500 mt-1">This will only take a moment</p>
+          </Card>
         </div>
       )}
     </div>
   );
 }
 
-// Helper function to get template icon emoji
-function getTemplateIcon(icon: string): string {
-  const iconMap: Record<string, string> = {
-    'shopping-bag': '🛍️',
-    'user-plus': '👤',
-    'star': '⭐',
-    'users': '👥',
-    'file-text': '📄',
-    'shopping-cart': '🛒',
-    'activity': '📊',
-    'bell': '🔔',
-    'grid': '📋',
-  };
-  return iconMap[icon] || '📌';
+// Helper function to get template icon as React component
+function getTemplateIcon(icon: string): React.ReactNode {
+  const iconClass = "w-6 h-6 text-brand-600";
+  
+  switch (icon) {
+    case 'shopping-bag':
+      return <ShoppingBag className={iconClass} />;
+    case 'user-plus':
+      return <UserPlus className={iconClass} />;
+    case 'star':
+      return <Star className={iconClass} />;
+    case 'users':
+      return <Users className={iconClass} />;
+    case 'file-text':
+      return <FileText className={iconClass} />;
+    case 'shopping-cart':
+      return <ShoppingCart className={iconClass} />;
+    case 'activity':
+      return <Activity className={iconClass} />;
+    case 'bell':
+      return <Bell className={iconClass} />;
+    case 'grid':
+      return <LayoutGrid className={iconClass} />;
+    default:
+      return <Zap className={iconClass} />;
+  }
 }

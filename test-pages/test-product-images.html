@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Product Images in Notifications</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 { color: #1f2937; }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #374151; }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        button {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover { opacity: 0.9; }
+        button.secondary {
+            background: #6b7280;
+        }
+        .result {
+            background: #f3f4f6;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 16px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .success { background: #d1fae5; color: #065f46; }
+        .error { background: #fee2e2; color: #991b1b; }
+        .sample-images {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .sample-images img {
+            width: 100%;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: border-color 0.2s;
+        }
+        .sample-images img:hover { border-color: #6366f1; }
+        .sample-images img.selected { border-color: #6366f1; }
+    </style>
+</head>
+<body>
+    <h1>🖼️ Test Product Images in Notifications</h1>
+    
+    <div class="card">
+        <h2>Configuration</h2>
+        <label>Site ID</label>
+        <input type="text" id="siteId" placeholder="Enter your site ID">
+        
+        <label>Event Type</label>
+        <select id="eventType">
+            <option value="purchase">Purchase</option>
+            <option value="signup">Signup</option>
+            <option value="add_to_cart">Add to Cart</option>
+            <option value="review">Review</option>
+        </select>
+    </div>
+    
+    <div class="card">
+        <h2>Customer Info</h2>
+        <label>Customer Name</label>
+        <input type="text" id="customerName" value="Sarah Johnson">
+        
+        <label>Location</label>
+        <input type="text" id="location" value="New York, USA">
+    </div>
+    
+    <div class="card">
+        <h2>Product Info</h2>
+        <label>Product Name</label>
+        <input type="text" id="productName" value="Premium Headphones">
+        
+        <label>Product Value ($)</label>
+        <input type="number" id="productValue" value="149">
+        
+        <label>Product Image URL (click a sample or enter custom)</label>
+        <div class="sample-images">
+            <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200" onclick="selectImage(this)" alt="Headphones">
+            <img src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200" onclick="selectImage(this)" alt="Watch">
+            <img src="https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=200" onclick="selectImage(this)" alt="Camera">
+            <img src="https://images.unsplash.com/photo-1585386959984-a4155224a1ad?w=200" onclick="selectImage(this)" alt="Perfume">
+        </div>
+        <input type="text" id="productImage" placeholder="https://example.com/product.jpg">
+    </div>
+    
+    <div class="card">
+        <h2>User Avatar (Optional)</h2>
+        <div class="sample-images">
+            <img src="https://randomuser.me/api/portraits/women/44.jpg" onclick="selectAvatar(this)" alt="Avatar 1">
+            <img src="https://randomuser.me/api/portraits/men/32.jpg" onclick="selectAvatar(this)" alt="Avatar 2">
+            <img src="https://randomuser.me/api/portraits/women/68.jpg" onclick="selectAvatar(this)" alt="Avatar 3">
+            <img src="https://randomuser.me/api/portraits/men/75.jpg" onclick="selectAvatar(this)" alt="Avatar 4">
+        </div>
+        <input type="text" id="userAvatar" placeholder="https://example.com/avatar.jpg">
+    </div>
+    
+    <div class="card">
+        <h2>Send Test Event</h2>
+        <button onclick="sendEvent()">🚀 Send Event with Product Image</button>
+        <button class="secondary" onclick="sendMultipleEvents()">📦 Send 3 Sample Events</button>
+        
+        <div id="result" class="result" style="display: none;"></div>
+    </div>
+    
+    <div class="card">
+        <h2>Sample Event Payloads</h2>
+        <p>When tracking events from your site, include product images like this:</p>
+        <pre class="result">
+// JavaScript Example
+fetch('https://ghiobuubmnvlaukeyuwe.supabase.co/functions/v1/track-event', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    site_id: 'YOUR_SITE_ID',
+    event_type: 'purchase',
+    event_data: {
+      customer_name: 'John Doe',
+      product_name: 'Premium Headphones',
+      product_image: 'https://example.com/headphones.jpg',
+      value: 149,
+      location: 'New York, USA'
+    }
+  })
+});
+        </pre>
+    </div>
+
+    <script>
+        const TRACK_EVENT_URL = 'https://ghiobuubmnvlaukeyuwe.supabase.co/functions/v1/track-event';
+        
+        function selectImage(img) {
+            document.querySelectorAll('.sample-images img').forEach(i => i.classList.remove('selected'));
+            img.classList.add('selected');
+            document.getElementById('productImage').value = img.src.replace('w=200', 'w=400');
+        }
+        
+        function selectAvatar(img) {
+            img.classList.toggle('selected');
+            document.getElementById('userAvatar').value = img.src;
+        }
+        
+        async function sendEvent() {
+            const siteId = document.getElementById('siteId').value;
+            if (!siteId) {
+                showResult('Please enter a Site ID', false);
+                return;
+            }
+            
+            const eventData = {
+                site_id: siteId,
+                event_type: document.getElementById('eventType').value,
+                event_data: {
+                    customer_name: document.getElementById('customerName').value,
+                    product_name: document.getElementById('productName').value,
+                    product_image: document.getElementById('productImage').value,
+                    avatar: document.getElementById('userAvatar').value,
+                    value: parseFloat(document.getElementById('productValue').value) || 0,
+                    location: document.getElementById('location').value
+                }
+            };
+            
+            try {
+                const response = await fetch(TRACK_EVENT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(eventData)
+                });
+                
+                const result = await response.json();
+                showResult(JSON.stringify({ sent: eventData, response: result }, null, 2), response.ok);
+            } catch (error) {
+                showResult('Error: ' + error.message, false);
+            }
+        }
+        
+        async function sendMultipleEvents() {
+            const siteId = document.getElementById('siteId').value;
+            if (!siteId) {
+                showResult('Please enter a Site ID', false);
+                return;
+            }
+            
+            const sampleEvents = [
+                {
+                    site_id: siteId,
+                    event_type: 'purchase',
+                    event_data: {
+                        customer_name: 'Emma Wilson',
+                        product_name: 'Wireless Earbuds Pro',
+                        product_image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400',
+                        avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
+                        value: 199,
+                        location: 'Los Angeles, USA'
+                    }
+                },
+                {
+                    site_id: siteId,
+                    event_type: 'purchase',
+                    event_data: {
+                        customer_name: 'James Chen',
+                        product_name: 'Smart Watch Series X',
+                        product_image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400',
+                        avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
+                        value: 349,
+                        location: 'Toronto, Canada'
+                    }
+                },
+                {
+                    site_id: siteId,
+                    event_type: 'purchase',
+                    event_data: {
+                        customer_name: 'Sofia Martinez',
+                        product_name: 'Designer Sunglasses',
+                        product_image: 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400',
+                        avatar: 'https://randomuser.me/api/portraits/women/68.jpg',
+                        value: 275,
+                        location: 'Miami, USA'
+                    }
+                }
+            ];
+            
+            const results = [];
+            for (const event of sampleEvents) {
+                try {
+                    const response = await fetch(TRACK_EVENT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(event)
+                    });
+                    const result = await response.json();
+                    results.push({ event: event.event_data.customer_name, success: response.ok, result });
+                } catch (error) {
+                    results.push({ event: event.event_data.customer_name, success: false, error: error.message });
+                }
+                // Small delay between events
+                await new Promise(r => setTimeout(r, 500));
+            }
+            
+            showResult(JSON.stringify(results, null, 2), results.every(r => r.success));
+        }
+        
+        function showResult(message, success) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = message;
+            resultDiv.className = 'result ' + (success ? 'success' : 'error');
+        }
+    </script>
+</body>
+</html>

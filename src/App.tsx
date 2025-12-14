@@ -3,10 +3,21 @@ import { AuthProvider, useAuth } from './components/auth/AuthProvider';
 import { AuthPage } from './components/auth/AuthPage';
 import { Dashboard } from './components/Dashboard';
 import LandingPage from './pages/LandingPage';
+import TermsPage from './pages/TermsPage';
+import PrivacyPage from './pages/PrivacyPage';
 
 function AppContent() {
   const { user, loading } = useAuth();
-  const [authMode, setAuthMode] = useState<'landing' | 'login' | 'signup'>('landing');
+  
+  // Check URL path for terms/privacy pages
+  const getInitialMode = (): 'landing' | 'login' | 'signup' | 'terms' | 'privacy' => {
+    const path = window.location.pathname;
+    if (path === '/terms') return 'terms';
+    if (path === '/privacy') return 'privacy';
+    return 'landing';
+  };
+  
+  const [authMode, setAuthMode] = useState<'landing' | 'login' | 'signup' | 'terms' | 'privacy'>(getInitialMode);
 
   // Show loading spinner while checking auth state
   if (loading) {
@@ -32,11 +43,35 @@ function AppContent() {
     );
   }
 
+  // Show Terms page
+  if (authMode === 'terms') {
+    return <TermsPage onBack={() => {
+      window.history.pushState({}, '', '/');
+      setAuthMode('landing');
+    }} />;
+  }
+
+  // Show Privacy page
+  if (authMode === 'privacy') {
+    return <PrivacyPage onBack={() => {
+      window.history.pushState({}, '', '/');
+      setAuthMode('landing');
+    }} />;
+  }
+
   // Otherwise, show landing page
   return (
     <LandingPage 
       onShowLogin={() => setAuthMode('login')} 
       onShowSignup={() => setAuthMode('signup')}
+      onShowTerms={() => {
+        window.history.pushState({}, '', '/terms');
+        setAuthMode('terms');
+      }}
+      onShowPrivacy={() => {
+        window.history.pushState({}, '', '/privacy');
+        setAuthMode('privacy');
+      }}
     />
   );
 }

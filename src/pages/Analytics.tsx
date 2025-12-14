@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Eye, Users, Calendar, ArrowUp, ArrowDown, Clock } from 'lucide-react';
+import { Eye, Users, Calendar, Clock, Activity, ChevronDown, BarChart3, Zap } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { 
+  Card, StatCard, Badge, Spinner, 
+  LineChart, DonutChart, ProgressBar,
+  Table, Sparkline
+} from '../components/ui';
 
 interface Site {
   id: string;
@@ -311,8 +316,6 @@ export default function Analytics({ userId }: AnalyticsProps) {
     }
   };
 
-  const maxValue = Math.max(...dailyStats.map(s => Math.max(s.impressions, s.unique_viewers, s.page_views)), 1);
-
   const formatTime = (seconds: number) => {
     if (seconds < 60) return `${Math.round(seconds)}s`;
     const mins = Math.floor(seconds / 60);
@@ -322,313 +325,390 @@ export default function Analytics({ userId }: AnalyticsProps) {
 
   if (loading && !selectedSiteId) {
     return (
-      <div className="flex-1 bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">Loading analytics...</div>
+      <div className="flex-1 bg-surface-50 flex flex-col items-center justify-center gap-4 lg:rounded-tl-3xl overflow-hidden">
+        <Spinner size="lg" />
+        <p className="text-sm font-medium text-surface-500">Loading analytics...</p>
       </div>
     );
   }
 
   if (sites.length === 0) {
     return (
-      <div className="flex-1 bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600 mb-4">No sites found. Create a site first to view analytics.</p>
+      <div className="flex-1 bg-surface-50 flex items-center justify-center lg:rounded-tl-3xl overflow-hidden">
+        <div className="text-center max-w-md mx-auto px-6">
+          <div className="w-16 h-16 bg-surface-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <BarChart3 className="w-8 h-8 text-surface-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-surface-900 mb-2">No Sites Found</h3>
+          <p className="text-surface-500 mb-6">Create a site first to start tracking analytics and see your data here.</p>
         </div>
       </div>
     );
   }
 
+  // Prepare chart data
+  const impressionsData = dailyStats.map(s => s.impressions);
+  const chartLabels = dailyStats.map(s => 
+    new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  );
+
   return (
-    <div className="flex-1 bg-gray-50 min-h-screen">
+    <div className="flex-1 bg-surface-50 min-h-screen lg:rounded-tl-3xl overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Analytics</h1>
-          
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
-            {/* Site Selector */}
-            <select
-              value={selectedSiteId}
-              onChange={(e) => setSelectedSiteId(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              {sites.map(site => (
-                <option key={site.id} value={site.id}>
-                  {site.name}
-                </option>
-              ))}
-            </select>
-
-            {/* Date Range Selector */}
-            <div className="flex space-x-2">
-              {(['7', '30', '90'] as const).map(range => (
-                <button
-                  key={range}
-                  onClick={() => setDateRange(range)}
-                  className={`px-4 py-2 rounded-lg transition-colors ${
-                    dateRange === range
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-                  }`}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-surface-900">Analytics</h1>
+              <p className="text-surface-500 mt-1">Track your notification performance and visitor engagement</p>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Site Selector */}
+              <div className="relative">
+                <select
+                  value={selectedSiteId}
+                  onChange={(e) => setSelectedSiteId(e.target.value)}
+                  className="appearance-none w-full sm:w-auto pl-4 pr-10 py-2.5 bg-white border border-surface-200 rounded-xl text-sm font-medium text-surface-700 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all cursor-pointer"
                 >
-                  {range} days
-                </button>
-              ))}
+                  {sites.map(site => (
+                    <option key={site.id} value={site.id}>
+                      {site.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400 pointer-events-none" />
+              </div>
+
+              {/* Date Range Selector */}
+              <div className="inline-flex bg-white border border-surface-200 rounded-xl p-1">
+                {(['7', '30', '90'] as const).map(range => (
+                  <button
+                    key={range}
+                    onClick={() => setDateRange(range)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      dateRange === range
+                        ? 'bg-brand-600 text-white shadow-soft-sm'
+                        : 'text-surface-600 hover:text-surface-900 hover:bg-surface-50'
+                    }`}
+                  >
+                    {range}d
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8 stagger-children">
           {/* Total Impressions */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Eye className="w-6 h-6 text-purple-600" />
-              </div>
-              {analytics.trend.impressions !== 0 && (
-                <div className={`flex items-center space-x-1 text-sm ${
-                  analytics.trend.impressions > 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {analytics.trend.impressions > 0 ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
-                  <span>{Math.abs(analytics.trend.impressions).toFixed(1)}%</span>
-                </div>
-              )}
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900">{analytics.totalImpressions.toLocaleString()}</h3>
-            <p className="text-sm text-gray-600">Total Impressions</p>
-            <p className="text-xs text-gray-500 mt-1">Notifications shown to visitors</p>
-          </div>
+          <StatCard
+            label="Total Impressions"
+            value={analytics.totalImpressions.toLocaleString()}
+            change={analytics.trend.impressions}
+            changeLabel="vs previous period"
+            icon={<Eye className="w-5 h-5 text-brand-600" />}
+            iconBg="bg-brand-50"
+          />
 
           {/* Unique Viewers */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Users className="w-6 h-6 text-blue-600" />
-              </div>
-              {analytics.trend.viewers !== 0 && (
-                <div className={`flex items-center space-x-1 text-sm ${
-                  analytics.trend.viewers > 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {analytics.trend.viewers > 0 ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
-                  <span>{Math.abs(analytics.trend.viewers).toFixed(1)}%</span>
-                </div>
-              )}
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900">{analytics.uniqueViewers.toLocaleString()}</h3>
-            <p className="text-sm text-gray-600">Unique Viewers</p>
-            <p className="text-xs text-gray-500 mt-1">Visitors who saw notifications</p>
-          </div>
+          <StatCard
+            label="Unique Viewers"
+            value={analytics.uniqueViewers.toLocaleString()}
+            change={analytics.trend.viewers}
+            changeLabel="vs previous period"
+            icon={<Users className="w-5 h-5 text-blue-600" />}
+            iconBg="bg-blue-50"
+          />
 
           {/* Active Visitors */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <Users className="w-6 h-6 text-green-600" />
-              </div>
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900">{analytics.activeVisitors}</h3>
-            <p className="text-sm text-gray-600">Active Now</p>
-            <p className="text-xs text-gray-500 mt-1">Visitors in last 5 minutes</p>
-          </div>
-        </div>
-
-        {/* Secondary Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* Avg Time on Page */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
-                <Clock className="w-6 h-6 text-indigo-600" />
-              </div>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900">{formatTime(analytics.avgTimeOnPage)}</h3>
-            <p className="text-sm text-gray-600">Avg Session Duration</p>
-            <p className="text-xs text-gray-500 mt-1">Average time visitors spend on site</p>
-          </div>
-
-          {/* Bounce Rate */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                <ArrowDown className="w-6 h-6 text-red-600" />
-              </div>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900">{analytics.bounceRate.toFixed(1)}%</h3>
-            <p className="text-sm text-gray-600">Bounce Rate</p>
-            <p className="text-xs text-gray-500 mt-1">Single-page sessions</p>
-          </div>
-
-          {/* Viewability Rate */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center">
-                <Eye className="w-6 h-6 text-teal-600" />
-              </div>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900">{analytics.viewabilityRate.toFixed(1)}%</h3>
-            <p className="text-sm text-gray-600">Viewability Rate</p>
-            <p className="text-xs text-gray-500 mt-1">Impressions per page view</p>
-          </div>
-        </div>
-
-        {/* Chart */}
-        <div className="bg-white rounded-lg shadow p-6 mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-gray-900">Activity Over Time</h2>
-            <div className="flex items-center space-x-4 text-sm">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-purple-500 rounded"></div>
-                <span className="text-gray-600">Impressions</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                <span className="text-gray-600">Unique Viewers</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded"></div>
-                <span className="text-gray-600">Page Views</span>
-              </div>
-            </div>
-          </div>
-
-          {dailyStats.length > 0 ? (
-            <div className="space-y-4">
-              {dailyStats.map((stat) => (
-                <div key={stat.date} className="flex items-center space-x-4">
-                  <div className="w-20 text-xs text-gray-600">
-                    {new Date(stat.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    {/* Impressions Bar */}
-                    <div className="flex items-center space-x-2">
-                      <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
-                        <div
-                          className="bg-purple-500 h-full rounded-full transition-all"
-                          style={{ width: `${(stat.impressions / maxValue) * 100}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-xs text-gray-600 w-12 text-right">{stat.impressions}</span>
-                    </div>
-                    {/* Unique Viewers Bar */}
-                    <div className="flex items-center space-x-2">
-                      <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
-                        <div
-                          className="bg-blue-500 h-full rounded-full transition-all"
-                          style={{ width: `${(stat.unique_viewers / maxValue) * 100}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-xs text-gray-600 w-12 text-right">{stat.unique_viewers}</span>
-                    </div>
-                    {/* Page Views Bar */}
-                    <div className="flex items-center space-x-2">
-                      <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
-                        <div
-                          className="bg-green-500 h-full rounded-full transition-all"
-                          style={{ width: `${(stat.page_views / maxValue) * 100}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-xs text-gray-600 w-12 text-right">{stat.page_views}</span>
-                    </div>
-                  </div>
+          <Card className="group">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-surface-500">Active Now</p>
+                <p className="text-2xl font-bold text-surface-900 tracking-tight">
+                  {analytics.activeVisitors}
+                </p>
+                <div className="flex items-center gap-2 pt-1">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success-500 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-success-500"></span>
+                  </span>
+                  <span className="text-xs text-surface-400">Live visitors</span>
                 </div>
-              ))}
+              </div>
+              <div className="p-3 rounded-xl bg-success-50 transition-transform duration-200 group-hover:scale-110">
+                <Activity className="w-5 h-5 text-success-600" />
+              </div>
             </div>
+          </Card>
+
+          {/* Avg Session */}
+          <StatCard
+            label="Avg Session"
+            value={formatTime(analytics.avgTimeOnPage)}
+            icon={<Clock className="w-5 h-5 text-purple-600" />}
+            iconBg="bg-purple-50"
+          />
+        </div>
+
+        {/* Charts Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Main Chart */}
+          <Card padding="lg" className="lg:col-span-2">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-lg font-semibold text-surface-900">Activity Overview</h2>
+                <p className="text-sm text-surface-500 mt-0.5">Impressions over the last {dateRange} days</p>
+              </div>
+              <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-brand-500 rounded-full"></div>
+                  <span className="text-surface-600">Impressions</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                  <span className="text-surface-600">Viewers</span>
+                </div>
+              </div>
+            </div>
+            
+            {impressionsData.length > 0 ? (
+              <LineChart 
+                data={impressionsData} 
+                labels={chartLabels.length > 7 ? [chartLabels[0], chartLabels[Math.floor(chartLabels.length/2)], chartLabels[chartLabels.length-1]] : chartLabels}
+                height={240}
+                color="#6366f1"
+                showArea={true}
+                showDots={impressionsData.length <= 14}
+              />
+            ) : (
+              <div className="h-60 flex items-center justify-center">
+                <div className="text-center">
+                  <Calendar className="w-10 h-10 text-surface-300 mx-auto mb-3" />
+                  <p className="text-surface-500">No data for this period</p>
+                </div>
+              </div>
+            )}
+          </Card>
+
+          {/* Engagement Donut */}
+          <Card padding="lg">
+            <h2 className="text-lg font-semibold text-surface-900 mb-6">Engagement Breakdown</h2>
+            <DonutChart
+              data={[
+                { label: 'Viewed', value: analytics.viewabilityRate, color: '#6366f1' },
+                { label: 'Bounced', value: analytics.bounceRate, color: '#f59e0b' },
+                { label: 'Engaged', value: Math.max(0, 100 - analytics.bounceRate - analytics.viewabilityRate), color: '#10b981' },
+              ]}
+              size={140}
+              strokeWidth={20}
+              centerValue={`${analytics.viewabilityRate.toFixed(0)}%`}
+              centerLabel="Viewability"
+            />
+          </Card>
+        </div>
+
+        {/* Progress Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+          <Card padding="md">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-surface-700">Bounce Rate</span>
+              <Badge variant={analytics.bounceRate > 70 ? 'danger' : analytics.bounceRate > 50 ? 'warning' : 'success'}>
+                {analytics.bounceRate > 70 ? 'High' : analytics.bounceRate > 50 ? 'Medium' : 'Low'}
+              </Badge>
+            </div>
+            <ProgressBar 
+              value={analytics.bounceRate} 
+              max={100}
+              color={analytics.bounceRate > 70 ? 'bg-danger-500' : analytics.bounceRate > 50 ? 'bg-warning-500' : 'bg-success-500'}
+              showValue={true}
+              label=""
+            />
+          </Card>
+
+          <Card padding="md">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-surface-700">Viewability Rate</span>
+              <Badge variant={analytics.viewabilityRate > 50 ? 'success' : analytics.viewabilityRate > 25 ? 'warning' : 'default'}>
+                {analytics.viewabilityRate > 50 ? 'Good' : analytics.viewabilityRate > 25 ? 'Fair' : 'Low'}
+              </Badge>
+            </div>
+            <ProgressBar 
+              value={analytics.viewabilityRate} 
+              max={100}
+              color={analytics.viewabilityRate > 50 ? 'bg-success-500' : analytics.viewabilityRate > 25 ? 'bg-warning-500' : 'bg-surface-400'}
+              showValue={true}
+              label=""
+            />
+          </Card>
+
+          <Card padding="md">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-surface-700">Impressions/Viewer</span>
+              <span className="text-sm font-semibold text-surface-900">
+                {analytics.uniqueViewers > 0 
+                  ? (analytics.totalImpressions / analytics.uniqueViewers).toFixed(1)
+                  : '0'}
+              </span>
+            </div>
+            <ProgressBar 
+              value={analytics.uniqueViewers > 0 ? Math.min((analytics.totalImpressions / analytics.uniqueViewers) * 20, 100) : 0} 
+              max={100}
+              color="bg-brand-500"
+              showValue={false}
+              label=""
+            />
+            <p className="text-xs text-surface-400 mt-2">Average notifications per visitor</p>
+          </Card>
+        </div>
+
+        {/* Widget Performance Table */}
+        <Card padding="lg" className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-lg font-semibold text-surface-900">Widget Performance</h2>
+              <p className="text-sm text-surface-500 mt-0.5">Individual notification performance metrics</p>
+            </div>
+            {analytics.widgetStats.length > 0 && (
+              <Badge variant="brand">{analytics.widgetStats.length} widgets</Badge>
+            )}
+          </div>
+          
+          {analytics.widgetStats.length > 0 ? (
+            <Table
+              columns={[
+                { 
+                  key: 'widget_name', 
+                  header: 'Widget Name',
+                  render: (value) => (
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center">
+                        <Zap className="w-4 h-4 text-brand-600" />
+                      </div>
+                      <span className="font-medium text-surface-900">{value}</span>
+                    </div>
+                  )
+                },
+                { 
+                  key: 'impressions', 
+                  header: 'Impressions', 
+                  align: 'right',
+                  sortable: true,
+                  render: (value) => (
+                    <span className="font-medium">{value.toLocaleString()}</span>
+                  )
+                },
+                { 
+                  key: 'unique_viewers', 
+                  header: 'Viewers', 
+                  align: 'right',
+                  sortable: true,
+                  render: (value) => value.toLocaleString()
+                },
+                { 
+                  key: 'engagement_rate', 
+                  header: 'Reach Rate', 
+                  align: 'right',
+                  sortable: true,
+                  render: (value) => (
+                    <Badge 
+                      variant={value >= 50 ? 'success' : value >= 25 ? 'warning' : 'default'}
+                    >
+                      {value.toFixed(1)}%
+                    </Badge>
+                  )
+                },
+              ]}
+              data={analytics.widgetStats}
+              hoverable
+              compact
+            />
           ) : (
             <div className="text-center py-12">
-              <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">No data available for the selected period</p>
+              <div className="w-12 h-12 rounded-full bg-surface-100 flex items-center justify-center mx-auto mb-4">
+                <Zap className="w-6 h-6 text-surface-400" />
+              </div>
+              <p className="text-surface-500">No widget data available yet</p>
+              <p className="text-sm text-surface-400 mt-1">Create and publish widgets to see performance data</p>
             </div>
           )}
-        </div>
-
-        {/* Widget Performance */}
-        <div className="bg-white rounded-lg shadow p-6 mb-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Widget Performance</h3>
-          {analytics.widgetStats.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="text-left text-sm text-gray-500 border-b">
-                    <th className="pb-3 font-medium">Widget</th>
-                    <th className="pb-3 font-medium text-right">Impressions</th>
-                    <th className="pb-3 font-medium text-right">Unique Viewers</th>
-                    <th className="pb-3 font-medium text-right">Reach Rate</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {analytics.widgetStats.map((widget) => (
-                    <tr key={widget.widget_id} className="text-sm">
-                      <td className="py-3 font-medium text-gray-900">{widget.widget_name}</td>
-                      <td className="py-3 text-right text-gray-600">{widget.impressions.toLocaleString()}</td>
-                      <td className="py-3 text-right text-gray-600">{widget.unique_viewers.toLocaleString()}</td>
-                      <td className="py-3 text-right">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                          widget.engagement_rate >= 50 ? 'bg-green-100 text-green-800' :
-                          widget.engagement_rate >= 25 ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {widget.engagement_rate.toFixed(1)}%
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="text-gray-500 text-center py-4">No widget data available</p>
-          )}
-        </div>
+        </Card>
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Impressions Summary */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Impressions Summary</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Total Impressions</span>
-                <span className="font-semibold text-gray-900">{analytics.totalImpressions.toLocaleString()}</span>
+          <Card padding="lg">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="p-2 rounded-xl bg-brand-50">
+                <Eye className="w-5 h-5 text-brand-600" />
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Unique Viewers</span>
-                <span className="font-semibold text-gray-900">{analytics.uniqueViewers.toLocaleString()}</span>
+              <h3 className="text-lg font-semibold text-surface-900">Impressions Summary</h3>
+            </div>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center py-2 border-b border-surface-100">
+                <span className="text-surface-600">Total Impressions</span>
+                <span className="font-semibold text-surface-900">{analytics.totalImpressions.toLocaleString()}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Avg Impressions per Viewer</span>
-                <span className="font-semibold text-gray-900">
-                  {analytics.uniqueViewers > 0 
-                    ? (analytics.totalImpressions / analytics.uniqueViewers).toFixed(1)
-                    : '0'}
-                </span>
+              <div className="flex justify-between items-center py-2 border-b border-surface-100">
+                <span className="text-surface-600">Unique Viewers</span>
+                <span className="font-semibold text-surface-900">{analytics.uniqueViewers.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-surface-600">Avg per Viewer</span>
+                <div className="flex items-center gap-2">
+                  <Sparkline 
+                    data={[1, 2, 1.5, 3, 2.5, 4, 3.5]} 
+                    width={60} 
+                    height={20}
+                    color="#6366f1"
+                  />
+                  <span className="font-semibold text-surface-900">
+                    {analytics.uniqueViewers > 0 
+                      ? (analytics.totalImpressions / analytics.uniqueViewers).toFixed(1)
+                      : '0'}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Engagement Summary */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Site Engagement</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Avg Session Duration</span>
-                <span className="font-semibold text-gray-900">{formatTime(analytics.avgTimeOnPage)}</span>
+          <Card padding="lg">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="p-2 rounded-xl bg-success-50">
+                <Activity className="w-5 h-5 text-success-600" />
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Bounce Rate</span>
-                <span className={`font-semibold ${analytics.bounceRate > 70 ? 'text-red-600' : analytics.bounceRate > 50 ? 'text-yellow-600' : 'text-green-600'}`}>
+              <h3 className="text-lg font-semibold text-surface-900">Site Engagement</h3>
+            </div>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center py-2 border-b border-surface-100">
+                <span className="text-surface-600">Avg Session Duration</span>
+                <span className="font-semibold text-surface-900">{formatTime(analytics.avgTimeOnPage)}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-surface-100">
+                <span className="text-surface-600">Bounce Rate</span>
+                <span className={`font-semibold ${
+                  analytics.bounceRate > 70 ? 'text-danger-600' : 
+                  analytics.bounceRate > 50 ? 'text-warning-600' : 
+                  'text-success-600'
+                }`}>
                   {analytics.bounceRate.toFixed(1)}%
                 </span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Viewability Rate</span>
-                <span className={`font-semibold ${analytics.viewabilityRate > 50 ? 'text-green-600' : analytics.viewabilityRate > 25 ? 'text-yellow-600' : 'text-gray-600'}`}>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-surface-600">Viewability Rate</span>
+                <span className={`font-semibold ${
+                  analytics.viewabilityRate > 50 ? 'text-success-600' : 
+                  analytics.viewabilityRate > 25 ? 'text-warning-600' : 
+                  'text-surface-600'
+                }`}>
                   {analytics.viewabilityRate.toFixed(1)}%
                 </span>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>

@@ -138,6 +138,7 @@ export const DEFAULT_TRIGGER_SETTINGS: TriggerSettings = {
       exclude: [],
     },
     customJsCondition: undefined,
+    productSpecificMode: 'off', // off = show all, product_only = only current product, product_first = prioritize current product
   },
 };
 
@@ -170,6 +171,8 @@ export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
     showCustomerName: true,
     showRating: true,
     showReviewContent: true,
+    useCustomFormMessage: false,
+    customFormMessage: 'signed up',
   },
   privacy: {
     anonymizeNames: false,
@@ -466,6 +469,22 @@ export function resetCategoryToDefaults<K extends keyof Omit<WidgetConfig, 'id' 
     [category]: getDefaultsForCategory(category),
     updatedAt: new Date().toISOString(),
   };
+}
+
+/**
+ * Get template-specific trigger defaults
+ * Pill Badge has 180 seconds (3 min) delay between notifications
+ */
+export function getTriggerDefaultsForTemplate(templateId: string): Partial<TriggerSettings> {
+  if (templateId === 'pill_badge') {
+    return {
+      behavior: {
+        ...DEFAULT_TRIGGER_SETTINGS.behavior,
+        delayBetweenNotifications: 180, // 3 minutes for pill badge
+      },
+    };
+  }
+  return {};
 }
 
 /**

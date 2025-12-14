@@ -19,6 +19,14 @@ Deno.serve(async (req) => {
     const widgetId = url.searchParams.get('widget_id');
     const siteId = url.searchParams.get('site_id');
     const limit = parseInt(url.searchParams.get('limit') || '10');
+    
+    // Product-specific filtering parameters
+    const productId = url.searchParams.get('product_id');
+    const productHandle = url.searchParams.get('product_handle');
+    const productName = url.searchParams.get('product_name');
+    const isProductPage = url.searchParams.get('product_page') === 'true';
+    
+    console.log('Product context:', { productId, productHandle, productName, isProductPage });
 
     if (!widgetId && !siteId) {
       return new Response(JSON.stringify({
@@ -200,6 +208,9 @@ Deno.serve(async (req) => {
           showCustomerName: display?.content?.showCustomerName ?? true,
           showRating: display?.content?.showRating ?? true,
           showReviewContent: display?.content?.showReviewContent ?? true,
+          // Custom form message settings
+          useCustomFormMessage: display?.content?.useCustomFormMessage ?? false,
+          customFormMessage: display?.content?.customFormMessage ?? 'signed up',
         },
         privacy: {
           anonymizeNames: widget.anonymize_names ?? display?.privacy?.anonymizeNames ?? false,
@@ -473,6 +484,7 @@ Deno.serve(async (req) => {
       const thresholdISO = timeThreshold.toISOString();
 
       console.log('EVENTS QUERY for widget:', widget.id, 'name:', widget.name, 'eventTypes:', eventTypes, 'timeWindowHours:', timeWindowHours, 'threshold:', thresholdISO);
+      console.log('Product filtering:', { isProductPage, productId, productHandle, productName });
 
       // Build query for events - check event_type column (not type)
       let eventsQuery = supabase
@@ -482,7 +494,7 @@ Deno.serve(async (req) => {
         .in('event_type', eventTypes)
         .gte('timestamp', thresholdISO)
         .order('timestamp', { ascending: false })
-        .limit(limit);
+        .limit(isProductPage ? limit * 3 : limit); // Fetch more if filtering by product
 
       const { data: events, error: eventsError } = await eventsQuery;
 
@@ -497,9 +509,97 @@ Deno.serve(async (req) => {
       }
 
       console.log(`Found ${events.length} events for widget:`, widget.id);
+      
+      // ==================== PRODUCT-SPECIFIC FILTERING ====================
+      // Get product filtering mode from widget config (extract early for filtering)
+      const triggerAdvancedConfig = triggersConfig.advanced || {};
+      const productSpecificMode = triggerAdvancedConfig.productSpecificMode || 'off';
+      console.log('Product specific mode:', productSpecificMode);
+      
+      // If on a product page and product filtering is enabled, filter events
+      let filteredEvents = events;
+      const shouldFilterByProduct = isProductPage && 
+                                     productSpecificMode !== 'off' && 
+                                     (productId || productHandle || productName);
+      
+      if (shouldFilterByProduct) {
+        const productMatchedEvents = events.filter(event => {
+          const metadata = event.metadata || {};
+          
+          // Match by product ID
+          if (productId && metadata.product_id) {
+            if (String(metadata.product_id) === String(productId)) {
+              console.log('Product match by ID:', productId);
+              return true;
+            }
+          }
+          
+          // Match by product handle/slug (from URL)
+          if (productHandle) {
+            // Check if event URL contains the product handle
+            const eventUrl = event.url || metadata.url || '';
+            if (eventUrl.toLowerCase().includes(productHandle.toLowerCase())) {
+              console.log('Product match by URL handle:', productHandle);
+              return true;
+            }
+            
+            // Check product_handle in metadata
+            if (metadata.product_handle && 
+                metadata.product_handle.toLowerCase() === productHandle.toLowerCase()) {
+              console.log('Product match by metadata handle:', productHandle);
+              return true;
+            }
+            
+            // Check product_slug in metadata
+            if (metadata.product_slug && 
+                metadata.product_slug.toLowerCase() === productHandle.toLowerCase()) {
+              console.log('Product match by metadata slug:', productHandle);
+              return true;
+            }
+          }
+          
+          // Match by product name (fuzzy match)
+          if (productName && metadata.product_name) {
+            const eventProductName = (metadata.product_name || '').toLowerCase().trim();
+            const currentProductName = productName.toLowerCase().trim();
+            
+            // Exact match or contains match
+            if (eventProductName === currentProductName ||
+                eventProductName.includes(currentProductName) ||
+                currentProductName.includes(eventProductName)) {
+              console.log('Product match by name:', productName, '===', metadata.product_name);
+              return true;
+            }
+          }
+          
+          return false;
+        });
+        
+        console.log(`Product filtering: ${events.length} events -> ${productMatchedEvents.length} matching product`);
+        
+        // Apply filtering based on mode
+        if (productSpecificMode === 'product_only') {
+          // Only show product-specific events, no fallback
+          filteredEvents = productMatchedEvents;
+          if (filteredEvents.length === 0) {
+            console.log('product_only mode: No matching events, widget will show nothing for this product');
+          }
+        } else if (productSpecificMode === 'product_first') {
+          // Prioritize product-specific events, but fallback to general if none found
+          if (productMatchedEvents.length > 0) {
+            filteredEvents = productMatchedEvents;
+          } else {
+            console.log('product_first mode: No product-specific events, falling back to general events');
+            filteredEvents = events.slice(0, Math.min(3, limit)); // Show fewer general events
+          }
+        }
+      }
+      
+      // Apply final limit
+      filteredEvents = filteredEvents.slice(0, limit);
 
-      // Transform events into notifications
-      const notifications = events.map(event => {
+      // Transform events into notifications (use filteredEvents for product-specific filtering)
+      const notifications = filteredEvents.map(event => {
         const metadata = event.metadata || {};
         const eventType = event.type || event.event_type;
         
@@ -538,9 +638,15 @@ Deno.serve(async (req) => {
                     metadata.firstName ||
                     (metadata.first_name && metadata.last_name ? `${metadata.first_name} ${metadata.last_name}` : null) ||
                     'Someone';
-            message = `submitted ${metadata.form_type || metadata.form_name || 'a form'}`;
+            
+            // Check if custom form message is enabled
+            if (displaySettings.content.useCustomFormMessage && displaySettings.content.customFormMessage) {
+              message = displaySettings.content.customFormMessage;
+            } else {
+              message = `submitted ${metadata.form_type || metadata.form_name || 'a form'}`;
+            }
             icon = '📝';
-            if (metadata.location) {
+            if (metadata.location && !displaySettings.content.useCustomFormMessage) {
               message += ` from ${metadata.location}`;
             }
             break;
@@ -597,10 +703,24 @@ Deno.serve(async (req) => {
         const productImage = metadata.product_image || 
                             metadata.image || 
                             metadata.image_url || 
+                            metadata.productImage ||
+                            metadata.img ||
+                            metadata.photo ||
+                            metadata.thumbnail ||
                             metadata.product_images?.[0] ||
+                            metadata.images?.[0] ||
                             metadata.line_items?.[0]?.image ||
                             metadata.line_items?.[0]?.product_image ||
+                            metadata.event_data?.product_image ||
+                            metadata.event_data?.image ||
                             null;
+        
+        console.log('Product image extraction:', { 
+          found: productImage, 
+          metadata_keys: Object.keys(metadata || {}),
+          raw_product_image: metadata.product_image,
+          raw_image: metadata.image
+        });
         
         // Extract user avatar
         const userAvatar = metadata.avatar || 
@@ -670,6 +790,7 @@ Deno.serve(async (req) => {
       const displayFrequency = triggerFrequency.displayFrequency || 'all_time';
       const maxNotificationsPerSession = triggerFrequency.maxNotificationsPerSession ?? 3;
       const urlPatterns = triggerAdvanced.urlPatterns || { include: [], exclude: [], matchTypes: [] };
+      const productSpecificModeValue = triggerAdvanced.productSpecificMode || 'off';
 
       widgetNotifications.push({
         widget_id: widget.id,
@@ -684,6 +805,7 @@ Deno.serve(async (req) => {
         display_frequency: displayFrequency,
         max_notifications_per_session: maxNotificationsPerSession,
         url_patterns: urlPatterns,
+        product_specific_mode: productSpecificModeValue,
         // Include design settings
         position: widget.position,
         offset_x: widget.offset_x,

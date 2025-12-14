@@ -8,7 +8,7 @@ Deno.serve((req) => {
   }
 
   const engineCode = `(function() {
-    console.log("ProofPop Widget Engine v2.6 Loaded - CENTER-TOP VERTICAL SLIDE");
+    console.log("ProofPop Widget Engine v2.8 Loaded - PILL BADGE SUPPORT");
 
     const WIDGET_API_URL = 'https://ghiobuubmnvlaukeyuwe.supabase.co/functions/v1/get-widgets';
     const TRACK_EVENT_URL = 'https://ghiobuubmnvlaukeyuwe.supabase.co/functions/v1/track-event';
@@ -16,6 +16,7 @@ Deno.serve((req) => {
     const WIDGET_NOTIFICATIONS_URL = 'https://ghiobuubmnvlaukeyuwe.supabase.co/functions/v1/get-widget-notifications';
     const TRACK_IMPRESSION_URL = 'https://ghiobuubmnvlaukeyuwe.supabase.co/functions/v1/track-impression';
     const TRACK_ANALYTICS_URL = 'https://ghiobuubmnvlaukeyuwe.supabase.co/functions/v1/track-analytics';
+    const DAILY_STATS_URL = 'https://ghiobuubmnvlaukeyuwe.supabase.co/functions/v1/get-daily-stats';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoaW9idXVibW52bGF1a2V5dXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0Njg2MzcsImV4cCI6MjA3MTA0NDYzN30.NR47GOGkExUmoNKQqdhWO4DR7SAQd9W3iZ5r8t1nC7s';
 
     // Find the script tag and get the site_id
@@ -35,6 +36,100 @@ Deno.serve((req) => {
 
     // Generate session ID for tracking
     const sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    
+    // ==================== PRODUCT DETECTION ====================
+    // Detect current product on the page for product-specific notifications
+    
+    function detectCurrentProduct() {
+        const product = {
+            id: null,
+            name: null,
+            url: window.location.href,
+            handle: null // URL slug/handle
+        };
+        
+        // Extract product handle from URL (works for most e-commerce platforms)
+        const urlPath = window.location.pathname;
+        
+        // Shopify: /products/product-handle
+        const shopifyMatch = urlPath.match(/\\/products\\/([^\\/?#]+)/);
+        if (shopifyMatch) {
+            product.handle = shopifyMatch[1];
+            console.log('ProofPop: Detected Shopify product handle:', product.handle);
+        }
+        
+        // WooCommerce: /product/product-slug
+        const wooMatch = urlPath.match(/\\/product\\/([^\\/?#]+)/);
+        if (wooMatch) {
+            product.handle = wooMatch[1];
+            console.log('ProofPop: Detected WooCommerce product handle:', product.handle);
+        }
+        
+        // Generic: Look for product ID in URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const productIdParam = urlParams.get('product_id') || urlParams.get('productId') || urlParams.get('id');
+        if (productIdParam) {
+            product.id = productIdParam;
+            console.log('ProofPop: Detected product ID from URL params:', product.id);
+        }
+        
+        // Try to get product name from page
+        // Shopify product JSON
+        try {
+            const productJsonScript = document.querySelector('script[type="application/json"][data-product-json]');
+            if (productJsonScript) {
+                const productData = JSON.parse(productJsonScript.textContent);
+                product.id = productData.id || product.id;
+                product.name = productData.title || product.name;
+                product.handle = productData.handle || product.handle;
+            }
+        } catch (e) {}
+        
+        // Try Shopify global object
+        if (window.ShopifyAnalytics && window.ShopifyAnalytics.meta && window.ShopifyAnalytics.meta.product) {
+            const shopifyProduct = window.ShopifyAnalytics.meta.product;
+            product.id = shopifyProduct.id || product.id;
+            product.name = shopifyProduct.title || product.name;
+            product.handle = shopifyProduct.handle || product.handle;
+        }
+        
+        // Try meta tags
+        const ogTitle = document.querySelector('meta[property="og:title"]');
+        if (ogTitle && !product.name) {
+            product.name = ogTitle.content;
+        }
+        
+        // Try common product title selectors
+        if (!product.name) {
+            const titleSelectors = [
+                '.product-title', '.product__title', '.product-single__title',
+                'h1[itemprop="name"]', '.product-name h1', '[data-product-title]',
+                '.ProductMeta__Title', '.product-info__title'
+            ];
+            for (const selector of titleSelectors) {
+                const el = document.querySelector(selector);
+                if (el && el.textContent) {
+                    product.name = el.textContent.trim();
+                    break;
+                }
+            }
+        }
+        
+        // Check if we're on a product page
+        const isProductPage = urlPath.includes('/products/') || 
+                              urlPath.includes('/product/') ||
+                              document.querySelector('[data-product-id]') ||
+                              document.querySelector('.product-single') ||
+                              document.querySelector('.woocommerce-product-details');
+        
+        product.isProductPage = isProductPage;
+        
+        console.log('ProofPop: Current product context:', product);
+        return product;
+    }
+    
+    // Detect product on page load
+    const currentProduct = detectCurrentProduct();
     
     // Note: page_view tracking is handled by pixel-loader, not engine
     // This prevents duplicate page_view events
@@ -240,6 +335,188 @@ Deno.serve((req) => {
     const widgetDisplaySettings = {}; // Map widget_id -> display settings
     const widgetTriggerSettings = {}; // Map widget_id -> trigger settings (delay, etc.)
     const notificationContainers = {}; // Map position -> DOM container
+    const pillBadgeElements = {}; // Map widget_id -> pill badge element
+    
+    // ==================== PILL BADGE FUNCTIONS ====================
+    
+    // Fetch daily stats for pill badge widgets
+    async function fetchDailyStats() {
+        try {
+            const response = await fetch(DAILY_STATS_URL + '?site_id=' + siteId, {
+                headers: { 'Content-Type': 'application/json' }
+            });
+            if (!response.ok) {
+                throw new Error('Failed to fetch daily stats');
+            }
+            const data = await response.json();
+            console.log('ProofPop: Daily stats:', data);
+            return data.stats || {};
+        } catch (error) {
+            console.error('ProofPop: Error fetching daily stats:', error);
+            return {};
+        }
+    }
+    
+    // Render a pill badge widget
+    function renderPillBadge(widgetData, stats) {
+        const widgetId = widgetData.widget_id;
+        const design = widgetDesignSettings[widgetId] || {};
+        const position = design.position || 'bottom-left';
+        
+        // Determine which stat to show based on widget config
+        const eventTypes = widgetData.event_types || ['page_view'];
+        let count = 0;
+        let label = 'today';
+        let iconSvg = '';
+        let iconColor = '#3B82F6';
+        
+        if (eventTypes.includes('page_view')) {
+            count = stats.visitors || 0;
+            label = 'visited today';
+            iconColor = '#3B82F6';
+            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>';
+        } else if (eventTypes.includes('purchase')) {
+            count = stats.purchases || 0;
+            label = 'bought today';
+            iconColor = '#10B981';
+            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>';
+        } else if (eventTypes.includes('add_to_cart')) {
+            count = stats.add_to_cart || 0;
+            label = 'added to cart today';
+            iconColor = '#F59E0B';
+            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>';
+        } else if (eventTypes.includes('review')) {
+            count = stats.reviews || 0;
+            label = 'reviews today';
+            iconColor = '#8B5CF6';
+            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>';
+        } else if (eventTypes.includes('signup')) {
+            count = stats.signups || 0;
+            label = 'signed up today';
+            iconColor = '#EC4899';
+            iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>';
+        }
+        
+        // Don't show if count is 0
+        if (count === 0) {
+            console.log('ProofPop: Pill badge skipped - no activity for widget', widgetId);
+            return;
+        }
+        
+        // Remove existing pill badge for this widget
+        if (pillBadgeElements[widgetId]) {
+            pillBadgeElements[widgetId].remove();
+        }
+        
+        // Create pill badge element
+        const pillBadge = document.createElement('div');
+        pillBadge.setAttribute('data-proofpop-pill-badge', widgetId);
+        pillBadge.style.cssText = 'position: fixed; z-index: 9999; pointer-events: auto; cursor: default; user-select: none; animation: proofpop-fade-in-up 0.5s ease-out forwards;';
+        
+        // Position the pill badge
+        const offsetX = design.offset_x || 24;
+        const offsetY = design.offset_y || 24;
+        
+        switch (position) {
+            case 'top-left':
+                pillBadge.style.top = offsetY + 'px';
+                pillBadge.style.left = offsetX + 'px';
+                break;
+            case 'top-right':
+                pillBadge.style.top = offsetY + 'px';
+                pillBadge.style.right = offsetX + 'px';
+                break;
+            case 'bottom-right':
+                pillBadge.style.bottom = offsetY + 'px';
+                pillBadge.style.right = offsetX + 'px';
+                break;
+            case 'center-top':
+                pillBadge.style.top = offsetY + 'px';
+                pillBadge.style.left = '50%';
+                pillBadge.style.transform = 'translateX(-50%)';
+                break;
+            case 'bottom-left':
+            default:
+                pillBadge.style.bottom = offsetY + 'px';
+                pillBadge.style.left = offsetX + 'px';
+                break;
+        }
+        
+        // Build the pill badge HTML
+        pillBadge.innerHTML = '<div style="display: flex; align-items: center; gap: 10px; padding: 10px 20px; background: white; border: 1px solid #e5e7eb; border-radius: 50px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-family: -apple-system, BlinkMacSystemFont, \\'Segoe UI\\', Roboto, sans-serif; font-size: 14px; transition: all 0.3s ease;">' +
+            '<div style="display: flex; align-items: center; justify-content: center; color: ' + iconColor + ';">' + iconSvg + '</div>' +
+            '<div style="display: flex; align-items: baseline; gap: 6px;">' +
+                '<span style="font-weight: 600; color: #111827;">' + count + '</span>' +
+                '<span style="color: #6b7280;">' + label + '</span>' +
+            '</div>' +
+        '</div>';
+        
+        // Add hover effect
+        const innerDiv = pillBadge.querySelector('div');
+        pillBadge.addEventListener('mouseenter', function() {
+            innerDiv.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+            innerDiv.style.borderColor = '#d1d5db';
+        });
+        pillBadge.addEventListener('mouseleave', function() {
+            innerDiv.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+            innerDiv.style.borderColor = '#e5e7eb';
+        });
+        
+        // Add animation keyframes if not already added
+        if (!document.getElementById('proofpop-pill-badge-styles')) {
+            const style = document.createElement('style');
+            style.id = 'proofpop-pill-badge-styles';
+            style.textContent = '@keyframes proofpop-fade-in-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }';
+            document.head.appendChild(style);
+        }
+        
+        document.body.appendChild(pillBadge);
+        pillBadgeElements[widgetId] = pillBadge;
+        
+        console.log('ProofPop: Pill badge rendered for widget', widgetId, 'count:', count);
+        
+        // Track analytics
+        trackAnalytics(widgetId, 'view', { type: 'pill_badge', count: count, label: label });
+        
+        // Get display duration from widget settings (default 8 seconds like other notifications)
+        const displaySettings = widgetDisplaySettings[widgetId] || {};
+        const durationSettings = displaySettings.duration || {};
+        const displayDuration = (durationSettings.displayDuration ?? 8) * 1000;
+        const fadeOutDuration = durationSettings.fadeOutDuration ?? 300;
+        
+        // Auto-hide after display duration
+        setTimeout(() => {
+            pillBadge.style.transition = 'opacity ' + fadeOutDuration + 'ms ease-out, transform ' + fadeOutDuration + 'ms ease-out';
+            pillBadge.style.opacity = '0';
+            pillBadge.style.transform = 'translateY(10px)';
+            
+            setTimeout(() => {
+                if (pillBadge.parentNode) {
+                    pillBadge.remove();
+                }
+                delete pillBadgeElements[widgetId];
+            }, fadeOutDuration);
+        }, displayDuration);
+    }
+    
+    // Check for and render pill badge widgets
+    async function checkAndRenderPillBadges(widgets) {
+        const pillBadgeWidgets = widgets.filter(w => w.layout_style === 'pill-badge' || w.widget_type === 'pill_badge');
+        
+        if (pillBadgeWidgets.length === 0) {
+            return;
+        }
+        
+        console.log('ProofPop: Found', pillBadgeWidgets.length, 'pill badge widgets');
+        
+        // Fetch daily stats
+        const stats = await fetchDailyStats();
+        
+        // Render each pill badge
+        pillBadgeWidgets.forEach(widget => {
+            renderPillBadge(widget, stats);
+        });
+    }
 
     // Anonymize names based on privacy settings
     function anonymizeName(name, style = 'first-initial') {
@@ -377,8 +654,26 @@ Deno.serve((req) => {
 
     async function fetchAndDisplayWidgets() {
         try {
+            // Build URL with product context for product-specific filtering
+            let apiUrl = \`\${WIDGET_NOTIFICATIONS_URL}?site_id=\${siteId}&limit=20\`;
+            
+            // Add product context if on a product page
+            if (currentProduct.isProductPage) {
+                if (currentProduct.id) {
+                    apiUrl += \`&product_id=\${encodeURIComponent(currentProduct.id)}\`;
+                }
+                if (currentProduct.handle) {
+                    apiUrl += \`&product_handle=\${encodeURIComponent(currentProduct.handle)}\`;
+                }
+                if (currentProduct.name) {
+                    apiUrl += \`&product_name=\${encodeURIComponent(currentProduct.name)}\`;
+                }
+                apiUrl += '&product_page=true';
+                console.log('ProofPop: Fetching product-specific notifications for:', currentProduct);
+            }
+            
             // Fetch widgets and their real notifications (public endpoint, no auth needed)
-            const response = await fetch(\`\${WIDGET_NOTIFICATIONS_URL}?site_id=\${siteId}&limit=20\`, {
+            const response = await fetch(apiUrl, {
                 headers: {
                     'Content-Type': 'application/json'
                 }
@@ -447,6 +742,7 @@ Deno.serve((req) => {
                     // Apply trigger validations
                     const urlPatterns = widgetData.url_patterns || {};
                     const displaySettings = widgetData.display || {};
+                    const productSpecificMode = widgetData.product_specific_mode || 'off';
                     
                     // Check URL pattern match
                     if (!matchesUrlPattern(urlPatterns)) {
@@ -458,6 +754,20 @@ Deno.serve((req) => {
                     if (!matchesDeviceDisplay(displaySettings)) {
                         console.log('ProofPop: Widget ' + widgetData.widget_id + ' skipped (device mismatch)');
                         return;
+                    }
+                    
+                    // Check product-specific mode - if set to 'product_only', skip on non-product pages
+                    if (productSpecificMode === 'product_only' && !currentProduct.isProductPage) {
+                        console.log('ProofPop: Widget ' + widgetData.widget_id + ' skipped (product_only mode but not on product page)');
+                        return;
+                    }
+                    
+                    // For 'product_only' mode on product pages, skip if no notifications (no matching product events)
+                    if (productSpecificMode === 'product_only' && currentProduct.isProductPage) {
+                        if (!widgetData.notifications || widgetData.notifications.length === 0) {
+                            console.log('ProofPop: Widget ' + widgetData.widget_id + ' skipped (product_only mode, no matching product events)');
+                            return;
+                        }
                     }
                     
                     // REMOVED: Frequency limit check during filtering phase
@@ -483,10 +793,57 @@ Deno.serve((req) => {
                     return timeB - timeA; // Descending order (newest first)
                 });
                 
+                // ============ LIVE PRIORITY FEATURE ============
+                // Detect super-fresh events (< 60 seconds old) and give them 30% chance to show first
+                const LIVE_THRESHOLD_MS = 60 * 1000; // 60 seconds
+                const LIVE_PRIORITY_CHANCE = 0.30; // 30% chance
+                const now = Date.now();
+                
+                // Separate live notifications from regular ones
+                const liveNotifications = [];
+                const regularNotifications = [];
+                
+                sortedNotifications.forEach(notification => {
+                    const notificationTime = new Date(notification.timestamp).getTime();
+                    const ageMs = now - notificationTime;
+                    
+                    if (ageMs < LIVE_THRESHOLD_MS) {
+                        // Super fresh! Mark as live
+                        notification.isLive = true;
+                        liveNotifications.push(notification);
+                        console.log('ProofPop LIVE: Found super-fresh notification!', {
+                            title: notification.title,
+                            ageSeconds: Math.round(ageMs / 1000),
+                            timestamp: notification.timestamp
+                        });
+                    } else {
+                        notification.isLive = false;
+                        regularNotifications.push(notification);
+                    }
+                });
+                
+                // Decide if we should prioritize a live notification (30% chance)
+                let prioritizedLiveNotification = null;
+                if (liveNotifications.length > 0 && Math.random() < LIVE_PRIORITY_CHANCE) {
+                    // Pick the freshest live notification
+                    prioritizedLiveNotification = liveNotifications[0];
+                    console.log('ProofPop LIVE: 🎯 Prioritizing live notification!', {
+                        title: prioritizedLiveNotification.title,
+                        chance: LIVE_PRIORITY_CHANCE * 100 + '%'
+                    });
+                }
+                
+                // Combine: prioritized live first (if any), then rest
+                const combinedNotifications = prioritizedLiveNotification 
+                    ? [prioritizedLiveNotification, ...regularNotifications, ...liveNotifications.filter(n => n !== prioritizedLiveNotification)]
+                    : [...liveNotifications, ...regularNotifications];
+                
+                // ============ END LIVE PRIORITY FEATURE ============
+                
                 // Smart randomization: Group by widget, then interleave with randomization
                 // This ensures we show variety across widgets while keeping recent notifications
                 const widgetGroups = {};
-                sortedNotifications.forEach(notification => {
+                combinedNotifications.forEach(notification => {
                     const widgetId = notification.widget_id;
                     if (!widgetGroups[widgetId]) {
                         widgetGroups[widgetId] = [];
@@ -498,6 +855,16 @@ Deno.serve((req) => {
                 notificationQueue = [];
                 const widgetKeys = Object.keys(widgetGroups);
                 let maxLength = Math.max(...Object.values(widgetGroups).map(arr => arr.length));
+                
+                // If we have a prioritized live notification, put it first before interleaving
+                if (prioritizedLiveNotification) {
+                    notificationQueue.push(prioritizedLiveNotification);
+                    // Remove it from its widget group to avoid duplication
+                    const liveWidgetId = prioritizedLiveNotification.widget_id;
+                    if (widgetGroups[liveWidgetId]) {
+                        widgetGroups[liveWidgetId] = widgetGroups[liveWidgetId].filter(n => n !== prioritizedLiveNotification);
+                    }
+                }
                 
                 for (let i = 0; i < maxLength; i++) {
                     // Get one notification from each widget at this index
@@ -518,6 +885,8 @@ Deno.serve((req) => {
                 }
                 
                 console.log('ProofPop: Total notifications queued:', notificationQueue.length);
+                console.log('ProofPop: Live notifications found:', liveNotifications.length);
+                console.log('ProofPop: Live priority activated:', prioritizedLiveNotification ? 'YES' : 'NO');
                 console.log('ProofPop: Queue (randomized across widgets):', notificationQueue.map(n => ({
                     widget: n.widgetType,
                     title: n.title,
@@ -697,6 +1066,8 @@ Deno.serve((req) => {
         const durationSettings = displaySettings.duration || {};
         const contentSettings = displaySettings.content || {};
         const privacySettings = displaySettings.privacy || {};
+        const brandingSettings = displaySettings.branding || {};
+        const showPoweredBy = brandingSettings.identity?.showPoweredBy !== false; // Default to true
 
         // DEBUG: Log duration settings
         console.log('ProofPop DEBUG: Duration settings for widget', notification.widget_id, ':', {
@@ -734,6 +1105,7 @@ Deno.serve((req) => {
         const isFloatingTag = layoutStyle === 'floating-tag';
         const isStoryPop = layoutStyle === 'story-pop';
         const isFrostedToken = layoutStyle === 'frosted-token';
+        const isPillBadge = layoutStyle === 'pill-badge';
         
         // DEBUG: Log layout style detection
         console.log('ProofPop DEBUG: Widget', notification.widget_id, 'layout_style:', layoutStyle, 'isRipple:', isRipple, 'isParallax:', isParallax, 'isPuzzle:', isPuzzle, 'isPeekaboo:', isPeekaboo, 'isFloatingTag:', isFloatingTag, 'isStoryPop:', isStoryPop, 'isFrostedToken:', isFrostedToken, 'design:', design);
@@ -742,16 +1114,16 @@ Deno.serve((req) => {
             position: 'relative',
             zIndex: '9999',
             transition: transitionStyle,
-            maxWidth: isFullWidth ? '100%' : (design.max_width || 280) + 'px',
-            minWidth: isFullWidth ? '100%' : (design.min_width || 240) + 'px',
+            maxWidth: isFullWidth ? '100%' : (design.max_width || 260) + 'px',
+            minWidth: isFullWidth ? '100%' : (design.min_width || 200) + 'px',
             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-            fontSize: '14px',
+            fontSize: '13px',
             lineHeight: '1.4',
             transform: initialState.transform,
             opacity: initialState.opacity,
             cursor: 'pointer',
             pointerEvents: 'auto',
-            padding: isRipple ? '8px 20px 8px 8px' : isCompact ? '8px' : isMinimal ? '12px' : '16px',
+            padding: isRipple ? '8px 16px 8px 8px' : isCompact ? '8px' : isMinimal ? '10px' : '12px',
             overflow: 'hidden'
         };
 
@@ -832,12 +1204,23 @@ Deno.serve((req) => {
             baseStyles.boxShadow = 'none';
             baseStyles.padding = '0';
             baseStyles.overflow = 'visible';
+        } else if (isPillBadge) {
+            // Special styling for Pill Badge layout - compact pill shape
+            baseStyles.borderRadius = '9999px';
+            baseStyles.borderWidth = '1px';
+            baseStyles.borderStyle = 'solid';
+            baseStyles.borderColor = '#e5e7eb';
+            baseStyles.backgroundColor = '#ffffff';
+            baseStyles.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+            baseStyles.padding = '10px 20px';
+            baseStyles.overflow = 'hidden';
         } else {
             // Apply position, layout, border, shadow, glassmorphism, background based on 'design' object
-            baseStyles.borderRadius = (design.border_radius || 12) + 'px';
+            // Clean minimal design with rounded corners
+            baseStyles.borderRadius = (design.border_radius || 10) + 'px';
             baseStyles.borderWidth = (design.border_width || 1) + 'px';
             baseStyles.borderStyle = 'solid';
-            baseStyles.borderColor = design.border_color || 'rgba(0,0,0,0.08)';
+            baseStyles.borderColor = design.border_color || 'rgba(0,0,0,0.06)';
 
             // Apply left accent
             if (design.border_left_accent) {
@@ -858,15 +1241,15 @@ Deno.serve((req) => {
                     baseStyles.borderLeftColor = design.border_left_accent_color || '#3B82F6';
                 }
             } else {
-                // Normal shadow
+                // Normal shadow - softer and more subtle
                 if (design.shadow_enabled !== false) {
-                    baseStyles.boxShadow = shadowMap[design.shadow_size || 'lg'] || shadowMap.lg;
+                    baseStyles.boxShadow = shadowMap[design.shadow_size || 'md'] || '0 4px 12px rgba(0, 0, 0, 0.08)';
                 }
                 // Normal background
                 if (design.background_gradient) {
                     const gradientDirection = design.gradient_direction || 'to-br';
                     const gradientStart = design.gradient_start || '#ffffff';
-                    const gradientEnd = design.gradient_end || '#f3f4f6';
+                    const gradientEnd = design.gradient_end || '#f9fafb';
                     baseStyles.background = 'linear-gradient(' + gradientDirection + ', ' + gradientStart + ', ' + gradientEnd + ')';
                 } else {
                     baseStyles.backgroundColor = design.background_color || '#ffffff';
@@ -916,12 +1299,50 @@ Deno.serve((req) => {
         
         let html = '';
         
+        // DEBUG: Log product image availability for special layouts
+        console.log('ProofPop IMAGE DEBUG:', {
+            widget_id: notification.widget_id,
+            layout: layoutStyle,
+            product_image: notification.product_image,
+            metadata_product_image: notification.metadata?.product_image,
+            metadata_image: notification.metadata?.image,
+            user_avatar: notification.user_avatar,
+            metadata_avatar: notification.metadata?.avatar,
+            all_metadata_keys: notification.metadata ? Object.keys(notification.metadata) : []
+        });
+        
         // Special Ripple Bubble Layout - Exact match to design
         if (isRipple) {
-            // Get product image from explicit fields first, then metadata
-            const productImage = notification.product_image || notification.metadata?.product_image || notification.metadata?.image || '';
-            const userAvatar = notification.user_avatar || notification.metadata?.avatar || '';
-            const locationCity = notification.location || 'Unknown';
+            // Get product image from all possible sources (same as Puzzle widget)
+            const productImage = notification.product_image || 
+                                notification.metadata?.product_image || 
+                                notification.metadata?.image || 
+                                notification.metadata?.image_url ||
+                                notification.metadata?.productImage ||
+                                notification.metadata?.img ||
+                                notification.metadata?.thumbnail ||
+                                notification.metadata?.photo ||
+                                '';
+            const userAvatar = notification.user_avatar || notification.metadata?.avatar || notification.metadata?.user_avatar || '';
+            // Get location from multiple sources
+            const locationCity = notification.location || 
+                                notification.metadata?.location || 
+                                notification.metadata?.city ||
+                                notification.metadata?.geo?.city ||
+                                notification.metadata?.geo_city ||
+                                notification.metadata?.region ||
+                                '';
+            const productName = notification.product_name || notification.metadata?.product_name || notification.metadata?.product || '';
+            
+            // Determine action text based on event type
+            let actionMessage = notification.message || 'is looking at this';
+            if (notification.event_type === 'add_to_cart' || notification.metadata?.event_type === 'add_to_cart') {
+                actionMessage = productName ? 'added ' + productName + ' to cart' : 'added to cart';
+            } else if (notification.event_type === 'purchase' || notification.metadata?.event_type === 'purchase') {
+                actionMessage = productName ? 'purchased ' + productName : 'made a purchase';
+            }
+            
+            console.log('Ripple widget - product image:', productImage, 'location:', locationCity, 'metadata:', JSON.stringify(notification.metadata));
             
             // Main content wrapper - horizontal flex
             html += '<div style="display: flex; align-items: center; gap: 12px;">';
@@ -929,18 +1350,18 @@ Deno.serve((req) => {
             // Image cluster container (overlapping circles)
             html += '<div style="position: relative; flex-shrink: 0; width: 56px; height: 44px;">';
             
-            // User avatar (front circle - blue/teal person image)
+            // User avatar (back circle - behind product)
             if (userAvatar) {
-                html += '<img src="' + userAvatar + '" alt="' + displayName + '" style="position: absolute; left: 0; top: 2px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid white; object-fit: cover; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 2;" />';
+                html += '<img src="' + userAvatar + '" alt="' + displayName + '" style="position: absolute; left: 0; top: 2px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid white; object-fit: cover; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 1;" />';
             } else {
-                html += '<div style="position: absolute; left: 0; top: 2px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid white; background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 2; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 16px;">' + initial + '</div>';
+                html += '<div style="position: absolute; left: 0; top: 2px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid white; background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 1; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 16px;">' + initial + '</div>';
             }
             
-            // Product image (back circle - yellow headphones)
+            // Product image (front circle - on top)
             if (productImage) {
-                html += '<img src="' + productImage + '" alt="Product" style="position: absolute; left: 20px; top: 2px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid white; object-fit: cover; background: #fbbf24; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 1;" />';
+                html += '<img src="' + productImage + '" alt="Product" style="position: absolute; left: 20px; top: 2px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid white; object-fit: cover; background: #fbbf24; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 2;" />';
             } else {
-                html += '<div style="position: absolute; left: 20px; top: 2px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid white; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 1;"></div>';
+                html += '<div style="position: absolute; left: 20px; top: 2px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid white; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 2;"></div>';
             }
             
             // Heart badge (small red heart at bottom)
@@ -953,15 +1374,17 @@ Deno.serve((req) => {
             // Text content
             html += '<div style="display: flex; flex-direction: column; justify-content: center; min-width: 0; padding-right: 8px;">';
             
-            // First line: "Maya from Toronto"
+            // First line: "Maya from Toronto" or just "Maya" if no location
             html += '<div style="font-size: 14px; color: #374151; font-weight: 400; white-space: nowrap;">';
             html += '<span style="font-weight: 600; color: #6366f1;">' + displayName + '</span>';
-            html += ' from ' + locationCity;
+            if (locationCity) {
+                html += ' from ' + locationCity;
+            }
             html += '</div>';
             
-            // Second line: "is looking at this"
-            html += '<div style="font-size: 13px; color: #9ca3af; font-weight: 400; white-space: nowrap;">';
-            html += notification.message;
+            // Second line: action message (e.g., "added Product to cart")
+            html += '<div style="font-size: 13px; color: #9ca3af; font-weight: 400; max-width: 280px;">';
+            html += actionMessage;
             html += '</div>';
             
             html += '</div>'; // End text content
@@ -969,8 +1392,8 @@ Deno.serve((req) => {
             html += '</div>'; // End main wrapper
         } else if (isParallax) {
             // 3D Parallax Card Layout - Dark glassmorphic with floating product image
-            const productImage = notification.metadata?.product_image || notification.metadata?.image || '';
-            const productName = notification.metadata?.product_name || notification.metadata?.product || 'Product';
+            const productImage = notification.product_image || notification.metadata?.product_image || notification.metadata?.image || notification.metadata?.image_url || notification.metadata?.thumbnail || '';
+            const productName = notification.product_name || notification.metadata?.product_name || notification.metadata?.product || 'Product';
             const buyerRole = notification.metadata?.role || notification.metadata?.title || '';
             
             // Glossy shine effect (moves with mouse)
@@ -1024,55 +1447,97 @@ Deno.serve((req) => {
             html += '<div style="position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: linear-gradient(to right, #6366f1, #a855f7, #ec4899); opacity: 0.5; border-radius: 0 0 12px 12px;"></div>';
         } else if (isPuzzle) {
             // Puzzle Reveal Layout - Three pieces that snap together
-            const userAvatar = notification.user_avatar || notification.metadata?.avatar || '';
-            const productImage = notification.product_image || notification.metadata?.product_image || notification.metadata?.image || '';
+            const userAvatar = notification.user_avatar || notification.metadata?.avatar || notification.metadata?.user_avatar || '';
+            const productImage = notification.product_image || 
+                                notification.metadata?.product_image || 
+                                notification.metadata?.image || 
+                                notification.metadata?.image_url ||
+                                notification.metadata?.productImage ||
+                                notification.metadata?.img ||
+                                notification.metadata?.thumbnail ||
+                                notification.metadata?.photo ||
+                                '';
             const productName = notification.product_name || notification.metadata?.product_name || notification.metadata?.product || 'Product';
-            const actionText = notification.metadata?.action || 'purchased';
+            
+            console.log('Puzzle widget - product image:', productImage, 'metadata:', JSON.stringify(notification.metadata));
+            
+            // Determine action text based on event type
+            let actionText = 'purchased';
+            let actionVerb = 'got';
+            if (notification.event_type === 'add_to_cart' || notification.metadata?.event_type === 'add_to_cart') {
+                actionText = 'added to cart';
+                actionVerb = 'added';
+            } else if (notification.event_type === 'purchase' || notification.metadata?.event_type === 'purchase') {
+                actionText = 'purchased';
+                actionVerb = 'got';
+            } else if (notification.event_type === 'signup' || notification.metadata?.event_type === 'signup') {
+                actionText = 'signed up';
+                actionVerb = 'joined';
+            } else if (notification.event_type === 'review' || notification.metadata?.event_type === 'review') {
+                actionText = 'reviewed';
+                actionVerb = 'reviewed';
+            } else if (notification.metadata?.action) {
+                actionText = notification.metadata.action;
+            }
+            
             const accentColor = notification.metadata?.color || '#facc15'; // Yellow default
             
-            // Container for all pieces
-            html += '<div data-puzzle-container style="display: flex; align-items: center; height: 56px; filter: drop-shadow(0 10px 25px rgba(0,0,0,0.2));">';
+            // Container for all pieces - clean horizontal layout
+            html += '<div data-puzzle-container style="position: relative; display: flex; align-items: center; filter: drop-shadow(0 8px 20px rgba(0,0,0,0.15));">';
             
             // PIECE 1: Avatar (Left) - slides from left
-            html += '<div data-puzzle-piece="1" style="position: relative; z-index: 30; display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; background: white; border-radius: 16px 6px 6px 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transform: translateX(-50px); opacity: 0; transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);">';
+            html += '<div data-puzzle-piece="1" style="position: relative; z-index: 30; display: flex; align-items: center; justify-content: center; width: 82px; height: 82px; background: white; border-radius: 18px 4px 4px 18px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); transform: translateX(-50px); opacity: 0; transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);">';
             if (userAvatar) {
-                html += '<img src="' + userAvatar + '" alt="' + displayName + '" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />';
+                html += '<img src="' + userAvatar + '" alt="' + displayName + '" style="width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />';
             } else {
-                html += '<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 16px; border: 2px solid white;">' + initial + '</div>';
+                html += '<div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 22px; border: 2px solid white;">' + initial + '</div>';
             }
             // Connector dot (puzzle tab)
             html += '<div style="position: absolute; right: -6px; width: 12px; height: 12px; background: white; border-radius: 50%; z-index: 10;"></div>';
             html += '</div>';
             
-            // PIECE 2: Message (Middle) - slides from top
-            html += '<div data-puzzle-piece="2" style="position: relative; z-index: 20; margin-left: -8px; display: flex; flex-direction: column; justify-content: center; padding: 0 24px; height: 56px; background: #111827; color: white; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); min-width: 160px; transform: translateY(-50px); opacity: 0; transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s;">';
-            // Action badge
-            html += '<div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">';
-            html += '<span style="display: inline-flex; align-items: center; justify-content: center; padding: 2px 4px; border-radius: 3px; background: ' + accentColor + '; color: #111827;">';
-            html += '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>';
-            html += '</span>';
-            html += '<span style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #9ca3af;">' + actionText + '</span>';
+            // PIECE 2: Message (Middle) - three-row layout for full product name
+            html += '<div data-puzzle-piece="2" style="position: relative; z-index: 10; margin-left: -8px; padding: 12px 20px; height: 82px; background: #1f2937; color: white; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: center; transform: translateY(-50px); opacity: 0; transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s;">';
+            
+            // Top row: Badge + Branding
+            html += '<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">';
+            // Action badge - single line
+            html += '<div style="display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 4px; background: ' + accentColor + ';">';
+            html += '<svg width="11" height="11" viewBox="0 0 24 24" fill="#111827"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>';
+            html += '<span style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: #111827; white-space: nowrap;">' + actionText + '</span>';
             html += '</div>';
-            // User and product text
-            html += '<div style="font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">';
-            html += '<span style="font-weight: 700; color: white;">' + displayName + '</span>';
-            html += ' got <span style="color: #d1d5db;">' + productName + '</span>';
-            html += '</div>';
+            // Branding
+            if (showPoweredBy) {
+                html += '<a href="https://proofedge.io" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 3px; font-size: 9px; color: rgba(255,255,255,0.6); text-decoration: none; white-space: nowrap;">';
+                html += '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>';
+                html += '<span>ProofEdge</span>';
+                html += '</a>';
+            }
             html += '</div>';
             
-            // PIECE 3: Product Image (Right) - slides from right
-            html += '<div data-puzzle-piece="3" style="position: relative; z-index: 10; margin-left: -8px; width: 56px; height: 56px; background: white; border-radius: 6px 16px 16px 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden; transform: translateX(50px); opacity: 0; transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s;">';
+            // Middle row: Name + action verb
+            html += '<div style="font-size: 13px; font-weight: 600; color: white; margin-bottom: 2px;">';
+            html += displayName + ' <span style="font-weight: 400; color: #9ca3af;">' + actionVerb + '</span>';
+            html += '</div>';
+            
+            // Bottom row: Product name (full visibility)
+            html += '<div style="font-size: 13px; font-weight: 500; color: #e5e7eb; max-width: 240px;">' + productName + '</div>';
+            
+            html += '</div>';
+            
+            // PIECE 3: Product Image (Right) - larger size
+            html += '<div data-puzzle-piece="3" style="position: relative; z-index: 20; margin-left: -8px; width: 82px; height: 82px; background: white; border-radius: 4px 18px 18px 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); overflow: hidden; transform: translateX(50px); opacity: 0; transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s;">';
             // Connector dot (puzzle notch - dark to match middle piece)
-            html += '<div style="position: absolute; left: -6px; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; background: #111827; border-radius: 50%; z-index: 20;"></div>';
+            html += '<div style="position: absolute; left: -6px; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; background: #1f2937; border-radius: 50%; z-index: 20;"></div>';
             if (productImage) {
                 html += '<img src="' + productImage + '" alt="' + productName + '" style="width: 100%; height: 100%; object-fit: cover;" />';
             } else {
                 html += '<div style="width: 100%; height: 100%; background: linear-gradient(135deg, #fbbf24, #f59e0b); display: flex; align-items: center; justify-content: center;">';
-                html += '<svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>';
+                html += '<svg width="30" height="30" viewBox="0 0 24 24" fill="white"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>';
                 html += '</div>';
             }
             // Close button
-            html += '<button data-puzzle-close style="position: absolute; top: 2px; right: 2px; width: 16px; height: 16px; background: rgba(0,0,0,0.3); backdrop-filter: blur(4px); border: none; border-radius: 50%; color: white; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;">×</button>';
+            html += '<button data-puzzle-close style="position: absolute; top: 4px; right: 4px; width: 18px; height: 18px; background: rgba(0,0,0,0.35); border: none; border-radius: 50%; color: white; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;">×</button>';
             html += '</div>';
             
             html += '</div>'; // End puzzle container
@@ -1225,10 +1690,27 @@ Deno.serve((req) => {
             html += '</div>'; // End floating container
         } else if (isStoryPop) {
             // Story Pop Layout - Vertical card with micro-animations like stories
-            const productImage = notification.product_image || notification.metadata?.product_image || notification.metadata?.image || '';
-            const userName = notification.customer_name || notification.metadata?.customer_name || notification.metadata?.name || 'Sarah J.';
-            const actionText = notification.metadata?.action || 'just bought this!';
+            const productImage = notification.product_image || 
+                                notification.metadata?.product_image || 
+                                notification.metadata?.image || 
+                                notification.metadata?.image_url ||
+                                notification.metadata?.productImage ||
+                                notification.metadata?.img ||
+                                notification.metadata?.thumbnail ||
+                                '';
+            const userName = notification.customer_name || notification.metadata?.customer_name || notification.metadata?.name || 'Someone';
+            const productName = notification.product_name || notification.metadata?.product_name || notification.metadata?.product || '';
+            
+            // Dynamic action text based on event type
+            let actionText = notification.metadata?.action || notification.message || 'just bought this!';
+            if (notification.event_type === 'add_to_cart' || notification.metadata?.event_type === 'add_to_cart') {
+                actionText = productName ? 'added ' + productName + ' to cart' : 'added to cart';
+            } else if (notification.event_type === 'purchase' || notification.metadata?.event_type === 'purchase') {
+                actionText = productName ? 'purchased ' + productName : 'made a purchase';
+            }
+            
             const timeText = notification.timeAgo || notification.metadata?.time || '2s ago';
+            const locationCity = notification.location || notification.metadata?.location || notification.metadata?.city || '';
             const storyType = notification.metadata?.storyType || 'product-spin';
             
             // Determine accent color based on type
@@ -1246,8 +1728,8 @@ Deno.serve((req) => {
             html += '</style>';
             
             // Close button
-            html += '<button data-story-close style="position: absolute; top: 8px; right: 8px; z-index: 30; width: 20px; height: 20px; background: rgba(0,0,0,0.2); backdrop-filter: blur(4px); border: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; transition: background 0.2s;">';
-            html += '<span style="font-size: 10px; font-weight: bold;">×</span>';
+            html += '<button data-story-close style="position: absolute; top: 8px; right: 8px; z-index: 30; width: 24px; height: 24px; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); border: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; transition: background 0.2s;">';
+            html += '<span style="font-size: 12px; font-weight: bold;">×</span>';
             html += '</button>';
             
             // Story content layer (the visual)
@@ -1255,8 +1737,8 @@ Deno.serve((req) => {
             
             if (storyType === 'product-spin' && productImage) {
                 // Spinning product
-                html += '<div style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; perspective: 1000px;">';
-                html += '<div class="proofpop-preserve-3d" style="width: 96px; height: 96px; animation: proofpop-spin-slow 4s linear infinite;">';
+                html += '<div style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; perspective: 1000px; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);">';
+                html += '<div class="proofpop-preserve-3d" style="width: 100px; height: 100px; animation: proofpop-spin-slow 4s linear infinite;">';
                 html += '<img src="' + productImage + '" alt="Product" style="width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.2));" />';
                 html += '</div>';
                 html += '<div style="position: absolute; top: 25%; left: 25%; width: 4px; height: 4px; background: white; border-radius: 50%; animation: ping 1s infinite;"></div>';
@@ -1290,24 +1772,43 @@ Deno.serve((req) => {
             }
             html += '</div>';
             
-            // Gradient overlay for text readability
-            html += '<div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0.2) 50%, transparent); z-index: 10; pointer-events: none;"></div>';
+            // Gradient overlay for text readability - stronger gradient
+            html += '<div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0.1) 70%, transparent 100%); z-index: 10; pointer-events: none;"></div>';
             
-            // Text content layer
-            html += '<div style="position: absolute; bottom: 0; left: 0; width: 100%; padding: 12px; z-index: 20; color: white;">';
-            // User avatar/icon
-            html += '<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">';
-            html += '<div style="width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; background: ' + accentColor + ';">' + userName.charAt(0) + '</div>';
-            html += '<span style="font-size: 12px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + userName + '</span>';
+            // Text content layer - improved readability
+            html += '<div style="position: absolute; bottom: 0; left: 0; width: 100%; padding: 14px; z-index: 20; color: white;">';
+            
+            // User info row
+            html += '<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">';
+            html += '<div style="width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; background: ' + accentColor + '; border: 2px solid rgba(255,255,255,0.3);">' + userName.charAt(0).toUpperCase() + '</div>';
+            html += '<div style="flex: 1; min-width: 0;">';
+            html += '<span style="font-size: 13px; font-weight: 700; display: block; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">' + userName + '</span>';
+            if (locationCity) {
+                html += '<span style="font-size: 10px; opacity: 0.8; display: block;">from ' + locationCity + '</span>';
+            }
             html += '</div>';
-            // Action text
-            html += '<p style="font-size: 11px; font-weight: 500; line-height: 1.3; opacity: 0.9; margin-bottom: 4px;">' + actionText + '</p>';
-            // Timestamp
-            html += '<p style="font-size: 9px; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.5px;">' + timeText + '</p>';
+            html += '</div>';
+            
+            // Action text - larger and more readable
+            html += '<p style="font-size: 12px; font-weight: 500; line-height: 1.4; margin-bottom: 6px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">' + actionText + '</p>';
+            
+            // Bottom row: Timestamp + Branding
+            html += '<div style="display: flex; align-items: center; justify-content: space-between;">';
+            html += '<span style="font-size: 10px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.5px;">' + timeText + '</span>';
+            
+            // ProofEdge branding inside Story Pop
+            if (showPoweredBy) {
+                html += '<a href="https://proofedge.io" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 3px; font-size: 9px; color: rgba(255,255,255,0.7); text-decoration: none;">';
+                html += '<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>';
+                html += '<span>ProofEdge</span>';
+                html += '</a>';
+            }
+            html += '</div>';
+            
             html += '</div>';
             
             // Progress bar (story-like)
-            html += '<div style="position: absolute; top: 0; left: 0; height: 3px; background: rgba(255,255,255,0.3); width: 100%; z-index: 30;">';
+            html += '<div style="position: absolute; top: 0; left: 0; height: 3px; background: rgba(255,255,255,0.3); width: 100%; z-index: 30; border-radius: 12px 12px 0 0;">';
             html += '<div data-story-progress style="height: 100%; background: white; width: 0%; animation: proofpop-progress ' + (displayDuration / 1000) + 's linear forwards;"></div>';
             html += '</div>';
             
@@ -1367,31 +1868,71 @@ Deno.serve((req) => {
             html += '</div>'; // End token
             html += '</div>'; // End main container
             
+        } else if (isPillBadge) {
+            // Pill Badge Layout - Fixed "20 visited today" display
+            const iconColor = '#3B82F6';
+            const iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="' + iconColor + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>';
+            
+            // Build pill badge HTML - fixed "20 visited today"
+            html += '<div style="display: flex; align-items: center; gap: 10px;">';
+            html += '<div style="display: flex; align-items: center; justify-content: center;">' + iconSvg + '</div>';
+            html += '<div style="display: flex; align-items: baseline; gap: 6px;">';
+            html += '<span style="font-weight: 600; color: #111827;">20</span>';
+            html += '<span style="color: #6b7280; font-size: 14px;">visited today</span>';
+            html += '</div>';
+            html += '</div>';
+            
         } else {
-            // Standard layouts (card, compact, minimal, full-width)
-            html += '<div style="display: flex; align-items: center; gap: ' + gapSize + '; ' + textShadow + '">';
+            // Standard layouts (card, compact, minimal, full-width) - Clean & Readable Design
+            const productImage = notification.product_image || 
+                                notification.metadata?.product_image || 
+                                notification.metadata?.image || 
+                                notification.metadata?.image_url ||
+                                notification.metadata?.productImage ||
+                                notification.metadata?.img ||
+                                notification.metadata?.thumbnail ||
+                                '';
+            const productName = notification.product_name || notification.metadata?.product_name || notification.metadata?.product || '';
+            
+            html += '<div style="display: flex; align-items: flex-start; gap: 12px;">';
+            
+            // Avatar or Product Image
             if (showEventIcon) {
-                html += '<div style="width: ' + iconSize + '; height: ' + iconSize + '; border-radius: 50%; background: ' + iconBg + '; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: ' + iconFontSize + '; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all ' + fadeInDuration + 'ms;">' + initial + '</div>';
+                if (productImage) {
+                    // Show product image if available
+                    html += '<div style="width: 48px; height: 48px; border-radius: 10px; overflow: hidden; flex-shrink: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">';
+                    html += '<img src="' + productImage + '" alt="Product" style="width: 100%; height: 100%; object-fit: cover;" />';
+                    html += '</div>';
+                } else {
+                    // Clean rounded square avatar with gradient
+                    html += '<div style="width: 48px; height: 48px; border-radius: 10px; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 18px; flex-shrink: 0;">' + initial + '</div>';
+                }
             }
-            html += '<div style="flex: 1;">';
+            
+            html += '<div style="flex: 1; min-width: 0;">';
+            
+            // First line: Customer name (bold)
             if (showCustomerName) {
-                html += '<div style="font-weight: ' + titleWeight + '; color: ' + titleColor + '; margin-bottom: 2px; font-size: ' + titleSize + ';">' + displayName + '</div>';
+                html += '<div style="font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 2px;">' + displayName + '</div>';
             }
-            html += '<div style="color: ' + textColor + '; font-weight: ' + textWeight + '; font-size: ' + textSize + ';">' + notification.message;
+            
+            // Second line: Action message
+            html += '<div style="font-size: 13px; color: #4b5563; line-height: 1.4; margin-bottom: 4px;">';
+            html += notification.message;
             if (showValue && notification.metadata && notification.metadata.value) {
-                html += ' • <strong>' + formatValue(
+                html += ' <span style="font-weight: 600; color: #059669;">' + formatValue(
                     notification.metadata.value,
                     contentSettings.valueFormat || 'currency',
                     contentSettings.currency || 'USD',
                     contentSettings.currencyPosition || 'before'
-                ) + '</strong>';
+                ) + '</span>';
             }
             html += '</div>';
             
             // Rating Stars for Reviews
             if (showRating && notification.metadata && notification.metadata.rating) {
                 const rating = notification.metadata.rating;
-                html += '<div style="display: flex; align-items: center; gap: 2px; margin-top: 4px;">';
+                html += '<div style="display: flex; align-items: center; gap: 2px; margin-bottom: 4px;">';
                 for (let i = 0; i < 5; i++) {
                     html += '<span style="color: ' + (i < rating ? '#FBBF24' : '#D1D5DB') + '; font-size: 14px;">★</span>';
                 }
@@ -1406,26 +1947,56 @@ Deno.serve((req) => {
                 (notification.metadata.event_data && notification.metadata.event_data.review_text)
             );
             if (showReviewContent && reviewText) {
-                html += '<div style="color: ' + (isGlass ? '#374151' : '#4B5563') + '; font-size: 11px; margin-top: 8px; font-style: italic; line-height: 1.4; max-height: 32px; overflow: hidden;">"' + reviewText + '"</div>';
+                html += '<div style="color: #6B7280; font-size: 12px; margin-bottom: 4px; font-style: italic; line-height: 1.3;">"' + reviewText + '"</div>';
             }
             
-            const metaColor = isGlass ? '#374151' : '#999';
-            const metaWeight = isGlass ? '500' : '400';
-            html += '<div style="color: ' + metaColor + '; font-weight: ' + metaWeight + '; font-size: 12px; margin-top: 4px;">';
+            // Bottom row: Timestamp + Location + Branding
+            html += '<div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">';
+            html += '<span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981; flex-shrink: 0;"></span>';
             if (showTimestamp) {
-                html += timestampPrefix + notification.timeAgo;
+                html += '<span style="color: #6b7280; font-size: 11px;">' + notification.timeAgo + '</span>';
             }
-            html += locationText;
+            if (notification.showLocation && notification.location) {
+                html += '<span style="color: #9ca3af;">•</span>';
+                html += '<span style="color: #6b7280; font-size: 11px;">' + notification.location + '</span>';
+            }
+            // Inline branding for classic card
+            if (showPoweredBy) {
+                html += '<span style="color: #d1d5db; margin-left: auto;">•</span>';
+                html += '<a href="https://proofedge.io" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 3px; font-size: 10px; color: #9ca3af; text-decoration: none;">';
+                html += '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>';
+                html += '<span>ProofEdge</span>';
+                html += '</a>';
+            }
             html += '</div>';
+            
             html += '</div>';
-            html += '<div style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></div>';
             html += '</div>';
             if (progressBar) {
-                const borderRadius = design.border_radius || 12;
+                const borderRadius = design.border_radius || 10;
                 const progressBarRadius = progressBarPosition === 'top' 
                     ? 'border-radius: ' + borderRadius + 'px ' + borderRadius + 'px 0 0;' 
                     : 'border-radius: 0 0 ' + borderRadius + 'px ' + borderRadius + 'px;';
-                html += '<div data-proofpop-progress="bar" style="height: 3px; background: ' + progressBarColor + '; width: 0; position: absolute; ' + (progressBarPosition === 'top' ? 'top: 0;' : 'bottom: 0;') + ' left: 0; right: 0; ' + progressBarRadius + ' transition: width ' + displayDuration + 'ms linear; max-width: 100%;"></div>';
+                html += '<div data-proofpop-progress="bar" style="height: 2px; background: ' + progressBarColor + '; width: 0; position: absolute; ' + (progressBarPosition === 'top' ? 'top: 0;' : 'bottom: 0;') + ' left: 0; right: 0; ' + progressBarRadius + ' transition: width ' + displayDuration + 'ms linear; max-width: 100%;"></div>';
+            }
+        }
+        
+        // Add "Verified by ProofEdge" branding if enabled
+        // Skip for layouts that have inline branding: Floating Tag, Frosted Token, Ripple, Puzzle, Story Pop, and standard layouts
+        const isStandardLayout = !isRipple && !isParallax && !isPuzzle && !isPeekaboo && !isFloatingTag && !isFrostedToken && !isStoryPop;
+        if (showPoweredBy && !isFloatingTag && !isFrostedToken && !isRipple && !isPuzzle && !isStoryPop && !isStandardLayout) {
+            if (isPeekaboo) {
+                // Compact branding for Peekaboo
+                html += '<a href="https://proofedge.io" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 3px; margin-top: 4px; font-size: 8px; color: #D1D5DB; text-decoration: none; opacity: 0.8;">';
+                html += '<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>';
+                html += '<span>ProofEdge</span>';
+                html += '</a>';
+            } else if (isParallax) {
+                // Branding for Parallax
+                html += '<a href="https://proofedge.io" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: center; gap: 3px; margin-top: 6px; font-size: 8px; color: #D1D5DB; text-decoration: none; opacity: 0.7;">';
+                html += '<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>';
+                html += '<span>ProofEdge</span>';
+                html += '</a>';
             }
         }
         
@@ -1562,18 +2133,24 @@ Deno.serve((req) => {
         
         // Add Peekaboo animation for peekaboo layout
         if (isPeekaboo) {
-            // Start hidden off-screen
-            widgetElement.style.transform = 'translateX(-120%) rotate(-10deg)';
+            // Start hidden off-screen (no transition initially)
+            widgetElement.style.transition = 'none';
+            widgetElement.style.transform = 'translateX(-100%)';
             widgetElement.style.opacity = '1';
             
-            // Step 1: Peek (show just the edge) after 500ms
+            // Force reflow to ensure initial state is applied
+            widgetElement.offsetHeight;
+            
+            // Now enable transition for animations
+            widgetElement.style.transition = 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
+            
+            // Step 1: Peek (show just half/edge) after a brief delay
             setTimeout(() => {
-                widgetElement.style.transform = 'translateX(-85%) rotate(5deg)';
-                widgetElement.style.transition = 'transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)';
+                widgetElement.style.transform = 'translateX(-50%)';
                 
-                // Step 2: Full reveal after 1 second of peeking
+                // Step 2: Full reveal after peeking for 800ms
                 setTimeout(() => {
-                    widgetElement.style.transform = 'translateX(0) rotate(0deg)';
+                    widgetElement.style.transform = 'translateX(0)';
                     
                     // Animate avatar sliding out
                     const avatar = widgetElement.querySelector('[data-peekaboo-avatar]');
@@ -1583,8 +2160,8 @@ Deno.serve((req) => {
                             avatar.style.opacity = '1';
                         }, 300);
                     }
-                }, 1000);
-            }, 500);
+                }, 800);
+            }, 100);
             
             // Add close button handler
             const closeBtn = widgetElement.querySelector('[data-peekaboo-close]');
@@ -1596,14 +2173,14 @@ Deno.serve((req) => {
                         notification_title: notification.title,
                         event_type: notification.event_type
                     });
-                    widgetElement.style.transform = 'translateX(-120%) rotate(-10deg)';
+                    widgetElement.style.transform = 'translateX(-100%)';
                     setTimeout(() => {
                         if (widgetElement.parentNode) {
                             widgetElement.remove();
                         }
                         isDisplaying = false;
                         currentNotificationElement = null;
-                    }, 700);
+                    }, 500);
                 });
                 
                 closeBtn.addEventListener('mouseenter', () => {
@@ -1720,7 +2297,7 @@ Deno.serve((req) => {
                 if (piece3) { piece3.style.transform = 'translateX(50px)'; piece3.style.opacity = '0'; }
             } else if (isPeekaboo) {
                 // Peekaboo exit animation - slide back off screen
-                widgetElement.style.transform = 'translateX(-120%) rotate(-10deg)';
+                widgetElement.style.transform = 'translateX(-100%)';
             } else if (isFloatingTag) {
                 // Floating Tag exit animation - fade down with blur
                 widgetElement.style.opacity = '0';
