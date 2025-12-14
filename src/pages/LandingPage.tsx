@@ -1097,6 +1097,7 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
               <p className="text-gray-500 text-base">© 2025 ProofEdge. All rights reserved.</p>
             </div>
             
+<<<<<<< HEAD
             {/* Essential Links */}
             <nav className="flex items-center gap-6 sm:gap-8 text-sm sm:text-base" aria-label="Footer navigation">
               <a href="#pricing" className="text-gray-400 hover:text-white transition-colors font-medium">Pricing</a>
@@ -1104,6 +1105,45 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
               <button onClick={onShowPrivacy} className="text-gray-400 hover:text-white transition-colors font-medium">Privacy</button>
               <button onClick={onShowTerms} className="text-gray-400 hover:text-white transition-colors font-medium">Terms</button>
             </nav>
+=======
+            <div>
+              <h4 className="font-semibold text-black mb-4">Platform</h4>
+              <ul className="space-y-3 text-sm text-slate-500">
+                <li className="hover:text-[#3E8BFF] cursor-pointer">Live Visitor</li>
+                <li className="hover:text-[#3E8BFF] cursor-pointer">Purchase Activity</li>
+                <li className="hover:text-[#3E8BFF] cursor-pointer">Integrations</li>
+                <li className="hover:text-[#3E8BFF] cursor-pointer">Pricing</li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-black mb-4">Company</h4>
+              <ul className="space-y-3 text-sm text-slate-500">
+                <li className="hover:text-[#3E8BFF] cursor-pointer">About Us</li>
+                <li className="hover:text-[#3E8BFF] cursor-pointer">Manifesto</li>
+                <li className="hover:text-[#3E8BFF] cursor-pointer">Contact</li>
+                <li className="hover:text-[#3E8BFF] cursor-pointer">Privacy</li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-black mb-4">Resources</h4>
+              <ul className="space-y-3 text-sm text-slate-500">
+                <li className="hover:text-[#3E8BFF] cursor-pointer">Documentation</li>
+                <li className="hover:text-[#3E8BFF] cursor-pointer">Blog</li>
+                <li className="hover:text-[#3E8BFF] cursor-pointer">Case Studies</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="border-t border-slate-100 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-slate-400 text-sm">© 2025 ProofEdge Inc. All rights reserved.</p>
+            <div className="flex gap-6">
+               <div className="w-5 h-5 bg-slate-200 rounded-full hover:bg-slate-300 cursor-pointer"></div>
+               <div className="w-5 h-5 bg-slate-200 rounded-full hover:bg-slate-300 cursor-pointer"></div>
+               <div className="w-5 h-5 bg-slate-200 rounded-full hover:bg-slate-300 cursor-pointer"></div>
+            </div>
+>>>>>>> 0dbc04c4cb1950e6f8a5ed79b878a69f92e5b699
           </div>
         </div>
       </footer>
