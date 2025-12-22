@@ -817,7 +817,7 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                   </SettingsSection>
 
                   {/* Device Display */}
-                  <SettingsSection
+                  {/* <SettingsSection
                     title="Device Display"
                     description="Control which devices show notifications"
                   >
@@ -852,7 +852,7 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                         />
                       </SettingsRow>
                     </SettingsGroup>
-                  </SettingsSection>
+                  </SettingsSection> */}
 
                 </div>
               </AccordionSection>
@@ -1104,7 +1104,7 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                         />
                       </SettingsRow>
 
-                      <SettingsRow label="Show Rating" description="Display rating stars for review notifications">
+                      {/* <SettingsRow label="Show Rating" description="Display rating stars for review notifications">
                         <Toggle
                           checked={config.display.content.showRating}
                           onChange={(value) => updateConfig({
@@ -1126,7 +1126,7 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                             }
                           })}
                         />
-                      </SettingsRow>
+                      </SettingsRow> */}
 
                       {/* Custom Form Message Section */}
                       <SettingsRow label="Custom Form Message" description="Use a custom message for form submissions (e.g., 'signed up for the challenge')">
@@ -1320,105 +1320,17 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                     description="Define how visitors can interact with the widget"
                   >
                     <SettingsGroup>
-                      <SettingsRow label="Widget is Clickable">
+                      <SettingsRow label="Widget is Clickable" description="Allow visitors to click the notification to dismiss it">
                         <Toggle
                           checked={config.display.interaction.clickable}
                           onChange={(value) => updateConfig({
                             display: {
                               ...config.display,
-                              interaction: { ...config.display.interaction, clickable: value }
-                            }
-                          })}
-                        />
-                      </SettingsRow>
-
-                      {config.display.interaction.clickable && (
-                        <SettingsRow label="Click Action">
-                          <Select
-                            value={config.display.interaction.clickAction}
-                            onChange={(value) => updateConfig({
-                              display: {
-                                ...config.display,
-                                interaction: { ...config.display.interaction, clickAction: value as any }
+                              interaction: { 
+                                ...config.display.interaction, 
+                                clickable: value,
+                                clickAction: value ? 'close' : 'none' // Auto-set to dismiss when enabled
                               }
-                            })}
-                            options={[
-                              { value: 'none', label: 'Do nothing' },
-                              { value: 'url', label: 'Open link' },
-                              { value: 'close', label: 'Dismiss notification' },
-                              { value: 'custom', label: 'Trigger custom callback' },
-                            ]}
-                            className="w-56"
-                          />
-                        </SettingsRow>
-                      )}
-
-                      {config.display.interaction.clickable && config.display.interaction.clickAction === 'url' && (
-                        <>
-                          <SettingsRow label="Click URL">
-                            <TextInput
-                              value={config.display.interaction.clickUrl || ''}
-                              onChange={(value) => updateConfig({
-                                display: {
-                                  ...config.display,
-                                  interaction: { ...config.display.interaction, clickUrl: value }
-                                }
-                              })}
-                              placeholder="https://example.com"
-                              type="url"
-                              className="w-80"
-                            />
-                          </SettingsRow>
-                          <SettingsRow label="Open Link In">
-                            <Select
-                              value={config.display.interaction.clickUrlTarget}
-                              onChange={(value) => updateConfig({
-                                display: {
-                                  ...config.display,
-                                  interaction: { ...config.display.interaction, clickUrlTarget: value as any }
-                                }
-                              })}
-                              options={[
-                                { value: '_blank', label: 'New tab' },
-                                { value: '_self', label: 'Same tab' },
-                              ]}
-                              className="w-40"
-                            />
-                          </SettingsRow>
-                        </>
-                      )}
-
-                      <SettingsRow label="Show Close Button">
-                        <Toggle
-                          checked={config.display.interaction.closeButton}
-                          onChange={(value) => updateConfig({
-                            display: {
-                              ...config.display,
-                              interaction: { ...config.display.interaction, closeButton: value }
-                            }
-                          })}
-                        />
-                      </SettingsRow>
-
-                      <SettingsRow label="Pause on Hover">
-                        <Toggle
-                          checked={config.display.interaction.pauseOnHover}
-                          onChange={(value) => updateConfig({
-                            display: {
-                              ...config.display,
-                              interaction: { ...config.display.interaction, pauseOnHover: value }
-                            }
-                          })}
-                        />
-                      </SettingsRow>
-
-                      <SettingsRow label="Expand on Hover">
-                        <Toggle
-                          checked={config.display.interaction.expandOnHover}
-                          onChange={(value) => updateConfig({
-                            display: {
-                              ...config.display,
-                              interaction: { ...config.display.interaction, expandOnHover: value }
                             }
                           })}
                         />
@@ -1429,7 +1341,7 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
               </AccordionSection>
 
               {/* Customize & Branding Section */}
-              <AccordionSection
+              {/* <AccordionSection
                 title="Customize & Branding"
                 isExpanded={expandedSections.has('branding')}
                 onToggle={() => toggleSection('branding')}
@@ -1437,10 +1349,10 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                 <div className="space-y-6 pt-4">
                   <p className="text-sm text-gray-600">
                     Add your brand identity, custom templates, and styling to match your website.
-                  </p>
+                  </p> */}
 
                   {/* Identity */}
-                  <SettingsSection
+                  {/* <SettingsSection
                     title="Brand Identity"
                     description="Add your logo and brand information"
                   >
@@ -1536,10 +1448,10 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                         />
                       </SettingsRow>
                     </SettingsGroup>
-                  </SettingsSection>
+                  </SettingsSection> */}
 
                   {/* Color Scheme */}
-                  <SettingsSection
+                  {/* <SettingsSection
                     title="Color Scheme"
                     description="Customize colors to match your brand"
                   >
@@ -1580,7 +1492,7 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                         />
                       </SettingsRow>
                     </SettingsGroup>
-                  </SettingsSection>
+                  </SettingsSection> */}
 
                   {/* Message Templates
                   <SettingsSection
@@ -1749,8 +1661,8 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                   </SettingsSection>
                    */}
                   
-                </div>
-              </AccordionSection>
+                {/* </div>
+              </AccordionSection> */}
 
               {/* Webhook & Auto Capture Section */}
               <AccordionSection

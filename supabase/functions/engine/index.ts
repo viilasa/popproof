@@ -2269,7 +2269,16 @@ Deno.serve((req) => {
             }, 100);
         }
         
-        // Add click handler
+        // Add click handler based on widget clickable settings
+        const isClickable = notification.clickable === true;
+        const clickAction = notification.click_action || 'close';
+        const clickUrl = notification.click_url || '';
+        const clickUrlTarget = notification.click_url_target || '_blank';
+        
+        if (isClickable) {
+            widgetElement.style.cursor = 'pointer';
+        }
+        
         widgetElement.addEventListener('click', () => {
             trackEvent('notification_click', {
                 notification_id: notification.id,
@@ -2282,6 +2291,23 @@ Deno.serve((req) => {
                 notification_message: notification.message,
                 event_type: notification.event_type
             });
+            
+            // Handle click action if widget is clickable
+            if (isClickable) {
+                if (clickAction === 'close') {
+                    // Dismiss the notification
+                    widgetElement.style.opacity = '0';
+                    widgetElement.style.transform = 'translateY(20px)';
+                    setTimeout(() => {
+                        if (widgetElement.parentNode) {
+                            widgetElement.parentNode.removeChild(widgetElement);
+                        }
+                    }, 300);
+                } else if (clickAction === 'url' && clickUrl) {
+                    // Open URL
+                    window.open(clickUrl, clickUrlTarget);
+                }
+            }
         });
 
         // Hide after duration
