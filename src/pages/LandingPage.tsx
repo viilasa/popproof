@@ -43,6 +43,7 @@ interface LandingPageProps {
   onShowSignup: () => void;
   onShowTerms?: () => void;
   onShowPrivacy?: () => void;
+  onShowRefund?: () => void;
 }
 
 // Logo component using Cloudinary image
@@ -62,7 +63,7 @@ const RECENT_ACTIVITY = [
   { type: 'review', text: '"Increased our conversions by 12%!" - Sarah J.', stars: 5 }
 ];
 
-export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, onShowPrivacy }: LandingPageProps) {
+export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, onShowPrivacy, onShowRefund }: LandingPageProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeWidgetIndex, setActiveWidgetIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
@@ -1103,6 +1104,7 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
               <a href="mailto:support@proofedge.io" className="text-gray-400 hover:text-white transition-colors font-medium">Contact</a>
               <button onClick={onShowPrivacy} className="text-gray-400 hover:text-white transition-colors font-medium">Privacy</button>
               <button onClick={onShowTerms} className="text-gray-400 hover:text-white transition-colors font-medium">Terms</button>
+              <button onClick={onShowRefund} className="text-gray-400 hover:text-white transition-colors font-medium">Refund Policy</button>
             </nav>
           </div>
         </div>
