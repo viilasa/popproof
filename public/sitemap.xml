@@ -6,7 +6,7 @@
   
   <!-- Homepage / Landing Page - Highest Priority -->
   <url>
-    <loc>https://proofedge.io/</loc>
+    <loc>https://www.proofedge.io/</loc>
     <lastmod>2026-01-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
@@ -14,7 +14,7 @@
   
   <!-- Terms of Service Page -->
   <url>
-    <loc>https://proofedge.io/terms</loc>
+    <loc>https://www.proofedge.io/terms</loc>
     <lastmod>2026-01-29</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
@@ -22,7 +22,7 @@
   
   <!-- Privacy Policy Page -->
   <url>
-    <loc>https://proofedge.io/privacy</loc>
+    <loc>https://www.proofedge.io/privacy</loc>
     <lastmod>2026-01-29</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
@@ -30,7 +30,7 @@
   
   <!-- Refund Policy Page -->
   <url>
-    <loc>https://proofedge.io/refund</loc>
+    <loc>https://www.proofedge.io/refund</loc>
     <lastmod>2026-01-29</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
