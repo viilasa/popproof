@@ -3,7 +3,11 @@ import { useState, useCallback } from 'react';
 interface ToastState {
   isOpen: boolean;
   message: string;
-  type: 'success' | 'error' | 'warning';
+  type: 'success' | 'error' | 'warning' | 'upgrade';
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
 }
 
 export function useToast() {
@@ -13,11 +17,16 @@ export function useToast() {
     type: 'success',
   });
 
-  const showToast = useCallback((message: string, type: 'success' | 'error' | 'warning' = 'success') => {
+  const showToast = useCallback((
+    message: string,
+    type: 'success' | 'error' | 'warning' | 'upgrade' = 'success',
+    action?: { label: string; onClick: () => void }
+  ) => {
     setToast({
       isOpen: true,
       message,
       type,
+      action,
     });
   }, []);
 
@@ -37,6 +46,14 @@ export function useToast() {
     showToast(message, 'warning');
   }, [showToast]);
 
+  // Show upgrade required toast with optional action
+  const upgrade = useCallback((message: string, onUpgrade?: () => void) => {
+    showToast(message, 'upgrade', onUpgrade ? {
+      label: 'Upgrade Now',
+      onClick: onUpgrade,
+    } : undefined);
+  }, [showToast]);
+
   return {
     toast,
     showToast,
@@ -44,5 +61,6 @@ export function useToast() {
     success,
     error,
     warning,
+    upgrade,
   };
 }

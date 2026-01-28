@@ -428,7 +428,7 @@ export interface WidgetConfig {
   name: string;
   type: string;
   isActive: boolean;
-  
+
   // Main setting categories
   design: DesignSettings;
   triggers: TriggerSettings;
@@ -439,7 +439,7 @@ export interface WidgetConfig {
   ecommerce: EcommerceSettings;
   integrations: APIIntegrationSettings;
   analytics: AnalyticsTrackingSettings;
-  
+
   // Metadata
   createdAt: string;
   updatedAt: string;
@@ -450,8 +450,8 @@ export interface WidgetConfig {
 export type PartialWidgetConfig = Partial<WidgetConfig>;
 export type DeepPartialWidgetConfig = {
   [P in keyof WidgetConfig]?: WidgetConfig[P] extends object
-    ? Partial<WidgetConfig[P]>
-    : WidgetConfig[P];
+  ? Partial<WidgetConfig[P]>
+  : WidgetConfig[P];
 };
 
 // Helper type for widget config updates in the database

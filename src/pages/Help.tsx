@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { 
-  Book, 
-  Zap, 
-  Globe, 
-  Bell, 
-  BarChart3, 
-  Code, 
-  ChevronDown, 
+import {
+  Book,
+  Zap,
+  Globe,
+  Bell,
+  BarChart3,
+  Code,
+  ChevronDown,
   ChevronRight,
   ExternalLink,
   Search,
@@ -24,7 +24,8 @@ import {
   Copy,
   HelpCircle,
   MessageSquare,
-  Mail
+  Mail,
+  LifeBuoy
 } from 'lucide-react';
 
 interface HelpSection {
@@ -39,7 +40,11 @@ interface FAQItem {
   answer: string;
 }
 
-export default function Help() {
+interface HelpProps {
+  onNavigate?: (section: string) => void;
+}
+
+export default function Help({ onNavigate }: HelpProps) {
   const [expandedSection, setExpandedSection] = useState<string | null>('getting-started');
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -98,8 +103,8 @@ export default function Help() {
     }
   ];
 
-  const filteredFaqs = faqs.filter(faq => 
-    searchQuery === '' || 
+  const filteredFaqs = faqs.filter(faq =>
+    searchQuery === '' ||
     faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
     faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -114,7 +119,7 @@ export default function Help() {
           <p className="text-gray-600">
             Welcome to ProofEdge! Follow these steps to start showing social proof notifications on your website.
           </p>
-          
+
           <div className="space-y-4">
             <div className="flex items-start space-x-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
               <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">1</div>
@@ -360,11 +365,11 @@ export default function Help() {
                 </p>
                 <div className="bg-gray-900 rounded-lg p-4 relative">
                   <pre className="text-sm text-gray-300 overflow-x-auto">
-{`<script src="https://your-domain.supabase.co/functions/v1/engine"
+                    {`<script src="https://your-domain.supabase.co/functions/v1/engine"
   data-site-id="YOUR_SITE_ID">
 </script>`}
                   </pre>
-                  <button 
+                  <button
                     onClick={() => copyToClipboard(`<script src="https://your-domain.supabase.co/functions/v1/engine" data-site-id="YOUR_SITE_ID"></script>`, 'pixel-code')}
                     className="absolute top-2 right-2 p-2 bg-gray-700 hover:bg-gray-600 rounded text-gray-300"
                   >
@@ -556,7 +561,7 @@ export default function Help() {
                 </p>
                 <div className="bg-gray-900 rounded-lg p-4 relative">
                   <pre className="text-sm text-gray-300 overflow-x-auto">
-{`POST /functions/v1/add-event
+                    {`POST /functions/v1/add-event
 {
   "site_id": "your-site-id",
   "event_type": "purchase",
@@ -666,7 +671,7 @@ export default function Help() {
 
         {/* Quick Links */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <button 
+          <button
             onClick={() => setExpandedSection('getting-started')}
             className="p-4 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all text-left"
           >
@@ -674,7 +679,7 @@ export default function Help() {
             <div className="font-medium text-gray-900">Quick Start</div>
             <div className="text-xs text-gray-500">Get up and running</div>
           </button>
-          <button 
+          <button
             onClick={() => setExpandedSection('pixel-installation')}
             className="p-4 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all text-left"
           >
@@ -682,7 +687,7 @@ export default function Help() {
             <div className="font-medium text-gray-900">Installation</div>
             <div className="text-xs text-gray-500">Pixel setup guide</div>
           </button>
-          <button 
+          <button
             onClick={() => setExpandedSection('notification-templates')}
             className="p-4 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all text-left"
           >
@@ -690,7 +695,7 @@ export default function Help() {
             <div className="font-medium text-gray-900">Templates</div>
             <div className="text-xs text-gray-500">Notification types</div>
           </button>
-          <button 
+          <button
             onClick={() => setExpandedSection('integrations')}
             className="p-4 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all text-left"
           >
@@ -709,7 +714,7 @@ export default function Help() {
             {sections.map((section) => {
               const Icon = section.icon;
               const isExpanded = expandedSection === section.id;
-              
+
               return (
                 <div key={section.id}>
                   <button
@@ -757,7 +762,7 @@ export default function Help() {
           <div className="divide-y divide-gray-200">
             {filteredFaqs.map((faq, index) => {
               const isExpanded = expandedFaq === `faq-${index}`;
-              
+
               return (
                 <div key={index}>
                   <button
@@ -799,19 +804,19 @@ export default function Help() {
                 Can't find what you're looking for? Our support team is here to help.
               </p>
               <div className="flex flex-wrap gap-3">
-                <a 
-                  href="mailto:support@proofedge.io"
+                <button
+                  onClick={() => onNavigate?.('support')}
                   className="inline-flex items-center space-x-2 px-4 py-2 bg-white text-blue-600 rounded-lg font-medium text-sm hover:bg-blue-50 transition-colors"
                 >
-                  <Mail className="w-4 h-4" />
-                  <span>Email Support</span>
-                </a>
-                <a 
-                  href="#"
+                  <LifeBuoy className="w-4 h-4" />
+                  <span>Contact Support</span>
+                </button>
+                <a
+                  href="mailto:support@proofedge.io"
                   className="inline-flex items-center space-x-2 px-4 py-2 bg-white/20 text-white rounded-lg font-medium text-sm hover:bg-white/30 transition-colors"
                 >
-                  <ExternalLink className="w-4 h-4" />
-                  <span>View Documentation</span>
+                  <Mail className="w-4 h-4" />
+                  <span>Email Directly</span>
                 </a>
               </div>
             </div>

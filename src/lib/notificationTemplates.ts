@@ -7,7 +7,7 @@ export interface NotificationTemplate {
   description: string;
   icon: string;
   category: 'social_proof' | 'engagement' | 'conversion' | 'activity';
-  
+
   // Default rule configuration
   defaultRules: {
     eventTypes: string[];
@@ -16,7 +16,7 @@ export interface NotificationTemplate {
     excludeTestEvents?: boolean;
     requireLocation?: boolean;
   };
-  
+
   // Display configuration
   displayConfig: {
     displayDuration: number;
@@ -24,14 +24,14 @@ export interface NotificationTemplate {
     showLocation: boolean;
     anonymizeNames?: boolean;
   };
-  
+
   // Message template
   messageTemplate: {
     titleTemplate: string; // e.g., "{customer_name}"
     messageTemplate: string; // e.g., "just purchased {product_name}"
     variables: string[]; // ["customer_name", "product_name", "value"]
   };
-  
+
   // Preview data
   preview: {
     title: string;
@@ -345,7 +345,7 @@ export function formatNotificationMessage(
   template.messageTemplate.variables.forEach(variable => {
     const value = eventData[variable] || '';
     const placeholder = `{${variable}}`;
-    
+
     // Special formatting for certain variables
     if (variable === 'value' && eventData.value) {
       const formattedValue = `for ${eventData.currency || '$'}${eventData.value}`;

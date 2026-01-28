@@ -40,7 +40,7 @@ const SAMPLE_LOCATION = {
 
 function getTemplateSample(templateId?: string) {
   console.log('Getting template sample for:', templateId); // Debug log
-  
+
   switch (templateId) {
     case 'recent_purchase':
     case 'purchase':
@@ -245,14 +245,14 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
   const displaySettings = config.display;
   const designPresetId = (config as any)?.designPresetId;
   const isDesignLocked = Boolean(designPresetId);
-  
+
   // Check multiple possible locations for template_id
-  const templateId = (config as any)?.template_id 
-    || (config as any)?.config?.template_id 
+  const templateId = (config as any)?.template_id
+    || (config as any)?.config?.template_id
     || (config as any)?.template_name?.toLowerCase().replace(/\s+/g, '_')
     || config.name?.toLowerCase().replace(/\s+/g, '_')
     || config.type;
-    
+
   console.log('Widget config:', config); // Debug log
   console.log('Config name:', config.name); // Debug log
   console.log('Template ID resolved to:', templateId); // Debug log
@@ -289,19 +289,19 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
 
   const locationText = displaySettings.content.showLocation
     ? getFormattedLocation(
-        displaySettings.content.locationFormat,
-        SAMPLE_LOCATION.city,
-        SAMPLE_LOCATION.country
-      )
+      displaySettings.content.locationFormat,
+      SAMPLE_LOCATION.city,
+      SAMPLE_LOCATION.country
+    )
     : '';
 
   const valueText = displaySettings.content.showValue && sampleValue != null
     ? formatDisplayValue(
-        sampleValue as number,
-        displaySettings.content.valueFormat,
-        displaySettings.content.currency,
-        displaySettings.content.currencyPosition
-      )
+      sampleValue as number,
+      displaySettings.content.valueFormat,
+      displaySettings.content.currency,
+      displaySettings.content.currencyPosition
+    )
     : '';
 
   const metaParts = [timestampText.trim(), locationText.trim()].filter(Boolean);
@@ -356,11 +356,10 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
 
           <div className="flex items-center space-x-3">
             {/* Status Badge */}
-            <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${
-              config.isActive
+            <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${config.isActive
                 ? 'bg-green-100 text-green-800'
                 : 'bg-gray-100 text-gray-800'
-            }`}>
+              }`}>
               {config.isActive ? 'Active' : 'Not Active'}
             </span>
 
@@ -500,8 +499,8 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                             updateConfig({
                               design: {
                                 ...config?.design,
-                                shadow: { 
-                                  ...config?.design?.shadow, 
+                                shadow: {
+                                  ...config?.design?.shadow,
                                   glassmorphism: value,
                                   backdropBlur: value ? 16 : 0,
                                 },
@@ -764,9 +763,9 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                               frequency: {
                                 ...config.triggers.frequency,
                                 displayFrequency: value as 'all_time' | 'once_per_session' | 'once_per_day',
-                                maxNotificationsPerSession: value === 'once_per_session' ? 1 : 
-                                  value === 'once_per_day' ? 1 : 
-                                  config.triggers.frequency?.maxNotificationsPerSession || 3
+                                maxNotificationsPerSession: value === 'once_per_session' ? 1 :
+                                  value === 'once_per_day' ? 1 :
+                                    config.triggers.frequency?.maxNotificationsPerSession || 3
                               }
                             }
                           })}
@@ -787,8 +786,8 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                     description="Show notifications relevant to the product being viewed"
                   >
                     <SettingsGroup>
-                      <SettingsRow 
-                        label="Product Filtering" 
+                      <SettingsRow
+                        label="Product Filtering"
                         description="On product pages, filter notifications to show only activity for that specific product"
                       >
                         <Select
@@ -1223,8 +1222,8 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                         </>
                       )}
 
-                      <SettingsRow 
-                        label="Notification Time Range" 
+                      <SettingsRow
+                        label="Notification Time Range"
                         description="Show notifications from this time period"
                       >
                         <Select
@@ -1232,8 +1231,8 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                           onChange={(value) => updateConfig({
                             display: {
                               ...config.display,
-                              content: { 
-                                ...config.display.content, 
+                              content: {
+                                ...config.display.content,
                                 notificationTimeRange: Number(value),
                                 customTimeRangeHours: Number(value) === 0 ? config.display.content.customTimeRangeHours : undefined
                               }
@@ -1326,8 +1325,8 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                           onChange={(value) => updateConfig({
                             display: {
                               ...config.display,
-                              interaction: { 
-                                ...config.display.interaction, 
+                              interaction: {
+                                ...config.display.interaction,
                                 clickable: value,
                                 clickAction: value ? 'close' : 'none' // Auto-set to dismiss when enabled
                               }
@@ -1351,8 +1350,8 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                     Add your brand identity, custom templates, and styling to match your website.
                   </p> */}
 
-                  {/* Identity */}
-                  {/* <SettingsSection
+              {/* Identity */}
+              {/* <SettingsSection
                     title="Brand Identity"
                     description="Add your logo and brand information"
                   >
@@ -1450,8 +1449,8 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                     </SettingsGroup>
                   </SettingsSection> */}
 
-                  {/* Color Scheme */}
-                  {/* <SettingsSection
+              {/* Color Scheme */}
+              {/* <SettingsSection
                     title="Color Scheme"
                     description="Customize colors to match your brand"
                   >
@@ -1494,7 +1493,7 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                     </SettingsGroup>
                   </SettingsSection> */}
 
-                  {/* Message Templates
+              {/* Message Templates
                   <SettingsSection
                     title="Message Templates"
                     description="Customize notification messages with variables"
@@ -1586,8 +1585,8 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                     </SettingsGroup>
                   </SettingsSection> */}
 
-                  {/* Custom CSS */}
-                  {/* <SettingsSection
+              {/* Custom CSS */}
+              {/* <SettingsSection
                     title="Custom CSS"
                     description="Advanced styling for developers"
                   >
@@ -1613,8 +1612,8 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                     </SettingsGroup>
                   </SettingsSection> */}
 
-                  {/* Localization */}
-                  {/* <SettingsSection
+              {/* Localization */}
+              {/* <SettingsSection
                     title="Localization (i18n)"
                     description="Multi-language support"
                   >
@@ -1660,8 +1659,8 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                     </SettingsGroup>
                   </SettingsSection>
                    */}
-                  
-                {/* </div>
+
+              {/* </div>
               </AccordionSection> */}
 
               {/* Webhook & Auto Capture Section */}
@@ -1714,8 +1713,8 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                     description="Automatically detect and record form submissions"
                   >
                     <SettingsGroup>
-                      <SettingsRow 
-                        label="Enable Auto Capture" 
+                      <SettingsRow
+                        label="Enable Auto Capture"
                         description="Setting the Auto Capture will attempt to automatically detect when a form has been submitted and record that data for you. (Password fields will never be captured.)"
                       >
                         <Toggle
@@ -1840,27 +1839,25 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                     <Eye className="w-5 h-5 text-gray-600" />
                     <span className="font-medium text-gray-900">Preview</span>
                   </div>
-                  
+
                   {/* Device Toggle */}
                   <div className="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
                     <button
                       onClick={() => setPreviewDevice('desktop')}
-                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                        previewDevice === 'desktop'
+                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${previewDevice === 'desktop'
                           ? 'bg-white text-blue-600 shadow-sm'
                           : 'text-gray-600 hover:text-gray-900'
-                      }`}
+                        }`}
                     >
                       <Monitor className="w-4 h-4 inline mr-1" />
                       Desktop
                     </button>
                     <button
                       onClick={() => setPreviewDevice('mobile')}
-                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                        previewDevice === 'mobile'
+                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${previewDevice === 'mobile'
                           ? 'bg-white text-blue-600 shadow-sm'
                           : 'text-gray-600 hover:text-gray-900'
-                      }`}
+                        }`}
                     >
                       <Smartphone className="w-4 h-4 inline mr-1" />
                       Mobile
@@ -1870,13 +1867,12 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
               </div>
 
               {/* Preview Container */}
-              <div className={`bg-white rounded-lg shadow-lg border border-gray-300 mx-auto transition-all ${
-                previewDevice === 'mobile' ? 'max-w-sm' : 'w-full'
-              }`}>
-                <div 
+              <div className={`bg-white rounded-lg shadow-lg border border-gray-300 mx-auto transition-all ${previewDevice === 'mobile' ? 'max-w-sm' : 'w-full'
+                }`}>
+                <div
                   className={`p-8 ${previewDevice === 'mobile' ? 'min-h-[600px]' : 'min-h-[500px]'} relative`}
                   style={{
-                    background: config?.design?.shadow?.glassmorphism 
+                    background: config?.design?.shadow?.glassmorphism
                       ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                       : '#f9fafb'
                   }}
@@ -1886,12 +1882,12 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                     const effectivePosition = previewDevice === 'mobile' && config?.display?.responsive?.mobilePosition
                       ? config.display.responsive.mobilePosition
                       : config?.design?.position?.position || 'bottom-left';
-                    
+
                     const blurAmount = config?.design?.shadow?.backdropBlur ?? 16;
                     if (config?.design?.shadow?.glassmorphism) {
                       console.log('Glassmorphism enabled - Blur amount:', blurAmount);
                     }
-                    
+
                     return (
                       <div
                         key={`${displaySettings.duration.animationType}-blur-${blurAmount}`}
@@ -1910,548 +1906,547 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
                           transform: effectivePosition === 'center-top' ? 'translateX(-50%)' : 'none',
                           pointerEvents: 'none',
                         }}
-                  >
-                    <div
-                      className={`relative transition-all duration-300 ${
-                        config?.design?.layout?.layout === 'full-width' ? 'w-full' :
-                        config?.design?.layout?.layout === 'ripple' ? 'py-1.5 pl-1.5 pr-6' :
-                        config?.design?.layout?.layout === 'compact' ? 'p-2' :
-                        config?.design?.layout?.layout === 'minimal' ? 'p-3' :
-                        'p-4'
-                      }`}
-                      style={config?.design?.layout?.layout === 'frosted-token' ? {
-                        // Frosted Token layout - transparent container
-                        maxWidth: '280px',
-                        minWidth: '200px',
-                        borderRadius: '0',
-                        border: 'none',
-                        boxShadow: 'none',
-                        backgroundColor: 'transparent',
-                        cursor: 'pointer',
-                        overflow: 'visible',
-                        padding: '0',
-                      } : config?.design?.layout?.layout === 'story-pop' ? {
-                        // Story Pop layout - transparent container (card has its own styles)
-                        maxWidth: '160px',
-                        minWidth: '160px',
-                        borderRadius: '0',
-                        border: 'none',
-                        boxShadow: 'none',
-                        backgroundColor: 'transparent',
-                        cursor: 'pointer',
-                        overflow: 'visible',
-                        padding: '0',
-                      } : config?.design?.layout?.layout === 'floating-tag' ? {
-                        // Floating Tag layout - transparent container (tag has its own styles)
-                        maxWidth: '320px',
-                        minWidth: '200px',
-                        borderRadius: '0',
-                        border: 'none',
-                        boxShadow: 'none',
-                        backgroundColor: 'transparent',
-                        cursor: 'pointer',
-                        overflow: 'visible',
-                        padding: '0',
-                      } : config?.design?.layout?.layout === 'peekaboo' ? {
-                        // Peekaboo layout - transparent container (card has its own styles)
-                        maxWidth: '320px',
-                        minWidth: '280px',
-                        borderRadius: '0',
-                        border: 'none',
-                        boxShadow: 'none',
-                        backgroundColor: 'transparent',
-                        cursor: 'pointer',
-                        overflow: 'visible',
-                        padding: '0',
-                      } : config?.design?.layout?.layout === 'puzzle' ? {
-                        // Puzzle layout - transparent container
-                        maxWidth: '360px',
-                        minWidth: '280px',
-                        borderRadius: '0',
-                        border: 'none',
-                        boxShadow: 'none',
-                        backgroundColor: 'transparent',
-                        cursor: 'pointer',
-                        overflow: 'visible',
-                        padding: '0',
-                      } : config?.design?.layout?.layout === 'parallax' ? {
-                        // Parallax layout - dark glassmorphic card
-                        maxWidth: '320px',
-                        minWidth: '280px',
-                        borderRadius: '12px',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-                        backgroundColor: 'rgba(17, 24, 39, 0.9)',
-                        backdropFilter: 'blur(16px)',
-                        WebkitBackdropFilter: 'blur(16px)',
-                        cursor: 'pointer',
-                        overflow: 'visible',
-                        padding: '16px',
-                      } : config?.design?.layout?.layout === 'ripple' ? {
-                        // Ripple layout - clean white pill
-                        maxWidth: '320px',
-                        minWidth: '200px',
-                        borderRadius: '9999px',
-                        border: 'none',
-                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)',
-                        backgroundColor: '#ffffff',
-                        cursor: 'pointer',
-                        overflow: 'hidden',
-                      } : {
-                        maxWidth: previewDevice === 'mobile' && config?.display?.responsive?.mobileMaxWidth
-                          ? `${config.display.responsive.mobileMaxWidth}px`
-                          : config?.design?.layout?.layout === 'full-width' ? '100%' : `${config?.design?.layout?.maxWidth || 280}px`,
-                        minWidth: config?.design?.layout?.layout === 'full-width' ? '100%' : `${config?.design?.layout?.minWidth || 240}px`,
-                        borderRadius: `${config?.design?.border?.borderRadius || 12}px`,
-                        borderWidth: `${config?.design?.border?.borderWidth || 1}px`,
-                        borderColor: config?.design?.shadow?.glassmorphism
-                          ? 'rgba(255, 255, 255, 0.5)'
-                          : config?.design?.border?.borderColor || 'rgba(229, 231, 235, 1)',
-                        borderLeftWidth: config?.design?.border?.borderLeftAccent
-                          ? `${config?.design?.border?.borderLeftAccentWidth || 4}px`
-                          : `${config?.design?.border?.borderWidth || 1}px`,
-                        borderLeftColor: config?.design?.border?.borderLeftAccent
-                          ? config?.design?.border?.borderLeftAccentColor || '#3B82F6'
-                          : config?.design?.shadow?.glassmorphism
-                            ? 'rgba(255, 255, 255, 0.3)'
-                            : config?.design?.border?.borderColor || 'rgba(229, 231, 235, 1)',
-                        boxShadow: config?.design?.shadow?.glassmorphism
-                          ? 'inset 0 1px 1px 0 rgba(255, 255, 255, 0.3), 0 20px 27px rgba(0, 0, 0, 0.05)'
-                          : config?.design?.shadow?.shadowEnabled
-                            ? getShadowStyle(config?.design?.shadow?.shadowSize || 'lg')
-                            : 'none',
-                        backgroundColor: config?.design?.shadow?.glassmorphism
-                          ? 'rgba(255, 255, 255, 0.3)'
-                          : config?.design?.background?.backgroundColor || 'rgba(255, 255, 255, 0.95)',
-                        backdropFilter: config?.design?.shadow?.glassmorphism
-                          ? `blur(${blurAmount}px)`
-                          : 'none',
-                        WebkitBackdropFilter: config?.design?.shadow?.glassmorphism
-                          ? `blur(${blurAmount}px)`
-                          : 'none',
-                        cursor: isClickable ? 'pointer' : 'default',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      {showCloseButton && (
-                        <button
-                          type="button"
-                          className={`absolute ${closeButtonClass} text-gray-400 hover:text-gray-600 transition-colors`}
-                          aria-label="Close"
-                        >
-                          ×
-                        </button>
-                      )}
-
-                      {displaySettings.duration.progressBar && (
+                      >
                         <div
-                          className={`absolute ${progressBarPositionClass} left-0 right-0 h-1`}
-                          style={{
-                            backgroundColor: `${displaySettings.duration.progressBarColor}33`,
-                            borderRadius: progressBarPositionClass === 'top-0' 
-                              ? `${config?.design?.border?.borderRadius || 12}px ${config?.design?.border?.borderRadius || 12}px 0 0`
-                              : `0 0 ${config?.design?.border?.borderRadius || 12}px ${config?.design?.border?.borderRadius || 12}px`,
+                          className={`relative transition-all duration-300 ${config?.design?.layout?.layout === 'full-width' ? 'w-full' :
+                              config?.design?.layout?.layout === 'ripple' ? 'py-1.5 pl-1.5 pr-6' :
+                                config?.design?.layout?.layout === 'compact' ? 'p-2' :
+                                  config?.design?.layout?.layout === 'minimal' ? 'p-3' :
+                                    'p-4'
+                            }`}
+                          style={config?.design?.layout?.layout === 'frosted-token' ? {
+                            // Frosted Token layout - transparent container
+                            maxWidth: '280px',
+                            minWidth: '200px',
+                            borderRadius: '0',
+                            border: 'none',
+                            boxShadow: 'none',
+                            backgroundColor: 'transparent',
+                            cursor: 'pointer',
+                            overflow: 'visible',
+                            padding: '0',
+                          } : config?.design?.layout?.layout === 'story-pop' ? {
+                            // Story Pop layout - transparent container (card has its own styles)
+                            maxWidth: '160px',
+                            minWidth: '160px',
+                            borderRadius: '0',
+                            border: 'none',
+                            boxShadow: 'none',
+                            backgroundColor: 'transparent',
+                            cursor: 'pointer',
+                            overflow: 'visible',
+                            padding: '0',
+                          } : config?.design?.layout?.layout === 'floating-tag' ? {
+                            // Floating Tag layout - transparent container (tag has its own styles)
+                            maxWidth: '320px',
+                            minWidth: '200px',
+                            borderRadius: '0',
+                            border: 'none',
+                            boxShadow: 'none',
+                            backgroundColor: 'transparent',
+                            cursor: 'pointer',
+                            overflow: 'visible',
+                            padding: '0',
+                          } : config?.design?.layout?.layout === 'peekaboo' ? {
+                            // Peekaboo layout - transparent container (card has its own styles)
+                            maxWidth: '320px',
+                            minWidth: '280px',
+                            borderRadius: '0',
+                            border: 'none',
+                            boxShadow: 'none',
+                            backgroundColor: 'transparent',
+                            cursor: 'pointer',
+                            overflow: 'visible',
+                            padding: '0',
+                          } : config?.design?.layout?.layout === 'puzzle' ? {
+                            // Puzzle layout - transparent container
+                            maxWidth: '360px',
+                            minWidth: '280px',
+                            borderRadius: '0',
+                            border: 'none',
+                            boxShadow: 'none',
+                            backgroundColor: 'transparent',
+                            cursor: 'pointer',
+                            overflow: 'visible',
+                            padding: '0',
+                          } : config?.design?.layout?.layout === 'parallax' ? {
+                            // Parallax layout - dark glassmorphic card
+                            maxWidth: '320px',
+                            minWidth: '280px',
+                            borderRadius: '12px',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                            backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                            backdropFilter: 'blur(16px)',
+                            WebkitBackdropFilter: 'blur(16px)',
+                            cursor: 'pointer',
+                            overflow: 'visible',
+                            padding: '16px',
+                          } : config?.design?.layout?.layout === 'ripple' ? {
+                            // Ripple layout - clean white pill
+                            maxWidth: '320px',
+                            minWidth: '200px',
+                            borderRadius: '9999px',
+                            border: 'none',
+                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)',
+                            backgroundColor: '#ffffff',
+                            cursor: 'pointer',
                             overflow: 'hidden',
-                            maxWidth: '100%'
+                          } : {
+                            maxWidth: previewDevice === 'mobile' && config?.display?.responsive?.mobileMaxWidth
+                              ? `${config.display.responsive.mobileMaxWidth}px`
+                              : config?.design?.layout?.layout === 'full-width' ? '100%' : `${config?.design?.layout?.maxWidth || 280}px`,
+                            minWidth: config?.design?.layout?.layout === 'full-width' ? '100%' : `${config?.design?.layout?.minWidth || 240}px`,
+                            borderRadius: `${config?.design?.border?.borderRadius || 12}px`,
+                            borderWidth: `${config?.design?.border?.borderWidth || 1}px`,
+                            borderColor: config?.design?.shadow?.glassmorphism
+                              ? 'rgba(255, 255, 255, 0.5)'
+                              : config?.design?.border?.borderColor || 'rgba(229, 231, 235, 1)',
+                            borderLeftWidth: config?.design?.border?.borderLeftAccent
+                              ? `${config?.design?.border?.borderLeftAccentWidth || 4}px`
+                              : `${config?.design?.border?.borderWidth || 1}px`,
+                            borderLeftColor: config?.design?.border?.borderLeftAccent
+                              ? config?.design?.border?.borderLeftAccentColor || '#3B82F6'
+                              : config?.design?.shadow?.glassmorphism
+                                ? 'rgba(255, 255, 255, 0.3)'
+                                : config?.design?.border?.borderColor || 'rgba(229, 231, 235, 1)',
+                            boxShadow: config?.design?.shadow?.glassmorphism
+                              ? 'inset 0 1px 1px 0 rgba(255, 255, 255, 0.3), 0 20px 27px rgba(0, 0, 0, 0.05)'
+                              : config?.design?.shadow?.shadowEnabled
+                                ? getShadowStyle(config?.design?.shadow?.shadowSize || 'lg')
+                                : 'none',
+                            backgroundColor: config?.design?.shadow?.glassmorphism
+                              ? 'rgba(255, 255, 255, 0.3)'
+                              : config?.design?.background?.backgroundColor || 'rgba(255, 255, 255, 0.95)',
+                            backdropFilter: config?.design?.shadow?.glassmorphism
+                              ? `blur(${blurAmount}px)`
+                              : 'none',
+                            WebkitBackdropFilter: config?.design?.shadow?.glassmorphism
+                              ? `blur(${blurAmount}px)`
+                              : 'none',
+                            cursor: isClickable ? 'pointer' : 'default',
+                            overflow: 'hidden',
                           }}
                         >
-                          <div
-                            className="h-full transition-all duration-700 ease-out"
-                            style={{
-                              width: '75%',
-                              backgroundColor: displaySettings.duration.progressBarColor,
-                              borderRadius: 'inherit'
-                            }}
-                          />
-                        </div>
-                      )}
+                          {showCloseButton && (
+                            <button
+                              type="button"
+                              className={`absolute ${closeButtonClass} text-gray-400 hover:text-gray-600 transition-colors`}
+                              aria-label="Close"
+                            >
+                              ×
+                            </button>
+                          )}
 
-                      {/* Pill Badge Layout Preview */}
-                      {config?.design?.layout?.layout === 'pill-badge' ? (
-                        <div className="flex items-center gap-2.5 px-5 py-2.5 bg-white border border-gray-200 rounded-full shadow-sm" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                          {/* Icon */}
-                          <div className="flex items-center justify-center text-blue-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-                              <circle cx="9" cy="7" r="4"></circle>
-                              <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
-                              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                            </svg>
-                          </div>
-                          {/* Count and label */}
-                          <div className="flex items-baseline gap-1.5">
-                            <span className="font-semibold text-gray-900">8</span>
-                            <span className="text-gray-500 text-sm">visited today</span>
-                          </div>
-                        </div>
-                      ) : config?.design?.layout?.layout === 'frosted-token' ? (
-                        <div className="flex items-center gap-3">
-                          {/* Text label */}
-                          <div className="px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 shadow-lg text-white">
-                            <div className="flex items-baseline gap-1.5 whitespace-nowrap">
-                              <span className="font-bold text-sm">32</span>
-                              <span className="text-xs font-medium opacity-80">purchased today</span>
-                            </div>
-                          </div>
-                          
-                          {/* Circular token */}
-                          <div className="relative w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-orange-400 to-pink-500 shadow-lg border border-white/20 shrink-0">
-                            {/* Gloss */}
-                            <div className="absolute inset-0 rounded-full bg-gradient-to-b from-white/40 to-transparent opacity-50"></div>
-                            {/* Icon */}
-                            <svg className="relative z-10 text-white drop-shadow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-                              <line x1="3" y1="6" x2="21" y2="6"></line>
-                              <path d="M16 10a4 4 0 0 1-8 0"></path>
-                            </svg>
-                            {/* Status dot */}
-                            <div className="absolute top-0 right-0 w-2.5 h-2.5 bg-white rounded-full shadow-sm flex items-center justify-center">
-                              <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div>
-                            </div>
-                          </div>
-                        </div>
-                      ) : config?.design?.layout?.layout === 'story-pop' ? (
-                        /* Story Pop Layout Preview */
-                        <div className="relative w-[120px] h-[165px] rounded-xl overflow-hidden shadow-xl border-2 border-white bg-white">
-                          {/* Close button */}
-                          <button className="absolute top-1.5 right-1.5 z-30 w-4 h-4 bg-black/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white">
-                            <span className="text-[8px] font-bold">×</span>
-                          </button>
-                          
-                          {/* Story content */}
-                          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 z-0">
-                            <div className="w-full h-full flex items-center justify-center">
-                              <div className="w-16 h-16 bg-white/20 rounded-lg flex items-center justify-center">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* Gradient overlay */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10 pointer-events-none"></div>
-                          
-                          {/* Text content */}
-                          <div className="absolute bottom-0 left-0 w-full p-2 z-20 text-white">
-                            <div className="flex items-center gap-1.5 mb-0.5">
-                              <div className="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center text-[8px] font-bold">{initials.charAt(0)}</div>
-                              <span className="text-[10px] font-bold truncate">{displaySettings.content.showCustomerName ? 'Sarah J.' : 'Customer'}</span>
-                            </div>
-                            <p className="text-[9px] font-medium opacity-90 mb-0.5">just bought this!</p>
-                            <p className="text-[7px] opacity-60 uppercase tracking-wider">2s ago</p>
-                          </div>
-                          
-                          {/* Progress bar */}
-                          <div className="absolute top-0 left-0 h-0.5 bg-white/30 w-full z-30">
-                            <div className="h-full bg-white w-3/4"></div>
-                          </div>
-                        </div>
-                      ) : config?.design?.layout?.layout === 'floating-tag' ? (
-                        /* Floating Tag Layout Preview */
-                        <div className="relative flex items-center gap-3 pl-2 pr-4 py-2 rounded-full bg-white/70 backdrop-blur-xl border border-white/40 shadow-lg" style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.05), 0 0 0 1px rgba(0,0,0,0.05)' }}>
-                          {/* Icon */}
-                          <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-amber-500/10 backdrop-blur-sm">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M12 3l1.912 5.813a2 2 0 001.272 1.272L21 12l-5.813 1.912a2 2 0 00-1.272 1.272L12 21l-1.912-5.813a2 2 0 00-1.272-1.272L3 12l5.813-1.912a2 2 0 001.272-1.272L12 3z"></path>
-                            </svg>
-                          </div>
-                          
-                          {/* Text */}
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-sm font-medium text-gray-800 tracking-tight">Popular in Design</span>
-                            <span className="w-1 h-1 rounded-full bg-gray-300"></span>
-                            <span className="text-xs text-gray-500 font-medium">120 viewing</span>
-                          </div>
-                          
-                          {/* Ping indicator */}
-                          <div className="absolute -top-1 -right-1">
-                            <span className="flex h-2 w-2">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-                            </span>
-                          </div>
-                        </div>
-                      ) : config?.design?.layout?.layout === 'peekaboo' ? (
-                        /* Peekaboo Reveal Layout Preview */
-                        <div className="relative flex items-center gap-3 p-4 pr-12 bg-white rounded-r-3xl rounded-l-xl shadow-lg border border-gray-100" style={{ width: '280px' }}>
-                          {/* Decoration dot */}
-                          <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-white rounded-full shadow-sm flex items-center justify-center border border-gray-100">
-                            <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse"></div>
-                          </div>
-                          
-                          {/* Eye icon with avatar */}
-                          <div className="relative shrink-0">
-                            <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
-                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                <circle cx="12" cy="12" r="3"></circle>
-                              </svg>
-                            </div>
-                            <div 
-                              className="absolute top-0 left-0 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-xs font-semibold border-2 border-white shadow-sm"
-                              style={{ transform: 'translateX(16px) translateY(12px) scale(0.75)' }}
-                            >
-                              {initials}
-                            </div>
-                          </div>
-                          
-                          {/* Text */}
-                          <div className="flex flex-col min-w-0">
-                            <div className="flex items-center gap-1 text-lg font-bold text-gray-900 leading-none">
-                              <span>18</span>
-                              <span className="text-sm font-medium text-gray-500">people viewed this</span>
-                            </div>
-                            <div className="text-xs font-medium text-indigo-500 uppercase tracking-wide mt-0.5">
-                              In the last hour
-                            </div>
-                          </div>
-                          
-                          {/* Close button */}
-                          <button className="absolute top-2 right-2 text-gray-300 hover:text-gray-500">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M18 6L6 18M6 6l12 12"/>
-                            </svg>
-                          </button>
-                        </div>
-                      ) : config?.design?.layout?.layout === 'puzzle' ? (
-                        /* Puzzle Reveal Layout Preview */
-                        <div className="flex items-center" style={{ height: '56px', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.15))' }}>
-                          {/* Piece 1: Avatar */}
-                          <div className="relative z-30 flex items-center justify-center w-14 h-14 bg-white rounded-l-2xl rounded-r-md shadow-sm">
-                            <div 
-                              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
-                              style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
-                            >
-                              {initials}
-                            </div>
-                            <div className="absolute -right-1.5 w-3 h-3 bg-white rounded-full z-10"></div>
-                          </div>
-                          
-                          {/* Piece 2: Message */}
-                          <div className="relative z-20 -ml-2 flex flex-col justify-center px-6 h-14 bg-gray-900 text-white rounded-md shadow-sm min-w-[160px]">
-                            <div className="flex items-center gap-1 mb-0.5">
-                              <span className="p-0.5 rounded-sm bg-yellow-400 text-gray-900">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                                  <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/>
-                                </svg>
-                              </span>
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">purchased</span>
-                            </div>
-                            <div className="text-xs font-medium truncate">
-                              <span className="font-bold text-white">{sampleName}</span>
-                              <span className="text-gray-300"> got Premium Plan</span>
-                            </div>
-                          </div>
-                          
-                          {/* Piece 3: Product */}
-                          <div className="relative z-10 -ml-2 w-14 h-14 bg-white rounded-r-2xl rounded-l-md shadow-sm overflow-hidden">
-                            <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 bg-gray-900 rounded-full z-20"></div>
-                            <div 
-                              className="w-full h-full flex items-center justify-center"
-                              style={{ background: 'linear-gradient(135deg, #fbbf24, #f59e0b)' }}
-                            >
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                              </svg>
-                            </div>
-                          </div>
-                        </div>
-                      ) : config?.design?.layout?.layout === 'parallax' ? (
-                        /* Parallax 3D Card Layout Preview */
-                        <div className="relative">
-                          {/* Noise texture overlay */}
-                          <div 
-                            className="absolute inset-0 opacity-20 mix-blend-overlay pointer-events-none rounded-xl"
-                            style={{ 
-                              backgroundImage: 'url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iLjA1Ii8+PC9zdmc+")'
-                            }}
-                          />
-                          
-                          {/* Content container */}
-                          <div className="relative flex items-center gap-4">
-                            {/* Floating product image */}
-                            <div className="flex-shrink-0 relative">
-                              <div 
-                                className="w-16 h-16 rounded-lg overflow-hidden border-2 flex items-center justify-center"
-                                style={{ 
-                                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                                  borderColor: 'rgba(255,255,255,0.2)',
-                                  boxShadow: '0 8px 16px rgba(0,0,0,0.3), 0 0 20px rgba(99,102,241,0.15)'
-                                }}
-                              >
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                                </svg>
-                              </div>
-                              {/* NEW badge */}
-                              <div 
-                                className="absolute -top-1.5 -right-1.5 text-white text-[9px] font-bold px-1.5 py-0.5 rounded"
-                                style={{ 
-                                  background: '#6366f1',
-                                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                                  border: '1px solid #818cf8'
-                                }}
-                              >
-                                NEW
-                              </div>
-                            </div>
-                            
-                            {/* Text content */}
-                            <div className="flex-1 min-w-0">
-                              {/* Header with lightning icon */}
-                              <div className="flex items-center gap-1.5 mb-1">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="#facc15">
-                                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-                                </svg>
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Just Grabbed</span>
-                              </div>
-                              
-                              {/* Product name */}
-                              <h4 className="text-sm font-bold text-white mb-0.5 truncate">AI Copywriter Pro</h4>
-                              
-                              {/* Buyer info */}
-                              <p className="text-xs text-gray-400 truncate">
-                                by <span className="text-gray-200 font-medium">{sampleName}</span> • Marketing Lead
-                              </p>
-                            </div>
-                          </div>
-                          
-                          {/* Bottom gradient bar */}
-                          <div 
-                            className="absolute bottom-0 left-0 right-0 h-0.5 rounded-b-xl"
-                            style={{ 
-                              background: 'linear-gradient(to right, #6366f1, #a855f7, #ec4899)',
-                              opacity: 0.5
-                            }}
-                          />
-                        </div>
-                      ) : config?.design?.layout?.layout === 'ripple' ? (
-                        /* Ripple Layout Preview - Exact match to design */
-                        <div className="flex items-center gap-3">
-                          {/* Image cluster container (overlapping circles) */}
-                          <div className="relative flex-shrink-0" style={{ width: '56px', height: '44px' }}>
-                            {/* User avatar (front circle - blue/teal) */}
-                            <div 
-                              className="absolute rounded-full border-2 border-white flex items-center justify-center text-white font-semibold shadow-md"
-                              style={{ 
-                                left: 0, 
-                                top: '2px', 
-                                width: '40px', 
-                                height: '40px', 
-                                background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
-                                zIndex: 2,
-                                fontSize: '16px'
+                          {displaySettings.duration.progressBar && (
+                            <div
+                              className={`absolute ${progressBarPositionClass} left-0 right-0 h-1`}
+                              style={{
+                                backgroundColor: `${displaySettings.duration.progressBarColor}33`,
+                                borderRadius: progressBarPositionClass === 'top-0'
+                                  ? `${config?.design?.border?.borderRadius || 12}px ${config?.design?.border?.borderRadius || 12}px 0 0`
+                                  : `0 0 ${config?.design?.border?.borderRadius || 12}px ${config?.design?.border?.borderRadius || 12}px`,
+                                overflow: 'hidden',
+                                maxWidth: '100%'
                               }}
                             >
-                              {initials}
+                              <div
+                                className="h-full transition-all duration-700 ease-out"
+                                style={{
+                                  width: '75%',
+                                  backgroundColor: displaySettings.duration.progressBarColor,
+                                  borderRadius: 'inherit'
+                                }}
+                              />
                             </div>
-                            {/* Product image (back circle - yellow) */}
-                            <div 
-                              className="absolute rounded-full border-2 border-white shadow-md"
-                              style={{ 
-                                left: '20px', 
-                                top: '2px', 
-                                width: '40px', 
-                                height: '40px', 
-                                background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
-                                zIndex: 1
-                              }}
-                            />
-                            {/* Heart badge */}
-                            <div 
-                              className="absolute bg-white rounded-full flex items-center justify-center shadow"
-                              style={{ left: '24px', bottom: 0, zIndex: 3, width: '16px', height: '16px' }}
-                            >
-                              <svg width="10" height="10" viewBox="0 0 24 24" fill="#ef4444">
-                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                              </svg>
-                            </div>
-                          </div>
-                          
-                          {/* Text content */}
-                          <div className="flex flex-col justify-center min-w-0 pr-2">
-                            {/* First line: "Maya from Toronto" */}
-                            <div className="text-sm text-gray-700 whitespace-nowrap">
-                              <span className="font-semibold text-indigo-500">{sampleName}</span>
-                              <span> from {locationText || 'Toronto'}</span>
-                            </div>
-                            {/* Second line: "is looking at this" */}
-                            <div className="text-[13px] text-gray-400 whitespace-nowrap">
-                              {sampleEvent}
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        /* Standard layouts (card, compact, minimal, full-width) - Matches engine rendering */
-                        <>
-                          <div className="flex items-start gap-3">
-                            {/* Avatar - matches engine: 48x48 rounded-lg with gradient */}
-                            {(displaySettings.content.showEventIcon || displaySettings.content.showUserAvatar) && (
-                              <div 
-                                className="w-12 h-12 rounded-[10px] flex items-center justify-center flex-shrink-0 text-white font-semibold text-lg"
-                                style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}
-                              >
-                                {displaySettings.content.showUserAvatar ? initials : '✨'}
-                              </div>
-                            )}
+                          )}
 
-                            <div className="flex-1 min-w-0">
-                              {/* Customer name - matches engine: 14px font-semibold text-gray-900 */}
-                              {displaySettings.content.showCustomerName && (
-                                <div className="text-sm font-semibold text-gray-900 mb-0.5">
-                                  {sampleName}
-                                </div>
-                              )}
-                              
-                              {/* Action message - matches engine: 13px text-gray-600 */}
-                              <div className="text-[13px] text-gray-600 leading-snug mb-1">
-                                {sampleEvent}
-                                {valueText && (
-                                  <span className="ml-1 font-semibold text-emerald-600">{valueText}</span>
-                                )}
+                          {/* Pill Badge Layout Preview */}
+                          {config?.design?.layout?.layout === 'pill-badge' ? (
+                            <div className="flex items-center gap-2.5 px-5 py-2.5 bg-white border border-gray-200 rounded-full shadow-sm" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                              {/* Icon */}
+                              <div className="flex items-center justify-center text-blue-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                                  <circle cx="9" cy="7" r="4"></circle>
+                                  <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
                               </div>
-                              
-                              {/* Rating Stars for Reviews - matches engine */}
-                              {displaySettings.content.showRating && sampleRating && (
-                                <div className="flex items-center gap-0.5 mb-1">
-                                  {[...Array(5)].map((_, i) => (
-                                    <span key={i} className="text-sm" style={{ color: i < sampleRating ? '#FBBF24' : '#D1D5DB' }}>
-                                      ★
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                              
-                              {/* Review Content - matches engine */}
-                              {displaySettings.content.showReviewContent && sampleReviewContent && (
-                                <p className="text-xs text-gray-500 italic leading-snug mb-1 line-clamp-2">
-                                  "{sampleReviewContent}"
-                                </p>
-                              )}
-                              
-                              {/* Bottom row: timestamp + location + branding - matches engine */}
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full flex-shrink-0"></span>
-                                {metaLine && (
-                                  <span className="text-[11px] text-gray-500">{metaLine}</span>
-                                )}
-                                {config?.branding?.identity?.showPoweredBy && (
-                                  <>
-                                    <span className="text-gray-300 ml-auto">•</span>
-                                    <span className="text-[10px] text-gray-400 flex items-center gap-1">
-                                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
-                                      ProofEdge
-                                    </span>
-                                  </>
-                                )}
+                              {/* Count and label - shows sample data, real data fetched live */}
+                              <div className="flex items-baseline gap-1.5">
+                                <span className="font-semibold text-gray-900">--</span>
+                                <span className="text-gray-500 text-sm">visited today</span>
                               </div>
                             </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                      );
-                    })()}
+                          ) : config?.design?.layout?.layout === 'frosted-token' ? (
+                            <div className="flex items-center gap-3">
+                              {/* Text label */}
+                              <div className="px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 shadow-lg text-white">
+                                <div className="flex items-baseline gap-1.5 whitespace-nowrap">
+                                  <span className="font-bold text-sm">32</span>
+                                  <span className="text-xs font-medium opacity-80">purchased today</span>
+                                </div>
+                              </div>
+
+                              {/* Circular token */}
+                              <div className="relative w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-orange-400 to-pink-500 shadow-lg border border-white/20 shrink-0">
+                                {/* Gloss */}
+                                <div className="absolute inset-0 rounded-full bg-gradient-to-b from-white/40 to-transparent opacity-50"></div>
+                                {/* Icon */}
+                                <svg className="relative z-10 text-white drop-shadow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                                  <line x1="3" y1="6" x2="21" y2="6"></line>
+                                  <path d="M16 10a4 4 0 0 1-8 0"></path>
+                                </svg>
+                                {/* Status dot */}
+                                <div className="absolute top-0 right-0 w-2.5 h-2.5 bg-white rounded-full shadow-sm flex items-center justify-center">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div>
+                                </div>
+                              </div>
+                            </div>
+                          ) : config?.design?.layout?.layout === 'story-pop' ? (
+                            /* Story Pop Layout Preview */
+                            <div className="relative w-[120px] h-[165px] rounded-xl overflow-hidden shadow-xl border-2 border-white bg-white">
+                              {/* Close button */}
+                              <button className="absolute top-1.5 right-1.5 z-30 w-4 h-4 bg-black/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white">
+                                <span className="text-[8px] font-bold">×</span>
+                              </button>
+
+                              {/* Story content */}
+                              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 z-0">
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <div className="w-16 h-16 bg-white/20 rounded-lg flex items-center justify-center">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /></svg>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Gradient overlay */}
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10 pointer-events-none"></div>
+
+                              {/* Text content */}
+                              <div className="absolute bottom-0 left-0 w-full p-2 z-20 text-white">
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                  <div className="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center text-[8px] font-bold">{initials.charAt(0)}</div>
+                                  <span className="text-[10px] font-bold truncate">{displaySettings.content.showCustomerName ? 'Sarah J.' : 'Customer'}</span>
+                                </div>
+                                <p className="text-[9px] font-medium opacity-90 mb-0.5">just bought this!</p>
+                                <p className="text-[7px] opacity-60 uppercase tracking-wider">2s ago</p>
+                              </div>
+
+                              {/* Progress bar */}
+                              <div className="absolute top-0 left-0 h-0.5 bg-white/30 w-full z-30">
+                                <div className="h-full bg-white w-3/4"></div>
+                              </div>
+                            </div>
+                          ) : config?.design?.layout?.layout === 'floating-tag' ? (
+                            /* Floating Tag Layout Preview */
+                            <div className="relative flex items-center gap-3 pl-2 pr-4 py-2 rounded-full bg-white/70 backdrop-blur-xl border border-white/40 shadow-lg" style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.05), 0 0 0 1px rgba(0,0,0,0.05)' }}>
+                              {/* Icon */}
+                              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-amber-500/10 backdrop-blur-sm">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M12 3l1.912 5.813a2 2 0 001.272 1.272L21 12l-5.813 1.912a2 2 0 00-1.272 1.272L12 21l-1.912-5.813a2 2 0 00-1.272-1.272L3 12l5.813-1.912a2 2 0 001.272-1.272L12 3z"></path>
+                                </svg>
+                              </div>
+
+                              {/* Text */}
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-sm font-medium text-gray-800 tracking-tight">Popular in Design</span>
+                                <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+                                <span className="text-xs text-gray-500 font-medium">120 viewing</span>
+                              </div>
+
+                              {/* Ping indicator */}
+                              <div className="absolute -top-1 -right-1">
+                                <span className="flex h-2 w-2">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                                </span>
+                              </div>
+                            </div>
+                          ) : config?.design?.layout?.layout === 'peekaboo' ? (
+                            /* Peekaboo Reveal Layout Preview */
+                            <div className="relative flex items-center gap-3 p-4 pr-12 bg-white rounded-r-3xl rounded-l-xl shadow-lg border border-gray-100" style={{ width: '280px' }}>
+                              {/* Decoration dot */}
+                              <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-white rounded-full shadow-sm flex items-center justify-center border border-gray-100">
+                                <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse"></div>
+                              </div>
+
+                              {/* Eye icon with avatar */}
+                              <div className="relative shrink-0">
+                                <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
+                                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                  </svg>
+                                </div>
+                                <div
+                                  className="absolute top-0 left-0 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-xs font-semibold border-2 border-white shadow-sm"
+                                  style={{ transform: 'translateX(16px) translateY(12px) scale(0.75)' }}
+                                >
+                                  {initials}
+                                </div>
+                              </div>
+
+                              {/* Text */}
+                              <div className="flex flex-col min-w-0">
+                                <div className="flex items-center gap-1 text-lg font-bold text-gray-900 leading-none">
+                                  <span>18</span>
+                                  <span className="text-sm font-medium text-gray-500">people viewed this</span>
+                                </div>
+                                <div className="text-xs font-medium text-indigo-500 uppercase tracking-wide mt-0.5">
+                                  In the last hour
+                                </div>
+                              </div>
+
+                              {/* Close button */}
+                              <button className="absolute top-2 right-2 text-gray-300 hover:text-gray-500">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M18 6L6 18M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          ) : config?.design?.layout?.layout === 'puzzle' ? (
+                            /* Puzzle Reveal Layout Preview */
+                            <div className="flex items-center" style={{ height: '56px', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.15))' }}>
+                              {/* Piece 1: Avatar */}
+                              <div className="relative z-30 flex items-center justify-center w-14 h-14 bg-white rounded-l-2xl rounded-r-md shadow-sm">
+                                <div
+                                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
+                                  style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+                                >
+                                  {initials}
+                                </div>
+                                <div className="absolute -right-1.5 w-3 h-3 bg-white rounded-full z-10"></div>
+                              </div>
+
+                              {/* Piece 2: Message */}
+                              <div className="relative z-20 -ml-2 flex flex-col justify-center px-6 h-14 bg-gray-900 text-white rounded-md shadow-sm min-w-[160px]">
+                                <div className="flex items-center gap-1 mb-0.5">
+                                  <span className="p-0.5 rounded-sm bg-yellow-400 text-gray-900">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                                      <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z" />
+                                    </svg>
+                                  </span>
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">purchased</span>
+                                </div>
+                                <div className="text-xs font-medium truncate">
+                                  <span className="font-bold text-white">{sampleName}</span>
+                                  <span className="text-gray-300"> got Premium Plan</span>
+                                </div>
+                              </div>
+
+                              {/* Piece 3: Product */}
+                              <div className="relative z-10 -ml-2 w-14 h-14 bg-white rounded-r-2xl rounded-l-md shadow-sm overflow-hidden">
+                                <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 bg-gray-900 rounded-full z-20"></div>
+                                <div
+                                  className="w-full h-full flex items-center justify-center"
+                                  style={{ background: 'linear-gradient(135deg, #fbbf24, #f59e0b)' }}
+                                >
+                                  <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                                  </svg>
+                                </div>
+                              </div>
+                            </div>
+                          ) : config?.design?.layout?.layout === 'parallax' ? (
+                            /* Parallax 3D Card Layout Preview */
+                            <div className="relative">
+                              {/* Noise texture overlay */}
+                              <div
+                                className="absolute inset-0 opacity-20 mix-blend-overlay pointer-events-none rounded-xl"
+                                style={{
+                                  backgroundImage: 'url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIgb3BhY2l0eT0iLjA1Ii8+PC9zdmc+")'
+                                }}
+                              />
+
+                              {/* Content container */}
+                              <div className="relative flex items-center gap-4">
+                                {/* Floating product image */}
+                                <div className="flex-shrink-0 relative">
+                                  <div
+                                    className="w-16 h-16 rounded-lg overflow-hidden border-2 flex items-center justify-center"
+                                    style={{
+                                      background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                                      borderColor: 'rgba(255,255,255,0.2)',
+                                      boxShadow: '0 8px 16px rgba(0,0,0,0.3), 0 0 20px rgba(99,102,241,0.15)'
+                                    }}
+                                  >
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                                      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                                    </svg>
+                                  </div>
+                                  {/* NEW badge */}
+                                  <div
+                                    className="absolute -top-1.5 -right-1.5 text-white text-[9px] font-bold px-1.5 py-0.5 rounded"
+                                    style={{
+                                      background: '#6366f1',
+                                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                      border: '1px solid #818cf8'
+                                    }}
+                                  >
+                                    NEW
+                                  </div>
+                                </div>
+
+                                {/* Text content */}
+                                <div className="flex-1 min-w-0">
+                                  {/* Header with lightning icon */}
+                                  <div className="flex items-center gap-1.5 mb-1">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="#facc15">
+                                      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                                    </svg>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Just Grabbed</span>
+                                  </div>
+
+                                  {/* Product name */}
+                                  <h4 className="text-sm font-bold text-white mb-0.5 truncate">AI Copywriter Pro</h4>
+
+                                  {/* Buyer info */}
+                                  <p className="text-xs text-gray-400 truncate">
+                                    by <span className="text-gray-200 font-medium">{sampleName}</span> • Marketing Lead
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Bottom gradient bar */}
+                              <div
+                                className="absolute bottom-0 left-0 right-0 h-0.5 rounded-b-xl"
+                                style={{
+                                  background: 'linear-gradient(to right, #6366f1, #a855f7, #ec4899)',
+                                  opacity: 0.5
+                                }}
+                              />
+                            </div>
+                          ) : config?.design?.layout?.layout === 'ripple' ? (
+                            /* Ripple Layout Preview - Exact match to design */
+                            <div className="flex items-center gap-3">
+                              {/* Image cluster container (overlapping circles) */}
+                              <div className="relative flex-shrink-0" style={{ width: '56px', height: '44px' }}>
+                                {/* User avatar (front circle - blue/teal) */}
+                                <div
+                                  className="absolute rounded-full border-2 border-white flex items-center justify-center text-white font-semibold shadow-md"
+                                  style={{
+                                    left: 0,
+                                    top: '2px',
+                                    width: '40px',
+                                    height: '40px',
+                                    background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+                                    zIndex: 2,
+                                    fontSize: '16px'
+                                  }}
+                                >
+                                  {initials}
+                                </div>
+                                {/* Product image (back circle - yellow) */}
+                                <div
+                                  className="absolute rounded-full border-2 border-white shadow-md"
+                                  style={{
+                                    left: '20px',
+                                    top: '2px',
+                                    width: '40px',
+                                    height: '40px',
+                                    background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+                                    zIndex: 1
+                                  }}
+                                />
+                                {/* Heart badge */}
+                                <div
+                                  className="absolute bg-white rounded-full flex items-center justify-center shadow"
+                                  style={{ left: '24px', bottom: 0, zIndex: 3, width: '16px', height: '16px' }}
+                                >
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="#ef4444">
+                                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                                  </svg>
+                                </div>
+                              </div>
+
+                              {/* Text content */}
+                              <div className="flex flex-col justify-center min-w-0 pr-2">
+                                {/* First line: "Maya from Toronto" */}
+                                <div className="text-sm text-gray-700 whitespace-nowrap">
+                                  <span className="font-semibold text-indigo-500">{sampleName}</span>
+                                  <span> from {locationText || 'Toronto'}</span>
+                                </div>
+                                {/* Second line: "is looking at this" */}
+                                <div className="text-[13px] text-gray-400 whitespace-nowrap">
+                                  {sampleEvent}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            /* Standard layouts (card, compact, minimal, full-width) - Matches engine rendering */
+                            <>
+                              <div className="flex items-start gap-3">
+                                {/* Avatar - matches engine: 48x48 rounded-lg with gradient */}
+                                {(displaySettings.content.showEventIcon || displaySettings.content.showUserAvatar) && (
+                                  <div
+                                    className="w-12 h-12 rounded-[10px] flex items-center justify-center flex-shrink-0 text-white font-semibold text-lg"
+                                    style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}
+                                  >
+                                    {displaySettings.content.showUserAvatar ? initials : '✨'}
+                                  </div>
+                                )}
+
+                                <div className="flex-1 min-w-0">
+                                  {/* Customer name - matches engine: 14px font-semibold text-gray-900 */}
+                                  {displaySettings.content.showCustomerName && (
+                                    <div className="text-sm font-semibold text-gray-900 mb-0.5">
+                                      {sampleName}
+                                    </div>
+                                  )}
+
+                                  {/* Action message - matches engine: 13px text-gray-600 */}
+                                  <div className="text-[13px] text-gray-600 leading-snug mb-1">
+                                    {sampleEvent}
+                                    {valueText && (
+                                      <span className="ml-1 font-semibold text-emerald-600">{valueText}</span>
+                                    )}
+                                  </div>
+
+                                  {/* Rating Stars for Reviews - matches engine */}
+                                  {displaySettings.content.showRating && sampleRating && (
+                                    <div className="flex items-center gap-0.5 mb-1">
+                                      {[...Array(5)].map((_, i) => (
+                                        <span key={i} className="text-sm" style={{ color: i < sampleRating ? '#FBBF24' : '#D1D5DB' }}>
+                                          ★
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {/* Review Content - matches engine */}
+                                  {displaySettings.content.showReviewContent && sampleReviewContent && (
+                                    <p className="text-xs text-gray-500 italic leading-snug mb-1 line-clamp-2">
+                                      "{sampleReviewContent}"
+                                    </p>
+                                  )}
+
+                                  {/* Bottom row: timestamp + location + branding - matches engine */}
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full flex-shrink-0"></span>
+                                    {metaLine && (
+                                      <span className="text-[11px] text-gray-500">{metaLine}</span>
+                                    )}
+                                    {config?.branding?.identity?.showPoweredBy && (
+                                      <>
+                                        <span className="text-gray-300 ml-auto">•</span>
+                                        <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                                          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="10" /></svg>
+                                          ProofEdge
+                                        </span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Device Frame Decoration */}
                   {previewDevice === 'mobile' && (
@@ -2463,7 +2458,7 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
               {/* Preview Info */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-xs text-blue-800">
-                  <span className="font-semibold">Live Preview:</span> This shows how your widget will appear to visitors with sample data matching your widget type. 
+                  <span className="font-semibold">Live Preview:</span> This shows how your widget will appear to visitors with sample data matching your widget type.
                   Changes are reflected in real-time as you adjust settings.
                 </p>
               </div>

@@ -20,6 +20,10 @@ function AppContent() {
   };
   
   const [authMode, setAuthMode] = useState<'landing' | 'login' | 'signup' | 'terms' | 'privacy' | 'refund'>(getInitialMode);
+  const [pendingPlanSlug, setPendingPlanSlug] = useState<string | null>(() => {
+    // Check if there's a pending plan from localStorage
+    return localStorage.getItem('proofedge_pending_plan');
+  });
 
   // Show loading spinner while checking auth state
   if (loading) {
@@ -32,6 +36,13 @@ function AppContent() {
 
   // If user is authenticated, show dashboard
   if (user) {
+    // Check if there's a pending plan to redirect to billing
+    const pendingPlan = localStorage.getItem('proofedge_pending_plan');
+    if (pendingPlan) {
+      localStorage.removeItem('proofedge_pending_plan');
+      // Pass the pending plan to Dashboard to auto-navigate to billing
+      return <Dashboard initialSection="billing" pendingPlanSlug={pendingPlan} />;
+    }
     return <Dashboard />;
   }
 
@@ -73,7 +84,14 @@ function AppContent() {
   return (
     <LandingPage 
       onShowLogin={() => setAuthMode('login')} 
-      onShowSignup={() => setAuthMode('signup')}
+      onShowSignup={(planSlug?: string) => {
+        // Store the selected plan if any
+        if (planSlug) {
+          localStorage.setItem('proofedge_pending_plan', planSlug);
+          setPendingPlanSlug(planSlug);
+        }
+        setAuthMode('signup');
+      }}
       onShowTerms={() => {
         window.history.pushState({}, '', '/terms');
         setAuthMode('terms');

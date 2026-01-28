@@ -72,7 +72,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Redirect to reset password form
         window.location.hash = '#reset-password';
       }
-      
+
       // Clean URL after successful OAuth sign in
       if (event === 'SIGNED_IN' && window.location.hash.includes('access_token')) {
         window.history.replaceState(null, '', window.location.pathname);

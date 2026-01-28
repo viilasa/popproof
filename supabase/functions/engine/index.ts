@@ -2,12 +2,12 @@ import { corsHeaders } from '../_shared/cors.ts';
 
 // Edge function to serve the widget engine script
 Deno.serve((req) => {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+    // Handle CORS preflight
+    if (req.method === 'OPTIONS') {
+        return new Response(null, { headers: corsHeaders });
+    }
 
-  const engineCode = `(function() {
+    const engineCode = `(function() {
     console.log("ProofPop Widget Engine v2.8 Loaded - PILL BADGE SUPPORT");
 
     const WIDGET_API_URL = 'https://ghiobuubmnvlaukeyuwe.supabase.co/functions/v1/get-widgets';
@@ -734,11 +734,25 @@ Deno.serve((req) => {
                     };
                 });
                 
+                // ============ PILL BADGE WIDGETS ============
+                // Pill badge widgets need special handling - they show real-time daily stats
+                // instead of individual notification events. Process them separately.
+                checkAndRenderPillBadges(data.widgets);
+                
+                // Filter out pill badge widgets from regular notification processing
+                const regularWidgets = data.widgets.filter(w => {
+                    const isPillBadge = w.layout_style === 'pill-badge' || w.widget_type === 'pill_badge';
+                    if (isPillBadge) {
+                        console.log('ProofPop: Widget ' + w.widget_id + ' is a pill badge, handled separately');
+                    }
+                    return !isPillBadge;
+                });
+                
                 // Filter and collect notifications from widgets that pass trigger rules
                 // NOTE: Do NOT check frequency limits here - that blocks entire widgets
                 // Frequency should only be checked when actually displaying notifications
                 const allNotifications = [];
-                data.widgets.forEach(widgetData => {
+                regularWidgets.forEach(widgetData => {
                     // Apply trigger validations
                     const urlPatterns = widgetData.url_patterns || {};
                     const displaySettings = widgetData.display || {};
@@ -2435,13 +2449,13 @@ Deno.serve((req) => {
 
 })();`;
 
-  return new Response(engineCode, {
-    headers: {
-      ...corsHeaders,
-      'Content-Type': 'application/javascript',
-      'Cache-Control': 'no-cache, no-store, must-revalidate', // Disable cache for testing
-      'Pragma': 'no-cache',
-      'Expires': '0'
-    }
-  });
+    return new Response(engineCode, {
+        headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/javascript',
+            'Cache-Control': 'no-cache, no-store, must-revalidate', // Disable cache for testing
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        }
+    });
 });

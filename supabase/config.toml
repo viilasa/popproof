@@ -12,3 +12,15 @@ verify_jwt = false
 
 [functions.track-event]
 verify_jwt = false
+
+[functions.get-widget-notifications]
+verify_jwt = false
+
+[functions.get-daily-stats]
+verify_jwt = false
+
+[functions.track-impression]
+verify_jwt = false
+
+[functions.track-analytics]
+verify_jwt = false

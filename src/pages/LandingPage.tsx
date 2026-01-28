@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
-import { 
-  Shield, 
-  Zap, 
-  Check, 
-  TrendingUp, 
-  Code, 
-  ArrowRight, 
-  Star, 
-  Menu, 
+import {
+  Shield,
+  Zap,
+  Check,
+  TrendingUp,
+  Code,
+  ArrowRight,
+  Star,
+  Menu,
   X,
   ShoppingBag,
   Eye,
@@ -23,24 +23,24 @@ import {
 
 // Pricing tier options
 const PRO_TIERS = [
-  { visitors: '6,000', price: 9 },
-  { visitors: '10,000', price: 12 },
-  { visitors: '15,000', price: 16 },
-  { visitors: '25,000', price: 21 },
-  { visitors: '50,000', price: 36 },
+  { slug: 'pro-6k', visitors: '6,000', price: 9 },
+  { slug: 'pro-10k', visitors: '10,000', price: 12 },
+  { slug: 'pro-15k', visitors: '15,000', price: 16 },
+  { slug: 'pro-25k', visitors: '25,000', price: 21 },
+  { slug: 'pro-50k', visitors: '50,000', price: 36 },
 ];
 
 const GROWTH_TIERS = [
-  { visitors: '100,000', price: 59 },
-  { visitors: '200,000', price: 79 },
-  { visitors: '400,000', price: 120 },
-  { visitors: '600,000', price: 180 },
-  { visitors: '1,000,000', price: 210 },
+  { slug: 'growth-100k', visitors: '100,000', price: 59 },
+  { slug: 'growth-200k', visitors: '200,000', price: 79 },
+  { slug: 'growth-400k', visitors: '400,000', price: 120 },
+  { slug: 'growth-600k', visitors: '600,000', price: 180 },
+  { slug: 'growth-1m', visitors: '1,000,000', price: 210 },
 ];
 
 interface LandingPageProps {
   onShowLogin: () => void;
-  onShowSignup: () => void;
+  onShowSignup: (planSlug?: string) => void;
   onShowTerms?: () => void;
   onShowPrivacy?: () => void;
   onShowRefund?: () => void;
@@ -48,7 +48,7 @@ interface LandingPageProps {
 
 // Logo component using Cloudinary image
 const Logo = ({ className = "w-8 h-8" }: { className?: string }) => (
-  <img 
+  <img
     src="https://res.cloudinary.com/ddhhlkyut/image/upload/v1765406050/Proofedge6_dxarbe.svg"
     alt="ProofEdge logo"
     className={className}
@@ -93,7 +93,53 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
 
     return () => {
       // Cleanup: remove script when leaving LandingPage
-      document.head.removeChild(script);
+      try {
+        document.head.removeChild(script);
+      } catch (e) {
+        // Script may already be removed
+      }
+
+      // Remove the specific widget container created by widget.js
+      const spWidgetContainer = document.querySelector('.sp-widget-container');
+      if (spWidgetContainer) spWidgetContainer.remove();
+
+      // Remove the widget styles
+      const widgetStyles = document.getElementById('social-proof-widget-styles');
+      if (widgetStyles) widgetStyles.remove();
+
+      // Remove all ProofEdge/ProofPop widget elements from the DOM
+      const widgetContainers = document.querySelectorAll('[id^="proofedge"], [id^="proof-edge"], [id^="proofpop"], [class*="proofedge"], [class*="proof-edge"], [class*="proofpop"], .sp-notification');
+      widgetContainers.forEach(el => el.remove());
+
+      // Also remove any widget containers with common patterns
+      const genericWidgets = document.querySelectorAll('[data-proofedge], [data-widget-id], .social-proof-widget, .notification-widget');
+      genericWidgets.forEach(el => el.remove());
+
+      // Clear any global ProofEdge state and intervals
+      if (typeof window !== 'undefined') {
+        // @ts-ignore - Clear widget instance
+        if (window.ProofEdge) {
+          // @ts-ignore
+          if (window.ProofEdge.fetchInterval) clearInterval(window.ProofEdge.fetchInterval);
+          // @ts-ignore
+          if (window.ProofEdge.verificationInterval) clearInterval(window.ProofEdge.verificationInterval);
+          // @ts-ignore
+          delete window.ProofEdge;
+        }
+        // @ts-ignore
+        if (window.proofedge) delete window.proofedge;
+        // @ts-ignore
+        if (window.ProofPop) {
+          // @ts-ignore
+          if (window.ProofPop.fetchInterval) clearInterval(window.ProofPop.fetchInterval);
+          // @ts-ignore
+          if (window.ProofPop.verificationInterval) clearInterval(window.ProofPop.verificationInterval);
+          // @ts-ignore
+          delete window.ProofPop;
+        }
+        // @ts-ignore
+        if (window.SocialProofWidget) delete window.SocialProofWidget;
+      }
     };
   }, []);
 
@@ -384,15 +430,15 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-5">
-            <button 
+            <button
               onClick={onShowLogin}
               className="text-base font-semibold text-gray-700 hover:text-blue-600 transition-colors px-4 py-2"
               aria-label="Log in to your account"
             >
               Log in
             </button>
-            <button 
-              onClick={onShowSignup}
+            <button
+              onClick={() => onShowSignup()}
               className="bg-gray-900 text-white px-6 py-3 rounded-xl text-base font-semibold hover:bg-gray-800 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-gray-500/20"
               aria-label="Get started with ProofEdge"
             >
@@ -402,8 +448,8 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
 
           {/* Mobile Menu Toggle */}
           <div className="md:hidden">
-            <button 
-              onClick={() => setIsMenuOpen(!isMenuOpen)} 
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="text-gray-900 p-2 rounded-lg hover:bg-gray-100 transition-colors"
               aria-expanded={isMenuOpen}
               aria-label={isMenuOpen ? "Close menu" : "Open menu"}
@@ -420,15 +466,15 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
             <a href="#how-it-works" className="text-lg font-semibold text-gray-900 py-2">How It Works</a>
             <a href="#pricing" className="text-lg font-semibold text-gray-900 py-2">Pricing</a>
             <hr className="border-gray-200 my-2" />
-            <button 
+            <button
               onClick={onShowLogin}
               className="w-full bg-white border-2 border-gray-200 text-gray-900 py-4 rounded-xl font-semibold text-lg hover:bg-gray-50 transition-colors"
               aria-label="Log in to your account"
             >
               Log in
             </button>
-            <button 
-              onClick={onShowSignup}
+            <button
+              onClick={() => onShowSignup()}
               className="w-full bg-gray-900 text-white py-4 rounded-xl font-semibold text-lg hover:bg-gray-800 transition-colors"
               aria-label="Get started with ProofEdge"
             >
@@ -444,12 +490,12 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
         <div className="absolute top-20 left-10 w-96 h-96 bg-blue-500/10 rounded-full blur-[100px] floating-slow" aria-hidden="true"></div>
         <div className="absolute bottom-20 right-10 w-[500px] h-[500px] bg-violet-500/10 rounded-full blur-[120px] floating-delayed" aria-hidden="true"></div>
         <div className="absolute top-1/3 left-1/3 w-72 h-72 bg-indigo-400/10 rounded-full blur-[80px]" aria-hidden="true"></div>
-        
+
         {/* Grid pattern overlay */}
         <div className="absolute inset-0 bg-[linear-gradient(rgba(99,102,241,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.03)_1px,transparent_1px)] bg-[size:60px_60px]" aria-hidden="true"></div>
-        
+
         <div className="max-w-7xl mx-auto px-6 lg:px-8 grid lg:grid-cols-2 gap-16 items-center relative z-10">
-          
+
           {/* Left Content */}
           <div className="relative z-10 fade-up">
             {/* Badge */}
@@ -457,16 +503,16 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
               <Sparkles size={16} className="text-indigo-500" aria-hidden="true" />
               <span>Trusted by 2,000+ brands worldwide</span>
             </div>
-            
+
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-gray-900 leading-[1.1] mb-6">
               Turn Visitors Into
               <span className="block text-gradient">Customers</span>
             </h1>
-            
+
             <p className="text-xl text-gray-600 mb-8 max-w-xl leading-relaxed">
               Show real-time social proof notifications that build trust and boost conversions by up to 15%. No fake popups — just authentic customer activity.
             </p>
-            
+
             {/* Stats row */}
             <div className="flex flex-wrap gap-8 mb-10">
               <div className="flex items-center gap-3">
@@ -490,15 +536,15 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <button 
-                onClick={onShowSignup}
+              <button
+                onClick={() => onShowSignup()}
                 className="bg-gray-900 text-white px-8 py-4 rounded-2xl font-semibold text-lg hover:bg-gray-800 transition-all shadow-xl shadow-gray-900/20 flex items-center justify-center gap-3 group focus:outline-none focus:ring-4 focus:ring-gray-500/30 shine-effect"
                 aria-label="Get started with ProofEdge for free"
               >
                 Start Free Trial
                 <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" aria-hidden="true" />
               </button>
-              <button 
+              <button
                 onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
                 className="bg-white/80 backdrop-blur-sm border border-gray-200 text-gray-700 px-8 py-4 rounded-2xl font-semibold text-lg hover:bg-white hover:border-gray-300 transition-all flex items-center justify-center gap-2 focus:outline-none focus:ring-4 focus:ring-gray-500/20"
                 aria-label="Watch demo video"
@@ -507,14 +553,14 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
                 See How It Works
               </button>
             </div>
-            
+
             {/* Trust indicators */}
             <div className="mt-10 flex items-center gap-4">
               <div className="flex -space-x-2" role="group" aria-label="Customer avatars">
-                {[1,2,3,4,5].map(i => (
+                {[1, 2, 3, 4, 5].map(i => (
                   <div key={i} className="w-9 h-9 rounded-full border-2 border-white bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center overflow-hidden shadow-md">
-                    <img 
-                      src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${i*12}`} 
+                    <img
+                      src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${i * 12}`}
                       alt={`Customer ${i} avatar`}
                       className="w-full h-full object-cover"
                     />
@@ -522,7 +568,7 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
                 ))}
               </div>
               <div className="flex items-center gap-1">
-                {[1,2,3,4,5].map(i => (
+                {[1, 2, 3, 4, 5].map(i => (
                   <Star key={i} size={16} className="text-amber-400 fill-amber-400" />
                 ))}
               </div>
@@ -531,14 +577,14 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
           </div>
 
           {/* Right Visual: Dynamic Demo */}
-          <div 
+          <div
             className="relative h-[500px] lg:h-[560px] rounded-3xl flex items-center justify-center overflow-hidden group"
             role="img"
             aria-label="Interactive demo showing ProofEdge social proof notifications"
           >
             {/* Glassmorphic card background */}
             <div className="absolute inset-4 bg-white/60 backdrop-blur-xl rounded-2xl border border-white/50 shadow-2xl card-glow"></div>
-            
+
             {/* Browser mockup */}
             <div className="relative w-[90%] h-[85%] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
               {/* Browser header */}
@@ -554,7 +600,7 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
                   </div>
                 </div>
               </div>
-              
+
               {/* Page content mockup */}
               <div className="p-6 space-y-4 bg-gradient-to-b from-gray-50 to-white h-full">
                 <div className="flex gap-4">
@@ -577,16 +623,15 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
             <div className={`absolute bottom-8 left-6 w-72 md:w-80 transition-all duration-500 ease-out floating ${isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
               <div className="bg-white rounded-2xl p-4 flex items-center gap-4 shadow-2xl border border-gray-100">
                 {/* Icon Area */}
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
-                  currentWidget.type === 'purchase' ? 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white' :
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${currentWidget.type === 'purchase' ? 'bg-gradient-to-br from-indigo-500 to-purple-500 text-white' :
                   currentWidget.type === 'visitor' ? 'bg-gradient-to-br from-emerald-500 to-teal-500 text-white' :
-                  'bg-gradient-to-br from-amber-500 to-orange-500 text-white'
-                }`}>
+                    'bg-gradient-to-br from-amber-500 to-orange-500 text-white'
+                  }`}>
                   {currentWidget.type === 'purchase' && <ShoppingBag size={18} />}
                   {currentWidget.type === 'visitor' && <Eye size={18} />}
                   {currentWidget.type === 'review' && <Star size={18} fill="currentColor" />}
                 </div>
-                
+
                 {/* Text Area */}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-900 leading-snug truncate">
@@ -602,7 +647,7 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
                 </div>
               </div>
             </div>
-            
+
             {/* Stats floating card */}
             <div className="absolute top-8 right-6 bg-white/90 backdrop-blur-sm rounded-xl p-3 shadow-lg border border-gray-100 floating" style={{ animationDelay: '1s' }}>
               <div className="flex items-center gap-2">
@@ -624,9 +669,9 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
         <div className="max-w-7xl mx-auto px-6 lg:px-8 text-center">
           <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-10">Proven increases without the hype</p>
           <div className="flex flex-wrap justify-center items-center gap-x-16 gap-y-8">
-             {['Acme Corp', 'GlobalBank', 'Nebula', 'FocalPoint', 'Vertex'].map((brand) => (
-               <span key={brand} className="text-2xl font-bold text-gray-400 hover:text-gray-600 transition-colors cursor-default">{brand}</span>
-             ))}
+            {['Acme Corp', 'GlobalBank', 'Nebula', 'FocalPoint', 'Vertex'].map((brand) => (
+              <span key={brand} className="text-2xl font-bold text-gray-400 hover:text-gray-600 transition-colors cursor-default">{brand}</span>
+            ))}
           </div>
         </div>
       </section>
@@ -681,46 +726,46 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
       <section id="how-it-works" className="py-28 bg-gradient-to-b from-gray-50 to-white relative overflow-hidden" aria-labelledby="how-it-works-heading">
         {/* Background decoration */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-indigo-100/50 to-transparent rounded-full blur-3xl" aria-hidden="true"></div>
-        
+
         <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
           <div className="text-center mb-20">
-             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-blue-600 text-sm font-semibold mb-6">
-               <Zap size={16} />
-               <span>Quick Setup</span>
-             </div>
-             <h2 id="how-it-works-heading" className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5">Get Started in <span className="text-gradient">3 Simple Steps</span></h2>
-             <p className="text-gray-600 text-xl">No coding required. Install in under 2 minutes.</p>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-blue-600 text-sm font-semibold mb-6">
+              <Zap size={16} />
+              <span>Quick Setup</span>
+            </div>
+            <h2 id="how-it-works-heading" className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-5">Get Started in <span className="text-gradient">3 Simple Steps</span></h2>
+            <p className="text-gray-600 text-xl">No coding required. Install in under 2 minutes.</p>
           </div>
-          
+
           {/* Steps with connecting line */}
           <div className="relative">
             {/* Connecting line */}
             <div className="hidden md:block absolute top-24 left-[16.67%] right-[16.67%] h-0.5 bg-gradient-to-r from-blue-200 via-indigo-300 to-emerald-200" aria-hidden="true"></div>
-            
+
             <div className="grid md:grid-cols-3 gap-8">
               <article className="group bg-white p-10 rounded-3xl border border-gray-100 shadow-lg text-center card-hover relative">
-                 <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-xl group-hover:scale-110 transition-transform" aria-hidden="true">
-                   <Users size={32} />
-                 </div>
-                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg">1</div>
-                 <h3 className="font-bold text-gray-900 mb-4 text-xl">Create Your Account</h3>
-                 <p className="text-gray-600 text-lg leading-relaxed">Sign up for free and add your website in seconds.</p>
+                <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-xl group-hover:scale-110 transition-transform" aria-hidden="true">
+                  <Users size={32} />
+                </div>
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg">1</div>
+                <h3 className="font-bold text-gray-900 mb-4 text-xl">Create Your Account</h3>
+                <p className="text-gray-600 text-lg leading-relaxed">Sign up for free and add your website in seconds.</p>
               </article>
               <article className="group bg-white p-10 rounded-3xl border border-gray-100 shadow-lg text-center card-hover relative">
-                 <div className="w-20 h-20 bg-gradient-to-br from-indigo-600 to-violet-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-xl group-hover:scale-110 transition-transform" aria-hidden="true">
-                   <MousePointer size={32} />
-                 </div>
-                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg">2</div>
-                 <h3 className="font-bold text-gray-900 mb-4 text-xl">Copy & Paste the Pixel</h3>
-                 <p className="text-gray-600 text-lg leading-relaxed">Add one line of code to your site header. Works with Shopify, WordPress, and more.</p>
+                <div className="w-20 h-20 bg-gradient-to-br from-indigo-600 to-violet-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-xl group-hover:scale-110 transition-transform" aria-hidden="true">
+                  <MousePointer size={32} />
+                </div>
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg">2</div>
+                <h3 className="font-bold text-gray-900 mb-4 text-xl">Copy & Paste the Pixel</h3>
+                <p className="text-gray-600 text-lg leading-relaxed">Add one line of code to your site header. Works with Shopify, WordPress, and more.</p>
               </article>
               <article className="group bg-white p-10 rounded-3xl border border-gray-100 shadow-lg text-center card-hover relative">
-                 <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-500 text-white rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-xl group-hover:scale-110 transition-transform" aria-hidden="true">
-                   <Rocket size={32} />
-                 </div>
-                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-8 bg-emerald-500 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg">3</div>
-                 <h3 className="font-bold text-gray-900 mb-4 text-xl">Watch Conversions Grow</h3>
-                 <p className="text-gray-600 text-lg leading-relaxed">Real social proof starts showing automatically. Track results in your dashboard.</p>
+                <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-500 text-white rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-xl group-hover:scale-110 transition-transform" aria-hidden="true">
+                  <Rocket size={32} />
+                </div>
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-8 bg-emerald-500 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg">3</div>
+                <h3 className="font-bold text-gray-900 mb-4 text-xl">Watch Conversions Grow</h3>
+                <p className="text-gray-600 text-lg leading-relaxed">Real social proof starts showing automatically. Track results in your dashboard.</p>
               </article>
             </div>
           </div>
@@ -731,7 +776,7 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
       <section className="py-28 bg-white overflow-hidden relative" aria-labelledby="modern-section-heading">
         {/* Subtle background decoration */}
         <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 via-transparent to-indigo-50/50" aria-hidden="true"></div>
-        
+
         <div className="max-w-7xl mx-auto px-6 lg:px-8 grid lg:grid-cols-2 gap-20 items-center relative z-10">
           <div>
             <div className="flex items-center gap-3 text-emerald-600 mb-6 font-mono text-sm font-semibold">
@@ -744,7 +789,7 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
             <p className="text-gray-600 text-xl mb-10 leading-relaxed">
               Clean design, smooth animations, instant loading — ProofEdge blends beautifully with your brand.
             </p>
-            
+
             <ul className="flex flex-col gap-5" role="list">
               <li className="flex items-center gap-4 text-gray-700 text-lg">
                 <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600" aria-hidden="true"><Zap size={20} /></div>
@@ -812,55 +857,55 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
       {/* --- What Actually Moves Conversions --- */}
       <section className="py-28 bg-gradient-to-b from-white to-slate-50" aria-labelledby="conversions-heading">
         <div className="max-w-6xl mx-auto px-6 lg:px-8 text-center">
-           <h2 id="conversions-heading" className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">What Actually Moves Conversions</h2>
-           <p className="text-gray-600 text-xl mb-20 max-w-3xl mx-auto leading-relaxed">Reddit users, SaaS founders, and marketers all agree: authenticity beats flashiness. ProofEdge focuses on the things that actually move the needle.</p>
-           
-           <div className="grid md:grid-cols-3 gap-10 text-left">
-               {/* Item 1 */}
-               <article className="bg-white p-10 rounded-3xl border-2 border-slate-100 flex flex-col items-center shadow-lg hover:shadow-xl transition-shadow">
-                   <div className="bg-slate-50 rounded-2xl p-5 flex items-center gap-5 shadow-sm w-full border border-slate-100 mb-8">
-                        <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0" aria-hidden="true">
-                            <ShoppingBag size={22} />
-                        </div>
-                        <div>
-                            <p className="text-base font-bold text-gray-900">Purchased Pro Plan</p>
-                            <p className="text-sm text-gray-500">2 mins ago • Verified</p>
-                        </div>
-                   </div>
-                   <h4 className="font-bold text-gray-900 mb-3 text-xl">Real-Time Purchase</h4>
-                   <p className="text-base text-gray-600 text-center leading-relaxed">Show verified recent purchases with dynamic timestamps for maximum credibility.</p>
-               </article>
+          <h2 id="conversions-heading" className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">What Actually Moves Conversions</h2>
+          <p className="text-gray-600 text-xl mb-20 max-w-3xl mx-auto leading-relaxed">Reddit users, SaaS founders, and marketers all agree: authenticity beats flashiness. ProofEdge focuses on the things that actually move the needle.</p>
 
-               {/* Item 2 */}
-               <article className="bg-white p-10 rounded-3xl border-2 border-slate-100 flex flex-col items-center shadow-lg hover:shadow-xl transition-shadow">
-                   <div className="bg-slate-50 rounded-2xl p-5 flex items-center gap-5 shadow-sm w-full border border-slate-100 mb-8">
-                        <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0" aria-hidden="true">
-                            <Eye size={22} />
-                        </div>
-                        <div>
-                            <p className="text-base font-bold text-gray-900">47 people viewing</p>
-                            <p className="text-sm text-gray-500">Live Count</p>
-                        </div>
-                   </div>
-                   <h4 className="font-bold text-gray-900 mb-3 text-xl">Live Visitor Count</h4>
-                   <p className="text-base text-gray-600 text-center leading-relaxed">"47 people are viewing this page." Real-time reassurance reduces hesitation.</p>
-               </article>
+          <div className="grid md:grid-cols-3 gap-10 text-left">
+            {/* Item 1 */}
+            <article className="bg-white p-10 rounded-3xl border-2 border-slate-100 flex flex-col items-center shadow-lg hover:shadow-xl transition-shadow">
+              <div className="bg-slate-50 rounded-2xl p-5 flex items-center gap-5 shadow-sm w-full border border-slate-100 mb-8">
+                <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0" aria-hidden="true">
+                  <ShoppingBag size={22} />
+                </div>
+                <div>
+                  <p className="text-base font-bold text-gray-900">Purchased Pro Plan</p>
+                  <p className="text-sm text-gray-500">2 mins ago • Verified</p>
+                </div>
+              </div>
+              <h4 className="font-bold text-gray-900 mb-3 text-xl">Real-Time Purchase</h4>
+              <p className="text-base text-gray-600 text-center leading-relaxed">Show verified recent purchases with dynamic timestamps for maximum credibility.</p>
+            </article>
 
-               {/* Item 3 */}
-               <article className="bg-white p-10 rounded-3xl border-2 border-slate-100 flex flex-col items-center shadow-lg hover:shadow-xl transition-shadow">
-                   <div className="bg-slate-50 rounded-2xl p-5 flex items-center gap-5 shadow-sm w-full border border-slate-100 mb-8">
-                        <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0" aria-hidden="true">
-                            <Star size={22} fill="currentColor"/>
-                        </div>
-                        <div>
-                            <p className="text-base font-bold text-gray-900">"Best tool ever"</p>
-                            <p className="text-sm text-gray-500">5 stars on G2</p>
-                        </div>
-                   </div>
-                   <h4 className="font-bold text-gray-900 mb-3 text-xl">Review Highlights</h4>
-                   <p className="text-base text-gray-600 text-center leading-relaxed">Highlight your top-rated reviews from trusted sources with clean, premium UI.</p>
-               </article>
-           </div>
+            {/* Item 2 */}
+            <article className="bg-white p-10 rounded-3xl border-2 border-slate-100 flex flex-col items-center shadow-lg hover:shadow-xl transition-shadow">
+              <div className="bg-slate-50 rounded-2xl p-5 flex items-center gap-5 shadow-sm w-full border border-slate-100 mb-8">
+                <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0" aria-hidden="true">
+                  <Eye size={22} />
+                </div>
+                <div>
+                  <p className="text-base font-bold text-gray-900">47 people viewing</p>
+                  <p className="text-sm text-gray-500">Live Count</p>
+                </div>
+              </div>
+              <h4 className="font-bold text-gray-900 mb-3 text-xl">Live Visitor Count</h4>
+              <p className="text-base text-gray-600 text-center leading-relaxed">"47 people are viewing this page." Real-time reassurance reduces hesitation.</p>
+            </article>
+
+            {/* Item 3 */}
+            <article className="bg-white p-10 rounded-3xl border-2 border-slate-100 flex flex-col items-center shadow-lg hover:shadow-xl transition-shadow">
+              <div className="bg-slate-50 rounded-2xl p-5 flex items-center gap-5 shadow-sm w-full border border-slate-100 mb-8">
+                <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0" aria-hidden="true">
+                  <Star size={22} fill="currentColor" />
+                </div>
+                <div>
+                  <p className="text-base font-bold text-gray-900">"Best tool ever"</p>
+                  <p className="text-sm text-gray-500">5 stars on G2</p>
+                </div>
+              </div>
+              <h4 className="font-bold text-gray-900 mb-3 text-xl">Review Highlights</h4>
+              <p className="text-base text-gray-600 text-center leading-relaxed">Highlight your top-rated reviews from trusted sources with clean, premium UI.</p>
+            </article>
+          </div>
         </div>
       </section>
 
@@ -868,7 +913,7 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
       <section id="pricing" className="py-28 bg-gradient-to-b from-white to-gray-50 relative overflow-hidden" aria-labelledby="pricing-heading">
         {/* Background decoration */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[600px] bg-gradient-to-r from-blue-100/30 via-indigo-100/30 to-violet-100/30 rounded-full blur-3xl" aria-hidden="true"></div>
-        
+
         <div className="max-w-6xl mx-auto px-6 lg:px-8 relative z-10">
           <div className="text-center mb-20">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 text-emerald-600 text-sm font-semibold mb-6">
@@ -878,7 +923,7 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
             <h2 id="pricing-heading" className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6">Simple, <span className="text-gradient">Transparent</span> Pricing</h2>
             <p className="text-gray-600 text-xl">Start free. Upgrade when you're ready.</p>
           </div>
-          
+
           <div className="grid md:grid-cols-3 gap-8">
             {/* Starter Plan */}
             <article className="bg-white p-10 rounded-3xl border border-gray-200 hover:border-gray-300 hover:shadow-xl transition-all card-hover">
@@ -905,27 +950,27 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
                   <Check size={18} className="text-emerald-500 shrink-0" aria-hidden="true" /> <span>Basic support</span>
                 </li>
               </ul>
-              <button 
-                onClick={onShowSignup}
+              <button
+                onClick={() => onShowSignup()}
                 className="w-full py-4 rounded-xl border-2 border-gray-200 text-gray-900 font-semibold text-lg hover:bg-gray-50 hover:border-gray-300 transition-all focus:outline-none focus:ring-4 focus:ring-gray-500/20"
                 aria-label="Get started with Starter plan for free"
               >
                 Get Started Free
               </button>
             </article>
-            
+
             {/* Pro Plan */}
-            <article className="bg-gray-900 p-10 rounded-3xl border-2 border-gray-700 relative transform md:scale-105 shadow-2xl">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-bold px-5 py-2 rounded-full shadow-lg">MOST POPULAR</div>
+            <article className="bg-gray-900 p-10 rounded-3xl border-2 border-gray-700 relative transform md:scale-105 shadow-2xl opacity-75">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold px-5 py-2 rounded-full shadow-lg">COMING SOON</div>
               <h3 className="text-2xl font-bold text-white mb-2 mt-2">Pro</h3>
               <p className="text-gray-400 text-sm mb-5">For growing businesses & active stores</p>
-              
+
               {/* Price Display */}
               <div className="mb-5">
                 <span className="text-5xl font-extrabold text-white">${PRO_TIERS[selectedProTier].price}</span>
                 <span className="text-gray-400 text-lg">/month</span>
               </div>
-              
+
               {/* Visitor Tier Selector */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-3">
@@ -937,11 +982,10 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
                     <button
                       key={index}
                       onClick={() => setSelectedProTier(index)}
-                      className={`py-2 px-1 rounded-lg text-xs font-semibold transition-all ${
-                        selectedProTier === index
-                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
-                          : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
-                      }`}
+                      className={`py-2 px-1 rounded-lg text-xs font-semibold transition-all ${selectedProTier === index
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
+                        : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                        }`}
                     >
                       {tier.visitors.replace(',000', 'k')}
                     </button>
@@ -965,27 +1009,27 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
                   <Check size={18} className="text-emerald-400 shrink-0" aria-hidden="true" /> <span>Priority support</span>
                 </li>
               </ul>
-              <button 
-                onClick={onShowSignup}
-                className="w-full py-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold text-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-500/40"
-                aria-label="Start Pro plan trial"
+              <button
+                disabled
+                className="w-full py-4 rounded-xl bg-gray-700 text-gray-400 font-semibold text-lg cursor-not-allowed"
+                aria-label="Pro plan coming soon"
               >
-                Start Pro Trial
+                Coming Soon
               </button>
             </article>
-            
+
             {/* Growth Plan */}
-            <article className="bg-white p-10 rounded-3xl border border-gray-200 hover:border-gray-300 hover:shadow-xl transition-all card-hover relative">
-              <div className="absolute -top-3 right-6 bg-gradient-to-r from-violet-600 to-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full">SCALE</div>
+            <article className="bg-white p-10 rounded-3xl border border-gray-200 relative opacity-75">
+              <div className="absolute -top-3 right-6 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full">COMING SOON</div>
               <h3 className="text-2xl font-bold text-gray-900 mb-2">Growth</h3>
               <p className="text-gray-500 text-sm mb-5">For high-traffic sites & scaling businesses</p>
-              
+
               {/* Price Display */}
               <div className="mb-5">
                 <span className="text-5xl font-extrabold text-gray-900">${GROWTH_TIERS[selectedGrowthTier].price}</span>
                 <span className="text-gray-500 text-lg">/month</span>
               </div>
-              
+
               {/* Visitor Tier Selector */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-3">
@@ -997,11 +1041,10 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
                     <button
                       key={index}
                       onClick={() => setSelectedGrowthTier(index)}
-                      className={`py-2 px-1 rounded-lg text-xs font-semibold transition-all ${
-                        selectedGrowthTier === index
-                          ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg'
-                          : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200'
-                      }`}
+                      className={`py-2 px-1 rounded-lg text-xs font-semibold transition-all ${selectedGrowthTier === index
+                        ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg'
+                        : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200'
+                        }`}
                     >
                       {tier.visitors.replace(',000', 'k').replace('1,000k', '1M')}
                     </button>
@@ -1028,12 +1071,12 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
                   <Check size={18} className="text-emerald-500 shrink-0" aria-hidden="true" /> <span>SLA guarantee</span>
                 </li>
               </ul>
-              <button 
-                onClick={onShowSignup}
-                className="w-full py-4 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white font-semibold text-lg hover:from-violet-700 hover:to-purple-700 transition-all shadow-lg focus:outline-none focus:ring-4 focus:ring-violet-500/30"
-                aria-label="Start Growth plan"
+              <button
+                disabled
+                className="w-full py-4 rounded-xl bg-gray-200 text-gray-500 font-semibold text-lg cursor-not-allowed"
+                aria-label="Growth plan coming soon"
               >
-                Start Growth Plan
+                Coming Soon
               </button>
             </article>
           </div>
@@ -1046,7 +1089,7 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:24px_24px]" aria-hidden="true"></div>
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-[120px]" aria-hidden="true"></div>
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-violet-600/20 rounded-full blur-[120px]" aria-hidden="true"></div>
-        
+
         <div className="max-w-5xl mx-auto px-6 lg:px-8 relative z-10">
           <div className="text-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm text-white/80 text-sm font-semibold mb-8 border border-white/10">
@@ -1055,24 +1098,24 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
             </div>
             <h2 id="cta-heading" className="text-4xl md:text-6xl font-extrabold text-white mb-8 leading-tight">Ready to Build Trust<br /><span className="text-gradient">the Right Way?</span></h2>
             <p className="text-gray-400 text-xl mb-12 max-w-2xl mx-auto leading-relaxed">
-                Install ProofEdge in 2 minutes. No coding required. Start showing real proof — the kind that your buyers actually trust.
+              Install ProofEdge in 2 minutes. No coding required. Start showing real proof — the kind that your buyers actually trust.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-5">
-                <button 
-                  onClick={onShowSignup}
-                  className="bg-white text-gray-900 px-10 py-5 rounded-2xl font-bold hover:bg-gray-100 transition-all shadow-2xl shadow-white/20 text-lg flex items-center justify-center gap-3 focus:outline-none focus:ring-4 focus:ring-white/30 shine-effect"
-                  aria-label="Create your ProofEdge account"
-                >
-                  Start Free Trial
-                  <ArrowRight size={22} aria-hidden="true" />
-                </button>
-                <button 
-                  onClick={onShowLogin}
-                  className="bg-transparent border-2 border-white/20 text-white px-10 py-5 rounded-2xl font-semibold hover:bg-white/10 hover:border-white/30 transition-all text-lg focus:outline-none focus:ring-4 focus:ring-white/20"
-                  aria-label="Log in to your account"
-                >
-                  Log in
-                </button>
+              <button
+                onClick={() => onShowSignup()}
+                className="bg-white text-gray-900 px-10 py-5 rounded-2xl font-bold hover:bg-gray-100 transition-all shadow-2xl shadow-white/20 text-lg flex items-center justify-center gap-3 focus:outline-none focus:ring-4 focus:ring-white/30 shine-effect"
+                aria-label="Create your ProofEdge account"
+              >
+                Start Free Trial
+                <ArrowRight size={22} aria-hidden="true" />
+              </button>
+              <button
+                onClick={onShowLogin}
+                className="bg-transparent border-2 border-white/20 text-white px-10 py-5 rounded-2xl font-semibold hover:bg-white/10 hover:border-white/30 transition-all text-lg focus:outline-none focus:ring-4 focus:ring-white/20"
+                aria-label="Log in to your account"
+              >
+                Log in
+              </button>
             </div>
             <p className="mt-12 text-gray-500 text-base flex items-center justify-center gap-2">
               <Check size={16} className="text-emerald-400" />
@@ -1092,12 +1135,12 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
             {/* Logo & Copyright */}
             <div className="flex flex-col md:flex-row items-center gap-6">
               <div className="flex items-center gap-3">
-                <div className="text-blue-500 w-8 h-8" aria-hidden="true"><Logo className="w-8 h-8"/></div>
+                <div className="text-blue-500 w-8 h-8" aria-hidden="true"><Logo className="w-8 h-8" /></div>
                 <span className="font-bold text-xl text-white">ProofEdge</span>
               </div>
               <p className="text-gray-500 text-base">© 2025 ProofEdge. All rights reserved.</p>
             </div>
-            
+
             {/* Essential Links */}
             <nav className="flex items-center gap-6 sm:gap-8 text-sm sm:text-base" aria-label="Footer navigation">
               <a href="#pricing" className="text-gray-400 hover:text-white transition-colors font-medium">Pricing</a>

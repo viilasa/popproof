@@ -36,7 +36,7 @@ export default function RefundPage({ onBack }: RefundPageProps) {
             <section className="mb-8">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">1. Overview</h2>
               <p className="text-gray-600 leading-relaxed mb-4">
-                At ProofEdge, we want you to be completely satisfied with our service. This Refund & Cancellation Policy 
+                At ProofEdge, we want you to be completely satisfied with our service. This Refund & Cancellation Policy
                 outlines the terms and conditions for refunds and subscription cancellations.
               </p>
               <p className="text-gray-600 leading-relaxed">
@@ -47,7 +47,7 @@ export default function RefundPage({ onBack }: RefundPageProps) {
             <section className="mb-8">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">2. Free Plan</h2>
               <p className="text-gray-600 leading-relaxed">
-                Our Starter plan is completely free and does not require any payment. You can use the free plan 
+                Our Starter plan is completely free and does not require any payment. You can use the free plan
                 indefinitely with no obligation to upgrade. No refund policy applies to the free plan as no payment is made.
               </p>
             </section>
@@ -83,7 +83,7 @@ export default function RefundPage({ onBack }: RefundPageProps) {
               <p className="text-gray-600 leading-relaxed mb-4">
                 Refunds are available under the following conditions:
               </p>
-              
+
               <h3 className="text-lg font-medium text-gray-800 mb-3 mt-6">5.1 Eligible for Refund</h3>
               <ul className="list-disc list-inside text-gray-600 space-y-2 ml-4">
                 <li>Request made within 14 days of initial subscription payment</li>
@@ -119,11 +119,11 @@ export default function RefundPage({ onBack }: RefundPageProps) {
             <section className="mb-8">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">7. Plan Changes</h2>
               <p className="text-gray-600 leading-relaxed mb-4">
-                <strong>Upgrades:</strong> When you upgrade your plan, the new pricing takes effect immediately. 
+                <strong>Upgrades:</strong> When you upgrade your plan, the new pricing takes effect immediately.
                 You will be charged the prorated difference for the remainder of your billing period.
               </p>
               <p className="text-gray-600 leading-relaxed">
-                <strong>Downgrades:</strong> When you downgrade your plan, the change takes effect at the start of 
+                <strong>Downgrades:</strong> When you downgrade your plan, the change takes effect at the start of
                 your next billing period. You will continue to have access to your current plan's features until then.
               </p>
             </section>
@@ -131,17 +131,16 @@ export default function RefundPage({ onBack }: RefundPageProps) {
             <section className="mb-8">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">8. Payment Methods</h2>
               <p className="text-gray-600 leading-relaxed mb-4">
-                We accept payments through Razorpay, which supports:
+                We accept payments through Razorpay and PayPal, which support:
               </p>
               <ul className="list-disc list-inside text-gray-600 space-y-2 ml-4">
                 <li>Credit Cards (Visa, Mastercard, American Express)</li>
                 <li>Debit Cards</li>
                 <li>Net Banking</li>
-                <li>UPI</li>
-                <li>Digital Wallets</li>
+                <li>PayPal Balance</li>
               </ul>
               <p className="text-gray-600 leading-relaxed mt-4">
-                Refunds will be credited to the original payment method used for the transaction.
+                All payments are processed in USD. Refunds will be credited to the original payment method used for the transaction.
               </p>
             </section>
 

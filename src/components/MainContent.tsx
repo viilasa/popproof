@@ -9,6 +9,8 @@ import { supabase } from '../lib/supabase';
 import Account from '../pages/Account';
 import Analytics from '../pages/Analytics';
 import Help from '../pages/Help';
+import Support from '../pages/Support';
+import Billing from '../pages/Billing';
 import { Card, StatCard, Badge, Spinner, Button, LiveDot } from './ui';
 
 interface MainContentProps {
@@ -74,19 +76,19 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
     isOpen: false,
     title: '',
     message: '',
-    onConfirm: () => {},
+    onConfirm: () => { },
     loading: false
   });
 
   // State for widget editing
   const [selectedWidgetId, setSelectedWidgetId] = useState<string | null>(null);
-  
+
   // Load saved section and state on component mount
   useEffect(() => {
     const lastSection = localStorage.getItem('lastSection');
     const lastSiteId = localStorage.getItem('lastSiteId');
     const lastWidgetId = localStorage.getItem('lastWidgetId');
-    
+
     // If initialWidgetId is provided, use it (from URL parameter)
     if (initialWidgetId) {
       setSelectedWidgetId(initialWidgetId);
@@ -95,16 +97,16 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
     else if (lastWidgetId) {
       setSelectedWidgetId(lastWidgetId);
     }
-    
+
     if (lastSection && !initialWidgetId) {
       onSectionChange(lastSection);
     }
-    
+
     if (lastSiteId) {
       setSelectedSiteId(lastSiteId);
     }
   }, [initialWidgetId, onSectionChange]);
-  
+
   // Save current section and state when they change
   useEffect(() => {
     localStorage.setItem('lastSection', activeSection);
@@ -117,7 +119,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
       localStorage.removeItem('lastWidgetId');
     }
   }, [activeSection, selectedSiteId, selectedWidgetId]);
-  
+
   useEffect(() => {
     if (activeSection === 'sites' && userId) {
       fetchSites();
@@ -141,7 +143,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
   useEffect(() => {
     if (activeSection === 'notifications' && selectedSiteId) {
       fetchActiveVisitors(); // Initial fetch
-      
+
       const interval = setInterval(() => {
         fetchActiveVisitors();
       }, 10000); // Every 10 seconds
@@ -158,7 +160,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
   }, [sites]);
   const fetchNotifications = async () => {
     if (!userId || !selectedSiteId) return;
-    
+
     setNotificationsLoading(true);
     try {
       // Fetch widgets for the selected site
@@ -176,14 +178,14 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
       // Fetch analytics for all widgets
       const widgetIds = widgets?.map(w => w.id) || [];
       let analyticsMap: Record<string, { impressions: number; uniqueViewers: Set<string> }> = {};
-      
+
       if (widgetIds.length > 0) {
         const { data: analytics, error: analyticsError } = await supabase
           .from('notification_analytics')
           .select('widget_id, action_type, session_id')
           .in('widget_id', widgetIds)
           .eq('action_type', 'view');
-        
+
         if (!analyticsError && analytics) {
           // Aggregate analytics by widget_id
           analytics.forEach((record: { widget_id: string; action_type: string; session_id: string }) => {
@@ -200,7 +202,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
 
       const widgetNotifications: Notification[] = widgets?.map((widget, index) => {
         const stats = analyticsMap[widget.id] || { impressions: 0, uniqueViewers: new Set() };
-        
+
         return {
           id: widget.id,
           site_id: widget.site_id,
@@ -232,11 +234,11 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
 
   const fetchActiveVisitors = async () => {
     if (!selectedSiteId) return;
-    
+
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
+
       const response = await fetch(
         `${supabaseUrl}/functions/v1/get-active-visitors?site_id=${selectedSiteId}&time_window=5`,
         {
@@ -246,7 +248,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
           }
         }
       );
-      
+
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
@@ -260,7 +262,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
 
   const fetchSites = async () => {
     if (!userId) return;
-    
+
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -296,7 +298,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
   const deleteSite = async (siteId: string) => {
     const site = sites.find(s => s.id === siteId);
     console.log('Delete site clicked:', siteId, site);
-    
+
     // Save current section and state to localStorage for page reload persistence
     localStorage.setItem('lastSection', activeSection);
     localStorage.setItem('lastSiteId', selectedSiteId);
@@ -306,7 +308,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
       message: `Are you sure you want to delete "${site?.name || 'this site'}"? This will permanently remove all associated data and cannot be undone.`,
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, loading: true }));
-        
+
         try {
           const { error } = await supabase
             .from('sites')
@@ -315,7 +317,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
 
           if (error) throw error;
           fetchSites();
-          setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {}, loading: false });
+          setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => { }, loading: false });
         } catch (error) {
           console.error('Error deleting site:', error);
           setConfirmModal(prev => ({ ...prev, loading: false }));
@@ -327,7 +329,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
 
   const closeConfirmModal = () => {
     if (!confirmModal.loading) {
-      setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {}, loading: false });
+      setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => { }, loading: false });
     }
   };
 
@@ -364,9 +366,9 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
 
   const verifyPixel = async () => {
     if (!selectedSite) return;
-    
+
     setPixelStatus('checking');
-    
+
     try {
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-events?client_id=${selectedSite.public_key}&limit=1`,
@@ -378,7 +380,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
           },
         }
       );
-      
+
       if (response.ok) {
         const data = await response.json();
         setPixelStatus(data.events && data.events.length > 0 ? 'active' : 'inactive');
@@ -397,7 +399,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
       if (!notification) return;
 
       const newStatus = notification.status === 'active' ? false : true;
-      
+
       const { error } = await supabase
         .from('widgets')
         .update({ is_active: newStatus })
@@ -406,8 +408,8 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
       if (error) throw error;
 
       // Update local state
-      setNotifications(prev => prev.map(notification => 
-        notification.id === id 
+      setNotifications(prev => prev.map(notification =>
+        notification.id === id
           ? { ...notification, status: newStatus ? 'active' : 'inactive' }
           : notification
       ));
@@ -421,7 +423,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
     setSelectedWidgetId(id);
     onSectionChange('edit-widget');
   };
-  
+
   const deleteNotification = async (id: string) => {
     const notification = notifications.find(n => n.id === id);
     setConfirmModal({
@@ -430,7 +432,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
       message: `Are you sure you want to delete "${notification?.name || 'this notification'}"? This action cannot be undone and will permanently remove the notification from your site.`,
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, loading: true }));
-        
+
         try {
           const { error } = await supabase
             .from('widgets')
@@ -441,7 +443,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
 
           // Update local state
           setNotifications(prev => prev.filter(notification => notification.id !== id));
-          setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {}, loading: false });
+          setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => { }, loading: false });
         } catch (error) {
           console.error('Error deleting notification:', error);
           setConfirmModal(prev => ({ ...prev, loading: false }));
@@ -475,13 +477,13 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
     const diffTime = now.getTime() - date.getTime();
     const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffHours < 1) return 'Just now';
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays} days ago`;
     if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-    
+
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -498,7 +500,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
 
   if (activeSection === 'create-notification') {
     return (
-      <TemplateSelector 
+      <TemplateSelector
         onTemplateSelected={(widgetId: string) => {
           // Open the newly created widget in the enhanced editor immediately
           console.log('Opening newly created widget in enhanced editor:', widgetId);
@@ -530,9 +532,9 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                     <Globe className="w-4 h-4 text-brand-600" />
                   </div>
                   <span className="text-sm font-medium text-surface-900 truncate flex-1 text-left">
-                    {sites.find(s => s.id === selectedSiteId)?.domain || 
-                     sites.find(s => s.id === selectedSiteId)?.name || 
-                     'Select a site'}
+                    {sites.find(s => s.id === selectedSiteId)?.domain ||
+                      sites.find(s => s.id === selectedSiteId)?.name ||
+                      'Select a site'}
                   </span>
                   <div className="flex items-center gap-2">
                     {selectedSiteId && (
@@ -541,7 +543,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                     <ChevronDown className={`w-4 h-4 text-surface-400 transition-transform duration-200 ${showSiteDropdown ? 'rotate-180' : ''}`} />
                   </div>
                 </button>
-                
+
                 {showSiteDropdown && (
                   <>
                     <div className="fixed inset-0 z-20" onClick={() => setShowSiteDropdown(false)} />
@@ -555,15 +557,14 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                                 setSelectedSiteId(site.id);
                                 setShowSiteDropdown(false);
                               }}
-                              className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between gap-3 ${
-                                selectedSiteId === site.id 
-                                  ? 'bg-brand-50 text-brand-700' 
-                                  : 'text-surface-700 hover:bg-surface-50'
-                              }`}
+                              className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between gap-3 ${selectedSiteId === site.id
+                                ? 'bg-brand-50 text-brand-700'
+                                : 'text-surface-700 hover:bg-surface-50'
+                                }`}
                             >
                               <span className="truncate font-medium">{site.domain || site.name}</span>
-                              <Badge 
-                                variant={site.is_active ? 'success' : 'danger'} 
+                              <Badge
+                                variant={site.is_active ? 'success' : 'danger'}
                                 size="sm"
                               >
                                 {site.is_active ? 'Active' : 'Inactive'}
@@ -592,13 +593,13 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                   </>
                 )}
               </div>
-              
+
               {/* Breadcrumb */}
               <div className="hidden sm:flex items-center">
                 <Badge variant="brand">Notifications</Badge>
               </div>
             </div>
-            
+
             {/* Right side - Search and New Notification Button */}
             <div className="flex items-center gap-3">
               <div className="relative hidden sm:block">
@@ -611,7 +612,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                   className="pl-10 pr-4 py-2.5 border border-surface-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 w-48 lg:w-64 text-sm bg-white transition-all"
                 />
               </div>
-              <Button 
+              <Button
                 onClick={() => onSectionChange('create-notification')}
                 disabled={!selectedSiteId}
                 leftIcon={<Plus className="w-4 h-4" />}
@@ -632,7 +633,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
               icon={<Bell className="w-5 h-5 text-brand-600" />}
               iconBg="bg-brand-50"
             />
-            
+
             <Card className="group">
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
@@ -653,14 +654,14 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                 </div>
               </div>
             </Card>
-            
+
             <StatCard
               label="Total Impressions"
               value={notifications.reduce((sum, n) => sum + n.impressions, 0).toLocaleString()}
               icon={<Eye className="w-5 h-5 text-purple-600" />}
               iconBg="bg-purple-50"
             />
-            
+
             <StatCard
               label="Unique Viewers"
               value={notifications.reduce((sum, n) => sum + n.uniqueViewers, 0).toLocaleString()}
@@ -697,8 +698,8 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
               notifications.map((notification) => {
                 const IconComponent = getNotificationIcon(notification.preview.icon);
                 return (
-                  <div 
-                    key={notification.id} 
+                  <div
+                    key={notification.id}
                     onClick={() => editWidget(notification.id)}
                     className="border-b border-gray-200 px-6 py-6 hover:bg-gray-50 transition-colors cursor-pointer group"
                   >
@@ -719,16 +720,14 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                             e.stopPropagation();
                             toggleNotificationStatus(notification.id);
                           }}
-                          className={`w-11 h-6 rounded-full relative transition-colors ${
-                            notification.status === 'active' ? 'bg-blue-600' : 'bg-gray-300'
-                          }`}
+                          className={`w-11 h-6 rounded-full relative transition-colors ${notification.status === 'active' ? 'bg-blue-600' : 'bg-gray-300'
+                            }`}
                         >
-                          <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 shadow-sm transition-transform ${
-                            notification.status === 'active' ? 'right-0.5' : 'left-0.5'
-                          }`}></div>
+                          <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 shadow-sm transition-transform ${notification.status === 'active' ? 'right-0.5' : 'left-0.5'
+                            }`}></div>
                         </button>
                       </div>
-                      
+
                       <div className="bg-gray-50 rounded-lg p-3">
                         {/* Frosted Token Preview */}
                         {notification.layout_style === 'frosted-token' ? (
@@ -754,7 +753,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                             <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 z-0">
                               <div className="w-full h-full flex items-center justify-center">
                                 <div className="w-6 h-6 bg-white/20 rounded flex items-center justify-center">
-                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="white"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="white"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /></svg>
                                 </div>
                               </div>
                             </div>
@@ -813,7 +812,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                             <div className="relative z-20 -ml-1 flex flex-col justify-center px-2 h-9 bg-gray-900 text-white rounded-md min-w-[80px]">
                               <div className="flex items-center gap-0.5 mb-0.5">
                                 <span className="p-0.5 rounded-sm bg-yellow-400 text-gray-900">
-                                  <svg width="6" height="6" viewBox="0 0 24 24" fill="currentColor"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                                  <svg width="6" height="6" viewBox="0 0 24 24" fill="currentColor"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z" /></svg>
                                 </span>
                                 <span className="text-[6px] font-bold uppercase text-gray-400">purchased</span>
                               </div>
@@ -822,15 +821,15 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                             <div className="relative z-10 -ml-1 w-9 h-9 bg-white rounded-r-xl rounded-l-md overflow-hidden">
                               <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-gray-900 rounded-full z-20"></div>
                               <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #fbbf24, #f59e0b)' }}>
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /></svg>
                               </div>
                             </div>
                           </div>
                         ) : notification.layout_style === 'parallax' ? (
                           /* Parallax 3D Card Preview */
-                          <div 
+                          <div
                             className="relative rounded-lg p-2"
-                            style={{ 
+                            style={{
                               background: 'rgba(17, 24, 39, 0.9)',
                               border: '1px solid rgba(255, 255, 255, 0.1)',
                               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
@@ -838,9 +837,9 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                           >
                             <div className="flex items-center gap-2">
                               <div className="flex-shrink-0 relative">
-                                <div 
+                                <div
                                   className="w-8 h-8 rounded flex items-center justify-center"
-                                  style={{ 
+                                  style={{
                                     background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
                                     border: '1px solid rgba(255,255,255,0.2)'
                                   }}
@@ -849,45 +848,45 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                                     <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
                                   </svg>
                                 </div>
-                                <div 
+                                <div
                                   className="absolute -top-1 -right-1 text-white text-[6px] font-bold px-0.5 rounded"
                                   style={{ background: '#6366f1' }}
                                 >NEW</div>
                               </div>
                               <div className="min-w-0">
                                 <div className="flex items-center gap-1">
-                                  <svg width="6" height="6" viewBox="0 0 24 24" fill="#facc15"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                                  <svg width="6" height="6" viewBox="0 0 24 24" fill="#facc15"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
                                   <span className="text-[7px] font-bold uppercase text-gray-400">Just Grabbed</span>
                                 </div>
                                 <div className="text-[9px] font-bold text-white truncate">AI Copywriter Pro</div>
                                 <div className="text-[8px] text-gray-400">by <span className="text-gray-200">Nathan D.</span></div>
                               </div>
                             </div>
-                            <div 
+                            <div
                               className="absolute bottom-0 left-0 right-0 h-0.5 rounded-b"
                               style={{ background: 'linear-gradient(to right, #6366f1, #a855f7, #ec4899)', opacity: 0.5 }}
                             />
                           </div>
                         ) : notification.layout_style === 'ripple' ? (
                           /* Ripple Layout Preview */
-                          <div 
+                          <div
                             className="flex items-center gap-2 bg-white rounded-full py-1.5 pl-1.5 pr-3"
                             style={{ boxShadow: '0 2px 6px rgba(0,0,0,0.06)' }}
                           >
                             <div className="relative flex-shrink-0" style={{ width: '36px', height: '28px' }}>
-                              <div 
+                              <div
                                 className="absolute rounded-full border-2 border-white flex items-center justify-center text-white font-semibold text-[8px]"
                                 style={{ left: 0, top: '1px', width: '26px', height: '26px', background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', zIndex: 2 }}
                               >M</div>
-                              <div 
+                              <div
                                 className="absolute rounded-full border-2 border-white"
                                 style={{ left: '12px', top: '1px', width: '26px', height: '26px', background: 'linear-gradient(135deg, #fbbf24, #f59e0b)', zIndex: 1 }}
                               />
-                              <div 
+                              <div
                                 className="absolute bg-white rounded-full flex items-center justify-center"
                                 style={{ left: '14px', bottom: 0, zIndex: 3, width: '10px', height: '10px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}
                               >
-                                <svg width="6" height="6" viewBox="0 0 24 24" fill="#ef4444"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                                <svg width="6" height="6" viewBox="0 0 24 24" fill="#ef4444"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
                               </div>
                             </div>
                             <div className="min-w-0">
@@ -908,14 +907,14 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center space-x-4">
                           <span className="text-gray-600">{notification.impressions.toLocaleString()} impressions</span>
                           <span className="text-gray-600">{notification.uniqueViewers.toLocaleString()} viewers</span>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <button 
+                          <button
                             onClick={(e) => {
                               e.stopPropagation();
                               editWidget(notification.id);
@@ -925,7 +924,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                           >
                             <Edit3 className="w-4 h-4 text-gray-400 hover:text-blue-600" />
                           </button>
-                          <button 
+                          <button
                             onClick={(e) => {
                               e.stopPropagation();
                               deleteNotification(notification.id);
@@ -988,7 +987,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                             <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 z-0">
                               <div className="w-full h-full flex items-center justify-center">
                                 <div className="w-8 h-8 bg-white/20 rounded flex items-center justify-center">
-                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /></svg>
                                 </div>
                               </div>
                             </div>
@@ -1052,7 +1051,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                             <div className="relative z-20 -ml-1.5 flex flex-col justify-center px-4 h-11 bg-gray-900 text-white rounded-md min-w-[120px]">
                               <div className="flex items-center gap-1 mb-0.5">
                                 <span className="p-0.5 rounded-sm bg-yellow-400 text-gray-900">
-                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z" /></svg>
                                 </span>
                                 <span className="text-[8px] font-bold uppercase text-gray-400">purchased</span>
                               </div>
@@ -1061,15 +1060,15 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                             <div className="relative z-10 -ml-1.5 w-11 h-11 bg-white rounded-r-xl rounded-l-md overflow-hidden">
                               <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-gray-900 rounded-full z-20"></div>
                               <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #fbbf24, #f59e0b)' }}>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /></svg>
                               </div>
                             </div>
                           </div>
                         ) : notification.layout_style === 'parallax' ? (
                           /* Parallax 3D Card Preview */
-                          <div 
+                          <div
                             className="relative rounded-lg p-3"
-                            style={{ 
+                            style={{
                               background: 'rgba(17, 24, 39, 0.9)',
                               border: '1px solid rgba(255, 255, 255, 0.1)',
                               boxShadow: '0 8px 20px rgba(0, 0, 0, 0.25)'
@@ -1077,9 +1076,9 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                           >
                             <div className="flex items-center gap-3">
                               <div className="flex-shrink-0 relative">
-                                <div 
+                                <div
                                   className="w-10 h-10 rounded-md flex items-center justify-center"
-                                  style={{ 
+                                  style={{
                                     background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
                                     border: '1px solid rgba(255,255,255,0.2)',
                                     boxShadow: '0 4px 8px rgba(0,0,0,0.2)'
@@ -1089,45 +1088,45 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                                     <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
                                   </svg>
                                 </div>
-                                <div 
+                                <div
                                   className="absolute -top-1 -right-1 text-white text-[7px] font-bold px-1 py-0.5 rounded"
                                   style={{ background: '#6366f1', border: '1px solid #818cf8' }}
                                 >NEW</div>
                               </div>
                               <div className="min-w-0">
                                 <div className="flex items-center gap-1 mb-0.5">
-                                  <svg width="8" height="8" viewBox="0 0 24 24" fill="#facc15"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                                  <svg width="8" height="8" viewBox="0 0 24 24" fill="#facc15"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>
                                   <span className="text-[8px] font-bold uppercase tracking-wider text-gray-400">Just Grabbed</span>
                                 </div>
                                 <div className="text-xs font-bold text-white truncate">AI Copywriter Pro</div>
                                 <div className="text-[10px] text-gray-400">by <span className="text-gray-200">Nathan D.</span> • Marketing</div>
                               </div>
                             </div>
-                            <div 
+                            <div
                               className="absolute bottom-0 left-0 right-0 h-0.5 rounded-b-lg"
                               style={{ background: 'linear-gradient(to right, #6366f1, #a855f7, #ec4899)', opacity: 0.5 }}
                             />
                           </div>
                         ) : notification.layout_style === 'ripple' ? (
                           /* Ripple Layout Preview */
-                          <div 
+                          <div
                             className="flex items-center gap-2.5 bg-white rounded-full py-2 pl-2 pr-4 border border-gray-100"
                             style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
                           >
                             <div className="relative flex-shrink-0" style={{ width: '44px', height: '34px' }}>
-                              <div 
+                              <div
                                 className="absolute rounded-full border-2 border-white flex items-center justify-center text-white font-semibold text-[10px]"
                                 style={{ left: 0, top: '2px', width: '30px', height: '30px', background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', zIndex: 2 }}
                               >M</div>
-                              <div 
+                              <div
                                 className="absolute rounded-full border-2 border-white"
                                 style={{ left: '16px', top: '2px', width: '30px', height: '30px', background: 'linear-gradient(135deg, #fbbf24, #f59e0b)', zIndex: 1 }}
                               />
-                              <div 
+                              <div
                                 className="absolute bg-white rounded-full flex items-center justify-center"
                                 style={{ left: '18px', bottom: 0, zIndex: 3, width: '12px', height: '12px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}
                               >
-                                <svg width="7" height="7" viewBox="0 0 24 24" fill="#ef4444"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                                <svg width="7" height="7" viewBox="0 0 24 24" fill="#ef4444"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
                               </div>
                             </div>
                             <div className="min-w-0">
@@ -1174,17 +1173,15 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                               e.stopPropagation();
                               toggleNotificationStatus(notification.id);
                             }}
-                            className={`w-11 h-6 rounded-full relative cursor-pointer shadow-inner transition-colors ${
-                              notification.status === 'active' ? 'bg-blue-600' : 'bg-gray-300'
-                            }`}
+                            className={`w-11 h-6 rounded-full relative cursor-pointer shadow-inner transition-colors ${notification.status === 'active' ? 'bg-blue-600' : 'bg-gray-300'
+                              }`}
                           >
-                            <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 shadow-sm transition-transform ${
-                              notification.status === 'active' ? 'right-0.5' : 'left-0.5'
-                            }`}></div>
+                            <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 shadow-sm transition-transform ${notification.status === 'active' ? 'right-0.5' : 'left-0.5'
+                              }`}></div>
                           </button>
                         </div>
                         <div className="flex items-center space-x-1">
-                          <button 
+                          <button
                             onClick={(e) => {
                               e.stopPropagation();
                               editWidget(notification.id);
@@ -1194,7 +1191,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                           >
                             <Edit3 className="w-4 h-4 text-gray-400 hover:text-blue-600" />
                           </button>
-                          <button 
+                          <button
                             onClick={(e) => {
                               e.stopPropagation();
                               deleteNotification(notification.id);
@@ -1221,7 +1218,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                       <p className="text-gray-600 mb-6 text-lg">
                         Add a site first to create notifications
                       </p>
-                      <button 
+                      <button
                         onClick={() => onSectionChange('sites')}
                         className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                       >
@@ -1238,7 +1235,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                       <p className="text-gray-600 mb-6 text-lg">
                         Create your first social proof notification for {sites.find(s => s.id === selectedSiteId)?.domain || sites.find(s => s.id === selectedSiteId)?.name}
                       </p>
-                      <button 
+                      <button
                         onClick={() => onSectionChange('create-notification')}
                         disabled={!selectedSiteId}
                         className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
@@ -1296,13 +1293,13 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 stagger-children">
               {sites.map((site) => {
                 const widgetCount = allWidgets.filter(w => w.config.site_id === site.id).length;
-                const isPixelActive = site.last_ping && 
+                const isPixelActive = site.last_ping &&
                   (new Date().getTime() - new Date(site.last_ping).getTime()) < 24 * 60 * 60 * 1000;
-                
+
                 // Determine site status: Active if is_active AND (pixel active OR verified)
                 const isActive = site.is_active && (isPixelActive || site.verified);
                 const isPending = !site.verified && !isPixelActive;
-                
+
                 return (
                   <Card key={site.id} padding="none" hover className="overflow-hidden group">
                     {/* Card Header */}
@@ -1317,7 +1314,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                             <p className="text-sm text-surface-500 truncate mt-0.5">{site.domain || 'No domain set'}</p>
                           </div>
                         </div>
-                        <Badge 
+                        <Badge
                           variant={isActive ? 'success' : isPending ? 'default' : 'warning'}
                           dot
                         >
@@ -1348,16 +1345,16 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
 
                       {/* Action Buttons */}
                       <div className="flex flex-col gap-2 pt-2">
-                        <Button 
+                        <Button
                           onClick={() => handlePixelIntegration(site)}
                           leftIcon={<Code className="w-4 h-4" />}
                           fullWidth
                         >
                           Pixel Integration
                         </Button>
-                        
+
                         <div className="grid grid-cols-2 gap-2">
-                          <Button 
+                          <Button
                             variant="secondary"
                             size="sm"
                             onClick={() => toggleSiteStatus(site.id, site.is_active)}
@@ -1365,8 +1362,8 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                           >
                             {site.is_active ? 'Deactivate' : 'Activate'}
                           </Button>
-                          
-                          <Button 
+
+                          <Button
                             variant="danger"
                             size="sm"
                             onClick={() => deleteSite(site.id)}
@@ -1391,7 +1388,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
                 <p className="text-surface-500 mb-6">
                   Add your first site to get started with social proof notifications
                 </p>
-                <Button 
+                <Button
                   onClick={() => setShowAddSiteModal(true)}
                   leftIcon={<Plus className="w-5 h-5" />}
                 >
@@ -1428,9 +1425,9 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
   if (activeSection === 'pixel-integration' && selectedSite) {
     return (
       <>
-        <PixelIntegration 
-          selectedSite={selectedSite} 
-          onBack={() => onSectionChange('sites')} 
+        <PixelIntegration
+          selectedSite={selectedSite}
+          onBack={() => onSectionChange('sites')}
         />
         <ConfirmationModal
           isOpen={confirmModal.isOpen}
@@ -1443,20 +1440,20 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
       </>
     );
   }
-  
+
   // Widget editor screen
   if (activeSection === 'edit-widget' && selectedWidgetId) {
     console.log('Rendering widget editor for widget ID:', selectedWidgetId);
     return (
       <>
-        <WidgetEditorWithPreview 
+        <WidgetEditorWithPreview
           widgetId={selectedWidgetId}
           onBack={() => {
             // Clear the widget ID and go back to notifications
             setSelectedWidgetId(null);
             localStorage.removeItem('lastWidgetId');
             onSectionChange('notifications');
-            
+
             // Also clear the URL parameter if present
             if (window.history && window.history.pushState) {
               const url = new URL(window.location.href);
@@ -1489,7 +1486,17 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
 
   // Help screen
   if (activeSection === 'help') {
-    return <Help />;
+    return <Help onNavigate={onSectionChange} />;
+  }
+
+  // Billing screen
+  if (activeSection === 'billing') {
+    return <Billing onNavigate={onSectionChange} />;
+  }
+
+  // Support screen
+  if (activeSection === 'support') {
+    return <Support />;
   }
 
   // Default content for other sections
@@ -1503,7 +1510,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
           {activeSection.charAt(0).toUpperCase() + activeSection.slice(1).replace('-', ' ')}
         </h2>
         <p className="text-surface-500 mb-6">This section is under development. Check back soon for new features!</p>
-        <Button 
+        <Button
           onClick={() => onSectionChange('notifications')}
         >
           Go to Notifications

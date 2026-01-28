@@ -1,4 +1,5 @@
-import { Bell, BarChart2, HelpCircle, PlusSquare, Globe, Settings, X, Sparkles, ChevronRight } from 'lucide-react';
+import { Bell, BarChart2, HelpCircle, PlusSquare, Globe, Settings, X, Sparkles, ChevronRight, CreditCard, Crown, Check, LifeBuoy } from 'lucide-react';
+import { useSubscription } from '../contexts/SubscriptionContext';
 
 interface SidebarProps {
   activeSection: string;
@@ -8,6 +9,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activeSection, onSectionChange, isMobileMenuOpen, onClose }: SidebarProps) {
+  const { subscription, isPaidPlan, loading: subscriptionLoading } = useSubscription();
 
   const menuItems = [
     {
@@ -22,6 +24,7 @@ export function Sidebar({ activeSection, onSectionChange, isMobileMenuOpen, onCl
     {
       category: 'TOOLS',
       items: [
+        { id: 'billing', label: 'Billing', icon: CreditCard, badge: null },
         { id: 'settings', label: 'Settings', icon: Settings, badge: null },
       ]
     },
@@ -29,6 +32,7 @@ export function Sidebar({ activeSection, onSectionChange, isMobileMenuOpen, onCl
       category: 'SUPPORT',
       items: [
         { id: 'help', label: 'Help Center', icon: HelpCircle, badge: null },
+        { id: 'support', label: 'Contact Support', icon: LifeBuoy, badge: null },
       ]
     }
   ];
@@ -37,7 +41,7 @@ export function Sidebar({ activeSection, onSectionChange, isMobileMenuOpen, onCl
     <>
       {/* Mobile Overlay */}
       {isMobileMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-surface-950/60 backdrop-blur-sm z-30 lg:hidden animate-fade-in"
           onClick={onClose}
           aria-hidden="true"
@@ -45,7 +49,7 @@ export function Sidebar({ activeSection, onSectionChange, isMobileMenuOpen, onCl
       )}
 
       {/* Sidebar */}
-      <aside 
+      <aside
         className={`
           fixed top-14 sm:top-16 bottom-0 left-0 z-40
           w-[280px] sm:w-[300px] lg:w-[260px]
@@ -81,7 +85,7 @@ export function Sidebar({ activeSection, onSectionChange, isMobileMenuOpen, onCl
                 {category.items.map((item, index) => {
                   const Icon = item.icon;
                   const isActive = activeSection === item.id;
-                  
+
                   return (
                     <button
                       key={item.id}
@@ -102,27 +106,27 @@ export function Sidebar({ activeSection, onSectionChange, isMobileMenuOpen, onCl
                       <div className="flex items-center gap-3">
                         <div className={`
                           p-1.5 rounded-lg transition-colors duration-200
-                          ${isActive 
-                            ? 'bg-brand-100' 
+                          ${isActive
+                            ? 'bg-brand-100'
                             : 'bg-surface-100 group-hover:bg-surface-200'
                           }
                         `}>
                           <Icon className={`
                             w-4 h-4 transition-colors duration-200
-                            ${isActive 
-                              ? 'text-brand-600' 
+                            ${isActive
+                              ? 'text-brand-600'
                               : 'text-surface-500 group-hover:text-surface-700'
                             }
                           `} />
                         </div>
                         <span className="text-sm font-medium">{item.label}</span>
                       </div>
-                      
+
                       {/* Active indicator arrow */}
                       {isActive && (
                         <ChevronRight className="w-4 h-4 text-brand-400 animate-fade-in" />
                       )}
-                      
+
                       {/* Badge if exists */}
                       {item.badge && (
                         <span className="px-2 py-0.5 text-xs font-medium bg-brand-100 text-brand-700 rounded-full">
@@ -137,41 +141,89 @@ export function Sidebar({ activeSection, onSectionChange, isMobileMenuOpen, onCl
           ))}
         </nav>
 
-        {/* Sidebar Footer - Upgrade Card */}
+        {/* Sidebar Footer - Conditional based on subscription */}
         <div className="p-4 border-t border-surface-100">
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 via-brand-700 to-purple-700 p-4 shadow-soft-lg">
-            {/* Decorative elements */}
-            <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-            <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
-            
-            <div className="relative">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
-                  <Sparkles className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-xs font-medium text-white/80 uppercase tracking-wide">Pro Plan</span>
-              </div>
-              
-              <h4 className="text-base font-semibold text-white mb-1">
-                Unlock Premium
-              </h4>
-              <p className="text-xs text-white/70 mb-4 leading-relaxed">
-                Get unlimited notifications, advanced analytics & priority support.
-              </p>
-              
-              <button className="
-                w-full py-2.5 px-4 
-                bg-white text-brand-700 
-                text-sm font-semibold rounded-xl
-                shadow-soft-sm
-                hover:bg-white/95 hover:shadow-soft
-                active:scale-[0.98]
-                transition-all duration-200
-              ">
-                Upgrade Now
-              </button>
+          {subscriptionLoading ? (
+            <div className="rounded-2xl bg-surface-100 p-4 animate-pulse">
+              <div className="h-4 bg-surface-200 rounded w-1/2 mb-2"></div>
+              <div className="h-3 bg-surface-200 rounded w-3/4 mb-3"></div>
+              <div className="h-10 bg-surface-200 rounded"></div>
             </div>
-          </div>
+          ) : isPaidPlan ? (
+            /* Paid Plan - Show current plan info */
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 p-4 shadow-soft-lg">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+              <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                    <Crown className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-xs font-medium text-white/80 uppercase tracking-wide">
+                    {subscription?.plan?.tier === 'growth' ? 'Growth' : 'Pro'} Plan
+                  </span>
+                </div>
+
+                <h4 className="text-base font-semibold text-white mb-1">
+                  {subscription?.plan?.name || 'Premium'}
+                </h4>
+                <p className="text-xs text-white/70 mb-3 leading-relaxed flex items-center gap-1">
+                  <Check className="w-3 h-3" /> Active subscription
+                </p>
+
+                <button
+                  onClick={() => onSectionChange('billing')}
+                  className="
+                  w-full py-2.5 px-4 
+                  bg-white/20 text-white 
+                  text-sm font-semibold rounded-xl
+                  backdrop-blur-sm border border-white/20
+                  hover:bg-white/30
+                  active:scale-[0.98]
+                  transition-all duration-200
+                ">
+                  Manage Plan
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Free Plan - Show upgrade CTA */
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 via-brand-700 to-purple-700 p-4 shadow-soft-lg">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+              <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                    <Sparkles className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-xs font-medium text-white/80 uppercase tracking-wide">Pro Plan</span>
+                </div>
+
+                <h4 className="text-base font-semibold text-white mb-1">
+                  Unlock Premium
+                </h4>
+                <p className="text-xs text-white/70 mb-4 leading-relaxed">
+                  Get unlimited notifications, advanced analytics & priority support.
+                </p>
+
+                <button
+                  onClick={() => onSectionChange('billing')}
+                  className="
+                  w-full py-2.5 px-4 
+                  bg-white text-brand-700 
+                  text-sm font-semibold rounded-xl
+                  shadow-soft-sm
+                  hover:bg-white/95 hover:shadow-soft
+                  active:scale-[0.98]
+                  transition-all duration-200
+                ">
+                  Upgrade Now
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </aside>
     </>

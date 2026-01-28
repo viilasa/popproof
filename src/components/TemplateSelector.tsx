@@ -1,15 +1,15 @@
 import { useState } from 'react';
-import { 
-  ArrowLeft, 
-  Sparkles, 
-  ShoppingBag, 
-  UserPlus, 
-  Star, 
-  Users, 
-  FileText, 
-  ShoppingCart, 
-  Activity, 
-  Bell, 
+import {
+  ArrowLeft,
+  Sparkles,
+  ShoppingBag,
+  UserPlus,
+  Star,
+  Users,
+  FileText,
+  ShoppingCart,
+  Activity,
+  Bell,
   LayoutGrid,
   Zap
 } from 'lucide-react';
@@ -66,11 +66,11 @@ interface TemplateSelectorProps {
   selectedSiteId?: string;
 }
 
-export function TemplateSelector({ 
-  onTemplateSelected, 
+export function TemplateSelector({
+  onTemplateSelected,
   onBack,
   userId,
-  selectedSiteId 
+  selectedSiteId
 }: TemplateSelectorProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -424,11 +424,10 @@ export function TemplateSelector({
                     onClick={() => {
                       setActiveFilter(tab.id);
                     }}
-                    className={`px-4 py-2 rounded-full text-xs font-medium transition-all duration-200 ${
-                      activeFilter === tab.id
+                    className={`px-4 py-2 rounded-full text-xs font-medium transition-all duration-200 ${activeFilter === tab.id
                         ? 'bg-brand-600 text-white shadow-soft-sm'
                         : 'bg-white text-surface-600 border border-surface-200 hover:bg-surface-50 hover:border-surface-300'
-                    }`}
+                      }`}
                   >
                     {tab.label}
                   </button>
@@ -470,7 +469,7 @@ export function TemplateSelector({
 
                         <div className="mt-3 p-3 bg-surface-50 rounded-xl border border-surface-100">
                           <div className="text-[11px] font-medium text-surface-400 mb-1 uppercase tracking-wider">Live preview</div>
-                          
+
                           {/* Special Frosted Token Preview */}
                           {preset.design?.layout?.layout === 'frosted-token' ? (
                             <div className="flex items-center gap-2">
@@ -501,7 +500,7 @@ export function TemplateSelector({
                               <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 z-0">
                                 <div className="w-full h-full flex items-center justify-center">
                                   <div className="w-8 h-8 bg-white/20 rounded flex items-center justify-center">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /></svg>
                                   </div>
                                 </div>
                               </div>
@@ -544,7 +543,7 @@ export function TemplateSelector({
                               <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-sm flex items-center justify-center border border-gray-100">
                                 <div className="w-1 h-1 bg-indigo-400 rounded-full"></div>
                               </div>
-                              
+
                               {/* Eye icon */}
                               <div className="relative shrink-0">
                                 <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
@@ -555,7 +554,7 @@ export function TemplateSelector({
                                 </div>
                                 <div className="absolute top-0 left-0 w-6 h-6 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-[8px] font-semibold border-2 border-white" style={{ transform: 'translateX(10px) translateY(8px) scale(0.7)' }}>A</div>
                               </div>
-                              
+
                               {/* Text */}
                               <div className="flex flex-col min-w-0">
                                 <div className="flex items-center gap-0.5 text-sm font-bold text-gray-900 leading-none">
@@ -570,19 +569,19 @@ export function TemplateSelector({
                             <div className="flex items-center" style={{ height: '44px', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.12))' }}>
                               {/* Piece 1: Avatar */}
                               <div className="relative z-30 flex items-center justify-center w-11 h-11 bg-white rounded-l-xl rounded-r-md">
-                                <div 
+                                <div
                                   className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-semibold"
                                   style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
                                 >A</div>
                                 <div className="absolute -right-1 w-2 h-2 bg-white rounded-full z-10"></div>
                               </div>
-                              
+
                               {/* Piece 2: Message */}
                               <div className="relative z-20 -ml-1.5 flex flex-col justify-center px-3 h-11 bg-gray-900 text-white rounded-md min-w-[100px]">
                                 <div className="flex items-center gap-1 mb-0.5">
                                   <span className="p-0.5 rounded-sm bg-yellow-400 text-gray-900">
                                     <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor">
-                                      <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/>
+                                      <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z" />
                                     </svg>
                                   </span>
                                   <span className="text-[7px] font-bold uppercase text-gray-400">purchased</span>
@@ -591,25 +590,25 @@ export function TemplateSelector({
                                   <span className="font-bold">Alex</span> got Neon High-Tops
                                 </div>
                               </div>
-                              
+
                               {/* Piece 3: Product */}
                               <div className="relative z-10 -ml-1.5 w-11 h-11 bg-white rounded-r-xl rounded-l-md overflow-hidden">
                                 <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-gray-900 rounded-full z-20"></div>
-                                <div 
+                                <div
                                   className="w-full h-full flex items-center justify-center"
                                   style={{ background: 'linear-gradient(135deg, #fbbf24, #f59e0b)' }}
                                 >
                                   <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
-                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
                                   </svg>
                                 </div>
                               </div>
                             </div>
                           ) : preset.design?.layout?.layout === 'parallax' ? (
                             /* Special Parallax 3D Card Preview */
-                            <div 
+                            <div
                               className="relative rounded-lg p-3"
-                              style={{ 
+                              style={{
                                 background: 'rgba(17, 24, 39, 0.9)',
                                 border: '1px solid rgba(255, 255, 255, 0.1)',
                                 boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)'
@@ -619,9 +618,9 @@ export function TemplateSelector({
                               <div className="flex items-center gap-3">
                                 {/* Product image */}
                                 <div className="flex-shrink-0 relative">
-                                  <div 
+                                  <div
                                     className="w-10 h-10 rounded-md flex items-center justify-center"
-                                    style={{ 
+                                    style={{
                                       background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
                                       border: '1px solid rgba(255,255,255,0.2)',
                                       boxShadow: '0 4px 8px rgba(0,0,0,0.2)'
@@ -632,19 +631,19 @@ export function TemplateSelector({
                                     </svg>
                                   </div>
                                   {/* NEW badge */}
-                                  <div 
+                                  <div
                                     className="absolute -top-1 -right-1 text-white text-[7px] font-bold px-1 py-0.5 rounded"
                                     style={{ background: '#6366f1', border: '1px solid #818cf8' }}
                                   >
                                     NEW
                                   </div>
                                 </div>
-                                
+
                                 {/* Text */}
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-1 mb-0.5">
                                     <svg width="8" height="8" viewBox="0 0 24 24" fill="#facc15">
-                                      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                                      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
                                     </svg>
                                     <span className="text-[8px] font-bold uppercase tracking-wider text-gray-400">Just Grabbed</span>
                                   </div>
@@ -654,29 +653,29 @@ export function TemplateSelector({
                                   </p>
                                 </div>
                               </div>
-                              
+
                               {/* Bottom gradient */}
-                              <div 
+                              <div
                                 className="absolute bottom-0 left-0 right-0 h-0.5 rounded-b-lg"
                                 style={{ background: 'linear-gradient(to right, #6366f1, #a855f7, #ec4899)', opacity: 0.5 }}
                               />
                             </div>
                           ) : preset.design?.layout?.layout === 'ripple' ? (
                             /* Special Ripple Bubble Preview */
-                            <div 
+                            <div
                               className="flex items-center gap-2 bg-white rounded-full py-1.5 pl-1.5 pr-4"
                               style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
                             >
                               {/* Image cluster */}
                               <div className="relative flex-shrink-0" style={{ width: '44px', height: '32px' }}>
                                 {/* User avatar (front) */}
-                                <div 
+                                <div
                                   className="absolute rounded-full border-2 border-white flex items-center justify-center text-white font-semibold text-[10px]"
-                                  style={{ 
-                                    left: 0, 
-                                    top: '1px', 
-                                    width: '30px', 
-                                    height: '30px', 
+                                  style={{
+                                    left: 0,
+                                    top: '1px',
+                                    width: '30px',
+                                    height: '30px',
                                     background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
                                     zIndex: 2
                                   }}
@@ -684,24 +683,24 @@ export function TemplateSelector({
                                   M
                                 </div>
                                 {/* Product (back) */}
-                                <div 
+                                <div
                                   className="absolute rounded-full border-2 border-white"
-                                  style={{ 
-                                    left: '16px', 
-                                    top: '1px', 
-                                    width: '30px', 
-                                    height: '30px', 
+                                  style={{
+                                    left: '16px',
+                                    top: '1px',
+                                    width: '30px',
+                                    height: '30px',
                                     background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
                                     zIndex: 1
                                   }}
                                 />
                                 {/* Heart badge */}
-                                <div 
+                                <div
                                   className="absolute bg-white rounded-full flex items-center justify-center"
                                   style={{ left: '18px', bottom: 0, zIndex: 3, width: '12px', height: '12px', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}
                                 >
                                   <svg width="7" height="7" viewBox="0 0 24 24" fill="#ef4444">
-                                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
                                   </svg>
                                 </div>
                               </div>
@@ -764,7 +763,7 @@ export function TemplateSelector({
 // Helper function to get template icon as React component
 function getTemplateIcon(icon: string): React.ReactNode {
   const iconClass = "w-6 h-6 text-brand-600";
-  
+
   switch (icon) {
     case 'shopping-bag':
       return <ShoppingBag className={iconClass} />;

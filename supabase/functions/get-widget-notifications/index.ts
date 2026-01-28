@@ -5,7 +5,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 // Public endpoint - no auth required since we use service role internally
 Deno.serve(async (req) => {
   console.log('get-widget-notifications function called');
-  
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -13,19 +13,19 @@ Deno.serve(async (req) => {
 
   // Allow GET requests without authentication (public read-only endpoint)
   // Using service role key internally to bypass RLS
-  
+
   try {
     const url = new URL(req.url);
     const widgetId = url.searchParams.get('widget_id');
     const siteId = url.searchParams.get('site_id');
     const limit = parseInt(url.searchParams.get('limit') || '10');
-    
+
     // Product-specific filtering parameters
     const productId = url.searchParams.get('product_id');
     const productHandle = url.searchParams.get('product_handle');
     const productName = url.searchParams.get('product_name');
     const isProductPage = url.searchParams.get('product_page') === 'true';
-    
+
     console.log('Product context:', { productId, productHandle, productName, isProductPage });
 
     if (!widgetId && !siteId) {
@@ -34,8 +34,8 @@ Deno.serve(async (req) => {
         error: 'widget_id or site_id is required'
       }), {
         status: 400,
-        headers: { 
-          ...corsHeaders, 
+        headers: {
+          ...corsHeaders,
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*'
         }
@@ -49,19 +49,19 @@ Deno.serve(async (req) => {
     );
 
     console.log('Querying widgets for:', { widgetId, siteId });
-    
+
     // DEBUG: First check ALL widgets for this site (regardless of is_active)
     const { data: allWidgets, error: allWidgetsError } = await supabase
       .from('widgets')
       .select('id, name, is_active, site_id')
       .eq('site_id', siteId);
-    
+
     console.log('DEBUG - All widgets for site (including inactive):', {
       count: allWidgets?.length,
       widgets: allWidgets,
       error: allWidgetsError
     });
-    
+
     // Fetch widgets for the site with design settings
     let widgetsQuery = supabase
       .from('widgets')
@@ -139,8 +139,8 @@ Deno.serve(async (req) => {
 
     const { data: widgets, error: widgetsError } = await widgetsQuery;
 
-    console.log('Widgets query result:', { 
-      count: widgets?.length, 
+    console.log('Widgets query result:', {
+      count: widgets?.length,
       error: widgetsError,
       widgets: widgets?.map(w => ({ id: w.id, name: w.name, is_active: w.is_active, site_id: w.site_id }))
     });
@@ -239,7 +239,7 @@ Deno.serve(async (req) => {
           reducedMotionSupport: widget.reduced_motion_support ?? display?.responsive?.reducedMotionSupport ?? true,
         }
       };
-      
+
       // Fetch notification rules from the notification_rules table (just like duration settings!)
       const { data: notificationRules } = await supabase
         .from('notification_rules')
@@ -249,47 +249,47 @@ Deno.serve(async (req) => {
         .order('priority', { ascending: false })
         .limit(1)
         .single();
-      
+
       // Extract rule parameters from notification_rules table (or fallback to config)
       const rules = config.rules || {};
       const triggersConfig = config.triggers || {};
       const eventsConfig = triggersConfig.events || {};
-      
+
       // Check if this is a Live Visitor widget
       const templateId = config.template_id || widget.type || '';
-      const isLiveVisitorWidget = templateId === 'live_visitors' || 
-                                   widget.name?.toLowerCase().includes('live visitor') ||
-                                   widget.name?.toLowerCase().includes('visitor count');
-      
+      const isLiveVisitorWidget = templateId === 'live_visitors' ||
+        widget.name?.toLowerCase().includes('live visitor') ||
+        widget.name?.toLowerCase().includes('visitor count');
+
       console.log('DEBUG Widget', widget.id, 'templateId:', templateId, 'isLiveVisitorWidget:', isLiveVisitorWidget);
-      
+
       // For live visitor widgets, we need to count recent page_view events
       if (isLiveVisitorWidget) {
         // Count unique sessions in the last 5 minutes for "live" visitors
         const fiveMinutesAgo = new Date();
         fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
-        
+
         const { data: recentViews, error: viewsError } = await supabase
           .from('events')
           .select('session_id')
           .eq('site_id', widget.site_id)
           .eq('event_type', 'page_view')
           .gte('timestamp', fiveMinutesAgo.toISOString());
-        
+
         if (viewsError) {
           console.error('Error fetching live visitors:', viewsError);
         }
-        
+
         // Count unique sessions
         const uniqueSessions = new Set(recentViews?.map(v => v.session_id) || []);
         const visitorCount = uniqueSessions.size || Math.floor(Math.random() * 5) + 1; // Fallback to random 1-5 if no data
-        
+
         console.log('Live visitor count for widget', widget.id, ':', visitorCount);
-        
+
         // Create a synthetic notification for live visitors
         // Use widget's display_duration setting (default to 0 for "stay visible")
         const liveDisplayDuration = widget.display_duration ?? displaySettings.duration.displayDuration ?? 0;
-        
+
         const liveNotification = {
           id: 'live_' + widget.id,
           widget_id: widget.id,
@@ -322,15 +322,16 @@ Deno.serve(async (req) => {
           responsive: displaySettings.responsive,
           metadata: { visitor_count: visitorCount }
         };
-        
+
         // Get delay between notifications from config
         const triggerBehavior = triggersConfig.behavior || {};
         const liveDelayBetween = triggerBehavior.delayBetweenNotifications ?? 5;
-        
+
         widgetNotifications.push({
           widget_id: widget.id,
           widget_name: widget.name || config.name,
           widget_type: templateId || widget.type,
+          event_types: ['page_view'], // Live visitors track page views
           display: displaySettings,
           notifications: [liveNotification],
           count: 1,
@@ -401,30 +402,30 @@ Deno.serve(async (req) => {
           stack_on_mobile: widget.stack_on_mobile,
           reduced_motion_support: widget.reduced_motion_support
         });
-        
+
         continue; // Skip normal event processing for live visitor widgets
       }
-      
+
       // Determine event types based on template or config
-      let eventTypes = notificationRules?.event_types || 
-                        eventsConfig.eventTypes || 
-                        rules.eventTypes;
-      
+      let eventTypes = notificationRules?.event_types ||
+        eventsConfig.eventTypes ||
+        rules.eventTypes;
+
       // If no event types configured, derive from template ID or widget name
       if (!eventTypes || eventTypes.length === 0) {
         // Check template ID first, then fall back to widget name
         const widgetNameLower = (widget.name || '').toLowerCase();
-        const effectiveTemplate = templateId || 
-          (widgetNameLower.includes('form') ? 'form_submission' : 
-           widgetNameLower.includes('purchase') ? 'recent_purchase' :
-           widgetNameLower.includes('signup') ? 'new_signup' :
-           widgetNameLower.includes('review') ? 'customer_review' :
-           widgetNameLower.includes('cart') ? 'cart_activity' :
-           widgetNameLower.includes('session') || widgetNameLower.includes('page') ? 'active_sessions' :
-           null);
-        
+        const effectiveTemplate = templateId ||
+          (widgetNameLower.includes('form') ? 'form_submission' :
+            widgetNameLower.includes('purchase') ? 'recent_purchase' :
+              widgetNameLower.includes('signup') ? 'new_signup' :
+                widgetNameLower.includes('review') ? 'customer_review' :
+                  widgetNameLower.includes('cart') ? 'cart_activity' :
+                    widgetNameLower.includes('session') || widgetNameLower.includes('page') ? 'active_sessions' :
+                      null);
+
         console.log('DEBUG: Deriving event types from effectiveTemplate:', effectiveTemplate, 'widgetName:', widget.name);
-        
+
         switch (effectiveTemplate) {
           case 'recent_purchase':
           case 'purchase':
@@ -455,7 +456,7 @@ Deno.serve(async (req) => {
             eventTypes = ['purchase', 'signup', 'form_submit'];
         }
       }
-      
+
       console.log('DEBUG Widget', widget.id, 'event types config:', {
         notificationRulesEventTypes: notificationRules?.event_types,
         eventsConfigEventTypes: eventsConfig.eventTypes,
@@ -464,7 +465,7 @@ Deno.serve(async (req) => {
         templateId: templateId,
         widgetName: widget.name
       });
-      
+
       // Get time range from display settings (with fallbacks)
       let timeWindowHours = widget.notification_time_range || 168; // Default to 7 days
       if (timeWindowHours === 0 && widget.custom_time_range_hours) {
@@ -474,7 +475,7 @@ Deno.serve(async (req) => {
       if (!widget.notification_time_range) {
         timeWindowHours = notificationRules?.time_window_hours || rules.timeWindowHours || 168;
       }
-      
+
       const minValue = notificationRules?.min_value || rules.minValue || 0;
       const excludeTestEvents = notificationRules?.exclude_test_events ?? rules.excludeTestEvents ?? true;
 
@@ -509,23 +510,23 @@ Deno.serve(async (req) => {
       }
 
       console.log(`Found ${events.length} events for widget:`, widget.id);
-      
+
       // ==================== PRODUCT-SPECIFIC FILTERING ====================
       // Get product filtering mode from widget config (extract early for filtering)
       const triggerAdvancedConfig = triggersConfig.advanced || {};
       const productSpecificMode = triggerAdvancedConfig.productSpecificMode || 'off';
       console.log('Product specific mode:', productSpecificMode);
-      
+
       // If on a product page and product filtering is enabled, filter events
       let filteredEvents = events;
-      const shouldFilterByProduct = isProductPage && 
-                                     productSpecificMode !== 'off' && 
-                                     (productId || productHandle || productName);
-      
+      const shouldFilterByProduct = isProductPage &&
+        productSpecificMode !== 'off' &&
+        (productId || productHandle || productName);
+
       if (shouldFilterByProduct) {
         const productMatchedEvents = events.filter(event => {
           const metadata = event.metadata || {};
-          
+
           // Match by product ID
           if (productId && metadata.product_id) {
             if (String(metadata.product_id) === String(productId)) {
@@ -533,7 +534,7 @@ Deno.serve(async (req) => {
               return true;
             }
           }
-          
+
           // Match by product handle/slug (from URL)
           if (productHandle) {
             // Check if event URL contains the product handle
@@ -542,41 +543,41 @@ Deno.serve(async (req) => {
               console.log('Product match by URL handle:', productHandle);
               return true;
             }
-            
+
             // Check product_handle in metadata
-            if (metadata.product_handle && 
-                metadata.product_handle.toLowerCase() === productHandle.toLowerCase()) {
+            if (metadata.product_handle &&
+              metadata.product_handle.toLowerCase() === productHandle.toLowerCase()) {
               console.log('Product match by metadata handle:', productHandle);
               return true;
             }
-            
+
             // Check product_slug in metadata
-            if (metadata.product_slug && 
-                metadata.product_slug.toLowerCase() === productHandle.toLowerCase()) {
+            if (metadata.product_slug &&
+              metadata.product_slug.toLowerCase() === productHandle.toLowerCase()) {
               console.log('Product match by metadata slug:', productHandle);
               return true;
             }
           }
-          
+
           // Match by product name (fuzzy match)
           if (productName && metadata.product_name) {
             const eventProductName = (metadata.product_name || '').toLowerCase().trim();
             const currentProductName = productName.toLowerCase().trim();
-            
+
             // Exact match or contains match
             if (eventProductName === currentProductName ||
-                eventProductName.includes(currentProductName) ||
-                currentProductName.includes(eventProductName)) {
+              eventProductName.includes(currentProductName) ||
+              currentProductName.includes(eventProductName)) {
               console.log('Product match by name:', productName, '===', metadata.product_name);
               return true;
             }
           }
-          
+
           return false;
         });
-        
+
         console.log(`Product filtering: ${events.length} events -> ${productMatchedEvents.length} matching product`);
-        
+
         // Apply filtering based on mode
         if (productSpecificMode === 'product_only') {
           // Only show product-specific events, no fallback
@@ -594,7 +595,7 @@ Deno.serve(async (req) => {
           }
         }
       }
-      
+
       // Apply final limit
       filteredEvents = filteredEvents.slice(0, limit);
 
@@ -602,12 +603,12 @@ Deno.serve(async (req) => {
       const notifications = filteredEvents.map(event => {
         const metadata = event.metadata || {};
         const eventType = event.type || event.event_type;
-        
+
         // Generate notification content based on event type
         let title = '';
         let message = '';
         let icon = '🔔';
-        
+
         switch (eventType) {
           case 'purchase':
             title = metadata.customer_name || metadata.user_name || 'Someone';
@@ -617,7 +618,7 @@ Deno.serve(async (req) => {
               message += ` for $${metadata.value || metadata.amount}`;
             }
             break;
-            
+
           case 'signup':
             title = metadata.customer_name || metadata.user_name || 'Someone';
             message = 'signed up';
@@ -626,19 +627,19 @@ Deno.serve(async (req) => {
               message += ` from ${metadata.location}`;
             }
             break;
-            
+
           case 'form_submit':
             // Check multiple possible name fields in form submissions
-            title = metadata.customer_name || 
-                    metadata.user_name || 
-                    metadata.name || 
-                    metadata.full_name || 
-                    metadata.fullName ||
-                    metadata.first_name || 
-                    metadata.firstName ||
-                    (metadata.first_name && metadata.last_name ? `${metadata.first_name} ${metadata.last_name}` : null) ||
-                    'Someone';
-            
+            title = metadata.customer_name ||
+              metadata.user_name ||
+              metadata.name ||
+              metadata.full_name ||
+              metadata.fullName ||
+              metadata.first_name ||
+              metadata.firstName ||
+              (metadata.first_name && metadata.last_name ? `${metadata.first_name} ${metadata.last_name}` : null) ||
+              'Someone';
+
             // Check if custom form message is enabled
             if (displaySettings.content.useCustomFormMessage && displaySettings.content.customFormMessage) {
               message = displaySettings.content.customFormMessage;
@@ -650,33 +651,33 @@ Deno.serve(async (req) => {
               message += ` from ${metadata.location}`;
             }
             break;
-            
+
           case 'review':
             title = metadata.customer_name || metadata.user_name || 'A customer';
             message = `left a ${metadata.rating || '5'}-star review`;
             icon = '⭐';
             break;
-            
+
           case 'add_to_cart':
             title = metadata.customer_name || metadata.user_name || 'Someone';
             message = `added ${metadata.product_name || 'an item'} to cart`;
             icon = '🛒';
             break;
-            
+
           case 'visitor_active':
             // For live visitor count widgets
             title = `${metadata.visitor_count || '1'} ${metadata.visitor_count === 1 ? 'person' : 'people'}`;
             message = 'viewing this right now';
             icon = '👥';
             break;
-            
+
           case 'page_view':
             // For active sessions
             title = metadata.customer_name || metadata.user_name || 'Someone';
             message = `is browsing ${metadata.page_title || 'this site'}`;
             icon = '👁️';
             break;
-            
+
           default:
             title = metadata.customer_name || metadata.user_name || 'Someone';
             message = eventType.replace(/_/g, ' ');
@@ -688,7 +689,7 @@ Deno.serve(async (req) => {
         const now = new Date();
         const diffMs = now.getTime() - eventTime.getTime();
         const diffMins = Math.floor(diffMs / 60000);
-        
+
         let timeAgo = '';
         if (diffMins < 1) timeAgo = 'Just now';
         else if (diffMins < 60) timeAgo = `${diffMins} ${diffMins === 1 ? 'minute' : 'minutes'} ago`;
@@ -700,34 +701,34 @@ Deno.serve(async (req) => {
         const showLocation = displaySettings.content.showLocation && !!metadata.location;
 
         // Extract product image from various possible metadata fields
-        const productImage = metadata.product_image || 
-                            metadata.image || 
-                            metadata.image_url || 
-                            metadata.productImage ||
-                            metadata.img ||
-                            metadata.photo ||
-                            metadata.thumbnail ||
-                            metadata.product_images?.[0] ||
-                            metadata.images?.[0] ||
-                            metadata.line_items?.[0]?.image ||
-                            metadata.line_items?.[0]?.product_image ||
-                            metadata.event_data?.product_image ||
-                            metadata.event_data?.image ||
-                            null;
-        
-        console.log('Product image extraction:', { 
-          found: productImage, 
+        const productImage = metadata.product_image ||
+          metadata.image ||
+          metadata.image_url ||
+          metadata.productImage ||
+          metadata.img ||
+          metadata.photo ||
+          metadata.thumbnail ||
+          metadata.product_images?.[0] ||
+          metadata.images?.[0] ||
+          metadata.line_items?.[0]?.image ||
+          metadata.line_items?.[0]?.product_image ||
+          metadata.event_data?.product_image ||
+          metadata.event_data?.image ||
+          null;
+
+        console.log('Product image extraction:', {
+          found: productImage,
           metadata_keys: Object.keys(metadata || {}),
           raw_product_image: metadata.product_image,
           raw_image: metadata.image
         });
-        
+
         // Extract user avatar
-        const userAvatar = metadata.avatar || 
-                          metadata.user_avatar || 
-                          metadata.customer_avatar ||
-                          metadata.profile_image ||
-                          null;
+        const userAvatar = metadata.avatar ||
+          metadata.user_avatar ||
+          metadata.customer_avatar ||
+          metadata.profile_image ||
+          null;
 
         return {
           id: event.id,
@@ -775,7 +776,7 @@ Deno.serve(async (req) => {
       const triggerBehavior = triggersConfig.behavior || {};
       const triggerFrequency = triggersConfig.frequency || {};
       const triggerAdvanced = triggersConfig.advanced || {};
-      
+
       // DEBUG: Log trigger settings
       console.log('DEBUG Widget', widget.id, 'trigger settings:', {
         hasConfig: !!config,
@@ -784,7 +785,7 @@ Deno.serve(async (req) => {
         showAfterDelay: triggerBehavior.showAfterDelay,
         fullBehavior: triggerBehavior
       });
-      
+
       const showAfterDelay = triggerBehavior.showAfterDelay ?? 3;
       const delayBetweenNotifications = triggerBehavior.delayBetweenNotifications ?? 5; // Default 5 seconds between notifications
       const displayFrequency = triggerFrequency.displayFrequency || 'all_time';
@@ -796,6 +797,7 @@ Deno.serve(async (req) => {
         widget_id: widget.id,
         widget_name: widget.name || config.name,
         widget_type: config.template_id || widget.type,
+        event_types: eventTypes, // Include event types for pill badge and other widgets
         display: displaySettings,
         notifications: notifications,
         count: notifications.length,
