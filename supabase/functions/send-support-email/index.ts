@@ -67,7 +67,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           from: 'PopProof Support <onboarding@resend.dev>',
-          to: ['support@proofedge.io'],
+          to: ['viilasacontact@gmail.com'],
           reply_to: email,
           subject: `[${categoryLabel}] ${subject}`,
           html: `
