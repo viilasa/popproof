@@ -119,7 +119,7 @@ export function StatCard({
                 {isNegative && <TrendingDown className="w-3 h-3" />}
                 {isNeutral && <Minus className="w-3 h-3" />}
                 {isPositive && '+'}
-                {change}%
+                {Math.round(change)}%
               </span>
               <span className="text-xs text-surface-400">{changeLabel}</span>
             </div>
