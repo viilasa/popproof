@@ -14,6 +14,7 @@ import {
     AtSign,
     FileText
 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 type QueryType = 'general' | 'technical' | 'bug' | 'feature' | 'billing';
 
@@ -80,24 +81,20 @@ export default function Support() {
         setError(null);
 
         try {
-            // Submit to FormSubmit.co
-            const response = await fetch('https://formsubmit.co/ajax/support@proofedge.io', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
+            // Send via Supabase Edge Function + Resend
+            const { data, error: fnError } = await supabase.functions.invoke('send-support-email', {
+                body: {
                     name: formData.name,
                     email: formData.email,
-                    _subject: `[ProofEdge ${formData.queryType.toUpperCase()}] ${formData.subject}`,
                     queryType: formData.queryType,
                     subject: formData.subject,
-                    message: formData.message
-                })
+                    message: formData.message,
+                },
             });
 
-            if (response.ok) {
+            if (fnError) throw fnError;
+
+            if (data?.success) {
                 setIsSubmitted(true);
                 setFormData({
                     name: '',
@@ -107,7 +104,7 @@ export default function Support() {
                     message: ''
                 });
             } else {
-                throw new Error('Failed to submit form');
+                throw new Error(data?.error || 'Failed to submit form');
             }
         } catch (err) {
             setError('Failed to send message. Please try again or email us directly at support@proofedge.io');
