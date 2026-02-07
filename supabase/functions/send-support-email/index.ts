@@ -46,45 +46,8 @@ serve(async (req) => {
       throw new Error('Failed to save support ticket')
     }
 
-    const queryTypeLabels: Record<string, string> = {
-      general: 'General Inquiry',
-      technical: 'Technical Support',
-      bug: 'Bug Report',
-      feature: 'Feature Request',
-      billing: 'Billing Question',
-    }
-    const categoryLabel = queryTypeLabels[queryType] || queryType
-
-    // Send email via FormSubmit.co
-    let emailSent = false
-    try {
-      const formSubmitResponse = await fetch('https://formsubmit.co/ajax/support@proofedge.io', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({
-          name: name,
-          email: email,
-          _subject: `[${categoryLabel}] ${subject}`,
-          'Query Type': categoryLabel,
-          'Subject': subject,
-          'Message': message,
-          'Ticket ID': ticket.id,
-          _template: 'table',
-        }),
-      })
-      emailSent = formSubmitResponse.ok
-      if (!formSubmitResponse.ok) {
-        console.error('FormSubmit error:', await formSubmitResponse.text())
-      }
-    } catch (emailErr) {
-      console.error('Email sending failed:', emailErr)
-    }
-
     return new Response(
-      JSON.stringify({ success: true, ticketId: ticket.id, emailSent }),
+      JSON.stringify({ success: true, ticketId: ticket.id }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
