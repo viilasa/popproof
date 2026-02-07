@@ -81,35 +81,8 @@ export default function Support() {
         setError(null);
 
         try {
-            const queryTypeLabels: Record<string, string> = {
-                general: 'General Inquiry',
-                technical: 'Technical Support',
-                bug: 'Bug Report',
-                feature: 'Feature Request',
-                billing: 'Billing Question',
-            };
-            const categoryLabel = queryTypeLabels[formData.queryType] || formData.queryType;
-
-            // 1. Send email via FormSubmit.co (client-side)
-            const emailResponse = await fetch('https://formsubmit.co/ajax/support@proofedge.io', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: formData.name,
-                    email: formData.email,
-                    _subject: `[${categoryLabel}] ${formData.subject}`,
-                    'Query Type': categoryLabel,
-                    'Subject': formData.subject,
-                    'Message': formData.message,
-                    _template: 'table',
-                }),
-            });
-
-            // 2. Store ticket in DB via edge function (fire and forget)
-            supabase.functions.invoke('send-support-email', {
+            // Store ticket in DB + send email via edge function
+            const { data, error: fnError } = await supabase.functions.invoke('send-support-email', {
                 body: {
                     name: formData.name,
                     email: formData.email,
@@ -117,9 +90,11 @@ export default function Support() {
                     subject: formData.subject,
                     message: formData.message,
                 },
-            }).catch(() => {});
+            });
 
-            if (emailResponse.ok) {
+            if (fnError) throw fnError;
+
+            if (data?.success) {
                 setIsSubmitted(true);
                 setFormData({
                     name: '',
@@ -129,7 +104,7 @@ export default function Support() {
                     message: ''
                 });
             } else {
-                throw new Error('Failed to submit form');
+                throw new Error(data?.error || 'Failed to submit form');
             }
         } catch (err) {
             setError('Failed to send message. Please try again or email us directly at support@proofedge.io');
