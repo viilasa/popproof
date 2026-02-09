@@ -1,0 +1,57 @@
+# ProofEdge – Real-Time Social Proof Widget
+
+> ProofEdge is a lightweight social proof widget that helps websites boost conversions by displaying real-time user activity like purchases, signups, and live visitor counts. Trusted by 2,000+ brands worldwide.
+
+## Product Overview
+
+ProofEdge is a SaaS tool designed for e-commerce stores, SaaS websites, and landing pages. It shows real-time social proof notifications to build trust and increase conversions by up to 15%.
+
+Unlike competitors that use fake data and fabricated popups, ProofEdge only displays verified, authentic user activity. The widget is under 2KB in size, loads instantly, and integrates with any website in under 2 minutes.
+
+## Key Features
+
+- **Real-Time Purchase Notifications**: Display verified recent purchases with dynamic timestamps (e.g., "Purchased 5 minutes ago").
+- **Live Visitor Count**: Show how many people are currently viewing a page to create urgency and reduce hesitation.
+- **Review Highlights**: Surface top-rated reviews from trusted sources with a clean, premium UI.
+- **Context-Aware Placement**: Notifications are optimized for checkout, pricing, and signup pages where buying decisions happen.
+- **Dynamic Timestamps**: Timestamps update in real-time, keeping social proof fresh and credible.
+- **Analytics Dashboard**: Track impressions, unique viewers, and conversion impact in real-time.
+
+## How It Works
+
+1. **Create Your Account** – Sign up for free at https://www.proofedge.io
+2. **Copy & Paste the Pixel** – Add one line of JavaScript to your site header. Works with Shopify, WordPress, Webflow, and more.
+3. **Watch Conversions Grow** – Real social proof starts showing automatically. Track results in your dashboard.
+
+## Pricing
+
+- **Starter (Free)**: $0/month – Up to 1,000 visitors/month, 1 website, basic notifications, community support.
+- **Pro (Coming Soon)**: $29/month – Up to 25,000 visitors/month, 3 websites, advanced analytics, A/B testing, priority support.
+- **Growth (Coming Soon)**: $79/month – Unlimited visitors, unlimited websites, custom branding, API access, dedicated support, SLA guarantee.
+
+## Integrations
+
+ProofEdge works with any website. Simply add one line of JavaScript to your site header. Compatible with:
+- Shopify
+- WordPress
+- Webflow
+- Wix
+- Squarespace
+- Custom HTML/React/Next.js sites
+
+## Company Information
+
+- **Company**: ProofEdge Inc.
+- **Website**: https://www.proofedge.io
+- **Support Email**: support@proofedge.io
+- **Founded**: 2025
+
+## Links
+
+- Homepage: https://www.proofedge.io
+- Features: https://www.proofedge.io/#features
+- Pricing: https://www.proofedge.io/#pricing
+- How It Works: https://www.proofedge.io/#how-it-works
+- Terms of Service: https://www.proofedge.io/terms
+- Privacy Policy: https://www.proofedge.io/privacy
+- Refund Policy: https://www.proofedge.io/refund

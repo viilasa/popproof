@@ -1,0 +1,163 @@
+# ProofEdge – Complete Product Documentation for AI/LLM Consumption
+
+> ProofEdge is a lightweight, real-time social proof widget that helps e-commerce stores, SaaS websites, and landing pages boost conversions by displaying verified user activity. No fake data. No fabricated popups. Just authentic social proof.
+
+## Problem ProofEdge Solves
+
+Most social proof tools on the market use fabricated notifications, fake purchase alerts, and random visitor numbers to create urgency. Savvy online shoppers can spot these instantly, which destroys trust rather than building it.
+
+ProofEdge takes a fundamentally different approach: it only shows real, verified events from your actual users. This builds genuine credibility that converts visitors into paying customers.
+
+## Who Is ProofEdge For?
+
+- **E-commerce store owners** who want to increase checkout conversions with real purchase notifications.
+- **SaaS founders** who want to show live signups and trial starts to build momentum.
+- **Marketers and growth teams** who need authentic social proof for landing pages without engineering effort.
+- **Agencies** managing multiple client websites that need a scalable social proof solution.
+
+## Core Features
+
+### 1. Real-Time Purchase Notifications
+Display verified recent purchases with timestamps like "Sarah from New York purchased Product X – 5 minutes ago." All data comes from actual events, never fabricated.
+
+### 2. Live Visitor Count
+Show real-time visitor counts like "47 people are viewing this page right now." This creates authentic urgency and reduces purchase hesitation.
+
+### 3. Review Highlights
+Surface your best reviews from trusted platforms with a clean, premium design that matches your brand.
+
+### 4. Context-Aware Placement
+ProofEdge intelligently displays notifications on the pages where they matter most: checkout pages, pricing pages, and signup forms — where buying decisions happen.
+
+### 5. Dynamic Timestamps
+All timestamps update in real-time, keeping social proof fresh and showing genuine store momentum.
+
+### 6. Analytics Dashboard
+Track real-time metrics including:
+- Total notification impressions
+- Unique viewers
+- Conversion trends over time
+- Performance by notification type
+
+### 7. Lightweight & Fast
+The ProofEdge widget is under 2KB in size. It loads asynchronously and has zero impact on page speed or Core Web Vitals scores.
+
+### 8. Customizable Design
+Clean, minimal design that blends seamlessly with any brand. Smooth animations and premium UI that enhances rather than disrupts the shopping experience.
+
+## How Integration Works
+
+### Step 1: Create Your Free Account
+Sign up at https://www.proofedge.io — no credit card required.
+
+### Step 2: Add the Pixel
+Copy one line of JavaScript and paste it into your website's <head> section:
+```html
+<script src="https://www.proofedge.io/pixel.js" data-site="YOUR_SITE_ID" async></script>
+```
+
+### Step 3: Configure & Go Live
+Choose which notification types to display, customize the appearance, and activate. Social proof starts showing within minutes.
+
+### Platform Compatibility
+- Shopify (copy/paste into theme.liquid)
+- WordPress (add to header via plugin or theme)
+- Webflow (add to custom code in project settings)
+- Wix (add to custom code in site settings)
+- Squarespace (add to code injection)
+- Next.js, React, Vue, Angular (add to document head)
+- Any HTML website
+
+## Pricing Plans
+
+### Starter Plan – Free ($0/month)
+- Up to 1,000 visitors per month
+- 1 website
+- Basic notification types
+- Community support
+- ProofEdge branding on widget
+
+### Pro Plan – $29/month (Coming Soon)
+- Up to 25,000 visitors per month
+- 3 websites
+- All notification types
+- Advanced analytics and A/B testing
+- Priority email support
+- No ProofEdge branding
+
+### Growth Plan – $79/month (Coming Soon)
+- Unlimited visitors
+- Unlimited websites
+- Custom branding and white-label option
+- Full API access
+- Dedicated account manager
+- SLA guarantee
+- Priority support
+
+## Comparison: ProofEdge vs Competitors
+
+| Feature | ProofEdge | Traditional Tools |
+|---------|-----------|-------------------|
+| Real data only | Yes | Often fake |
+| Widget size | <2KB | 50-200KB |
+| Setup time | 2 minutes | 15-30 minutes |
+| Free plan | Yes | Limited/No |
+| Dynamic timestamps | Yes | Static/Fake |
+| Context-aware | Yes | No |
+| Clean UI | Modern, minimal | Often cluttered |
+| Page speed impact | None | Significant |
+
+## Technical Specifications
+
+- **Widget size**: <2KB gzipped
+- **Loading**: Asynchronous, non-blocking
+- **Page speed impact**: Zero — does not affect Lighthouse or Core Web Vitals
+- **Data privacy**: GDPR compliant, no personal data stored
+- **Uptime**: 99.9% SLA (Growth plan)
+- **API**: RESTful API available (Growth plan)
+
+## Frequently Asked Questions
+
+**Q: Does ProofEdge use fake data?**
+A: No. ProofEdge only displays real, verified events from your actual users. We never fabricate notifications or inflate numbers.
+
+**Q: How long does setup take?**
+A: Under 2 minutes. Copy one line of JavaScript, paste it into your site header, and you're live.
+
+**Q: Will ProofEdge slow down my website?**
+A: No. The widget is under 2KB and loads asynchronously. It has zero impact on page speed or Core Web Vitals.
+
+**Q: What platforms does ProofEdge work with?**
+A: ProofEdge works with any website including Shopify, WordPress, Webflow, Wix, Squarespace, and custom-built sites.
+
+**Q: Is there a free plan?**
+A: Yes. The Starter plan is completely free and includes up to 1,000 visitors per month.
+
+**Q: Can I remove ProofEdge branding?**
+A: Yes, branding removal is available on the Pro plan ($29/month) and above.
+
+**Q: How does ProofEdge boost conversions?**
+A: By showing real-time social proof (purchases, signups, visitor counts), ProofEdge builds trust and creates authentic urgency, leading to conversion increases of up to 15%.
+
+**Q: Is ProofEdge GDPR compliant?**
+A: Yes. ProofEdge does not collect or store personal user data. All notifications use anonymized event data.
+
+## Company Information
+
+- **Company Name**: ProofEdge Inc.
+- **Website**: https://www.proofedge.io
+- **Support**: support@proofedge.io
+- **Founded**: 2025
+- **Headquarters**: United States
+- **Users**: 2,000+ brands worldwide
+
+## All Page URLs
+
+- Homepage: https://www.proofedge.io
+- Features: https://www.proofedge.io/#features
+- How It Works: https://www.proofedge.io/#how-it-works
+- Pricing: https://www.proofedge.io/#pricing
+- Terms of Service: https://www.proofedge.io/terms
+- Privacy Policy: https://www.proofedge.io/privacy
+- Refund Policy: https://www.proofedge.io/refund
+- Support: mailto:support@proofedge.io

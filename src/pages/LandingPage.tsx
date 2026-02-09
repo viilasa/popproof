@@ -18,7 +18,9 @@ import {
   BarChart3,
   Play,
   MousePointer,
-  Rocket
+  Rocket,
+  HelpCircle,
+  ChevronDown
 } from 'lucide-react';
 
 // Pricing tier options
@@ -1149,6 +1151,67 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
         </div>
       </section>
 
+      {/* --- FAQ Section --- */}
+      <section className="py-28 bg-white" aria-labelledby="faq-heading" id="faq">
+        <div className="max-w-4xl mx-auto px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-blue-700 text-sm font-semibold mb-6 border border-blue-100">
+              <HelpCircle size={16} />
+              <span>Got Questions?</span>
+            </div>
+            <h2 id="faq-heading" className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6">Frequently Asked <span className="text-gradient">Questions</span></h2>
+            <p className="text-gray-600 text-xl">Everything you need to know about ProofEdge.</p>
+          </div>
+
+          <div className="space-y-4">
+            {[
+              {
+                q: "What is ProofEdge?",
+                a: "ProofEdge is a lightweight social proof widget that displays real-time user activity like purchases, signups, and live visitor counts on your website. It helps boost conversions by up to 15% using only verified, authentic data — no fake popups."
+              },
+              {
+                q: "Does ProofEdge use fake data?",
+                a: "No. ProofEdge only displays real, verified events from your actual users. We never fabricate notifications or inflate numbers."
+              },
+              {
+                q: "How long does it take to set up?",
+                a: "Under 2 minutes. Simply copy one line of JavaScript and paste it into your website's header section. No coding knowledge required. Works with Shopify, WordPress, Webflow, Wix, and more."
+              },
+              {
+                q: "Will ProofEdge slow down my website?",
+                a: "No. The ProofEdge widget is under 2KB in size and loads asynchronously. It has zero impact on page speed or Core Web Vitals scores."
+              },
+              {
+                q: "What platforms does ProofEdge work with?",
+                a: "ProofEdge works with any website including Shopify, WordPress, Webflow, Wix, Squarespace, and custom-built sites like React, Next.js, and Vue."
+              },
+              {
+                q: "Is there a free plan?",
+                a: "Yes! The Starter plan is completely free and includes up to 1,000 visitors per month with basic notification types and community support."
+              },
+              {
+                q: "How does ProofEdge boost conversions?",
+                a: "By showing real-time social proof such as recent purchases, live signups, and visitor counts, ProofEdge builds trust and creates authentic urgency. This leads to conversion increases of up to 15%."
+              },
+              {
+                q: "Is ProofEdge GDPR compliant?",
+                a: "Yes. ProofEdge does not collect or store personal user data. All notifications use anonymized event data and are fully GDPR compliant."
+              }
+            ].map((faq, i) => (
+              <details key={i} className="group bg-gray-50 rounded-2xl border border-gray-200 hover:border-gray-300 transition-all">
+                <summary className="flex items-center justify-between cursor-pointer px-8 py-6 text-lg font-semibold text-gray-900 list-none">
+                  {faq.q}
+                  <ChevronDown size={20} className="text-gray-400 group-open:rotate-180 transition-transform duration-200 shrink-0 ml-4" />
+                </summary>
+                <div className="px-8 pb-6 text-gray-600 text-base leading-relaxed">
+                  {faq.a}
+                </div>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* --- Footer --- */}
       <footer className="bg-gray-950 py-12 border-t border-white/10" role="contentinfo">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
@@ -1167,6 +1230,7 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
               <a href="#features" className="text-gray-400 hover:text-white transition-colors font-medium">Features</a>
               <a href="#how-it-works" className="text-gray-400 hover:text-white transition-colors font-medium">How It Works</a>
               <a href="#pricing" className="text-gray-400 hover:text-white transition-colors font-medium">Pricing</a>
+              <a href="#faq" className="text-gray-400 hover:text-white transition-colors font-medium">FAQ</a>
               <button onClick={() => onShowSignup()} className="text-gray-400 hover:text-white transition-colors font-medium">Sign Up</button>
               <button onClick={onShowLogin} className="text-gray-400 hover:text-white transition-colors font-medium">Log In</button>
               <a href="mailto:support@proofedge.io" className="text-gray-400 hover:text-white transition-colors font-medium">Contact</a>
