@@ -1,0 +1,5 @@
+# 301 redirect non-www to www
+https://proofedge.io/* https://www.proofedge.io/:splat 301!
+
+# SPA fallback - all routes serve index.html
+/*    /index.html   200

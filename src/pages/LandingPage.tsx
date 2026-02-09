@@ -1162,8 +1162,12 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
             </div>
 
             {/* Essential Links */}
-            <nav className="flex items-center gap-6 sm:gap-8 text-sm sm:text-base" aria-label="Footer navigation">
+            <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 sm:gap-8 text-sm sm:text-base" aria-label="Footer navigation">
+              <a href="#features" className="text-gray-400 hover:text-white transition-colors font-medium">Features</a>
+              <a href="#how-it-works" className="text-gray-400 hover:text-white transition-colors font-medium">How It Works</a>
               <a href="#pricing" className="text-gray-400 hover:text-white transition-colors font-medium">Pricing</a>
+              <button onClick={() => onShowSignup()} className="text-gray-400 hover:text-white transition-colors font-medium">Sign Up</button>
+              <button onClick={onShowLogin} className="text-gray-400 hover:text-white transition-colors font-medium">Log In</button>
               <a href="mailto:support@proofedge.io" className="text-gray-400 hover:text-white transition-colors font-medium">Contact</a>
               <button onClick={onShowPrivacy} className="text-gray-400 hover:text-white transition-colors font-medium">Privacy</button>
               <button onClick={onShowTerms} className="text-gray-400 hover:text-white transition-colors font-medium">Terms</button>
