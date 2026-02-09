@@ -55,3 +55,12 @@ ProofEdge works with any website. Simply add one line of JavaScript to your site
 - Terms of Service: https://www.proofedge.io/terms
 - Privacy Policy: https://www.proofedge.io/privacy
 - Refund Policy: https://www.proofedge.io/refund
+
+## Guides (Topic Cluster)
+
+- Hub: The Complete Guide to Social Proof: https://www.proofedge.io/guides/social-proof-guide.html
+- What Is a Social Proof Widget?: https://www.proofedge.io/guides/what-is-social-proof-widget.html
+- How Social Proof Increases Conversions: https://www.proofedge.io/guides/social-proof-conversion-psychology.html
+- Setup Tutorial (2 Minutes): https://www.proofedge.io/guides/social-proof-setup-tutorial.html
+- Social Proof Tools Compared (2025): https://www.proofedge.io/guides/social-proof-tools-comparison.html
+- Full product docs for AI: https://www.proofedge.io/llms-full.txt

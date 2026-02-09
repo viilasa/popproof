@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to Add Social Proof to Your Website in 2 Minutes | ProofEdge Setup Tutorial</title>
+  <meta name="description" content="Step-by-step tutorial on adding social proof notifications to your website. Works with Shopify, WordPress, Webflow, Wix, and custom sites. Setup takes under 2 minutes." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://www.proofedge.io/guides/social-proof-setup-tutorial.html" />
+  <link rel="icon" type="image/png" href="https://res.cloudinary.com/ddhhlkyut/image/upload/v1765406050/Proofedge6_dxarbe.svg" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="How to Add Social Proof to Your Website in 2 Minutes" />
+  <meta property="og:url" content="https://www.proofedge.io/guides/social-proof-setup-tutorial.html" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "name": "How to Add Social Proof to Your Website",
+    "description": "Add real-time social proof notifications to your website in under 2 minutes using ProofEdge.",
+    "totalTime": "PT2M",
+    "estimatedCost": { "@type": "MonetaryAmount", "currency": "USD", "value": "0" },
+    "step": [
+      {
+        "@type": "HowToStep",
+        "position": 1,
+        "name": "Create a Free ProofEdge Account",
+        "text": "Go to proofedge.io and sign up for a free account. No credit card required. Enter your website URL during registration.",
+        "url": "https://www.proofedge.io"
+      },
+      {
+        "@type": "HowToStep",
+        "position": 2,
+        "name": "Copy the Tracking Pixel",
+        "text": "After signing up, go to your dashboard and copy the one-line JavaScript pixel code. It looks like: <script src='https://www.proofedge.io/pixel.js' data-site='YOUR_ID' async></script>"
+      },
+      {
+        "@type": "HowToStep",
+        "position": 3,
+        "name": "Paste Into Your Website Header",
+        "text": "Add the pixel code to your website's <head> section. For Shopify, paste it in theme.liquid. For WordPress, use a header scripts plugin. For Webflow, add it to custom code in project settings."
+      },
+      {
+        "@type": "HowToStep",
+        "position": 4,
+        "name": "Configure Notification Types",
+        "text": "In your ProofEdge dashboard, choose which notifications to display: purchase alerts, visitor counts, signup notifications, or review highlights."
+      },
+      {
+        "@type": "HowToStep",
+        "position": 5,
+        "name": "Go Live and Track Results",
+        "text": "Activate your widget. Social proof notifications start showing immediately. Monitor impressions and conversion impact in your analytics dashboard."
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; color: #1e293b; line-height: 1.8; background: #fff; }
+    .container { max-width: 800px; margin: 0 auto; padding: 40px 24px; }
+    nav.top { background: #0f172a; padding: 16px 24px; }
+    nav.top .inner { max-width: 800px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+    nav.top a { color: #94a3b8; text-decoration: none; font-size: 14px; font-weight: 500; }
+    nav.top a:hover { color: #fff; }
+    nav.top .brand { color: #fff; font-weight: 700; font-size: 18px; }
+    h1 { font-size: 38px; font-weight: 800; line-height: 1.2; margin-bottom: 16px; color: #0f172a; }
+    .answer { font-size: 19px; color: #334155; margin-bottom: 32px; line-height: 1.7; border-left: 4px solid #2563eb; padding: 20px 24px; background: #f8fafc; border-radius: 0 12px 12px 0; }
+    h2 { font-size: 26px; font-weight: 700; margin-top: 40px; margin-bottom: 14px; color: #0f172a; }
+    h3 { font-size: 20px; font-weight: 600; margin-top: 28px; margin-bottom: 10px; color: #1e293b; }
+    p { margin-bottom: 16px; color: #475569; font-size: 16px; }
+    .breadcrumb { font-size: 13px; color: #94a3b8; margin-bottom: 24px; }
+    .breadcrumb a { color: #2563eb; text-decoration: none; }
+    .step-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px; margin: 20px 0; position: relative; padding-left: 80px; }
+    .step-card .num { position: absolute; left: 24px; top: 28px; width: 40px; height: 40px; background: #2563eb; color: #fff; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; }
+    .step-card h3 { margin-top: 0; }
+    .platform { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 12px 0; }
+    .platform h4 { font-size: 17px; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
+    .platform p { margin-bottom: 0; font-size: 14px; }
+    code { background: #1e293b; color: #e2e8f0; padding: 12px 16px; border-radius: 8px; display: block; margin: 12px 0; font-size: 13px; overflow-x: auto; font-family: 'Courier New', monospace; }
+    .time-badge { display: inline-block; background: #ecfdf5; color: #059669; padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; margin-bottom: 24px; }
+    .snippet { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 20px 24px; margin: 24px 0; }
+    .snippet strong { color: #166534; }
+    .cta { background: #0f172a; color: #fff; padding: 36px; border-radius: 20px; text-align: center; margin: 40px 0; }
+    .cta h2 { color: #fff; margin-top: 0; }
+    .cta p { color: #94a3b8; }
+    .cta a { display: inline-block; background: #fff; color: #0f172a; padding: 12px 28px; border-radius: 12px; font-weight: 700; text-decoration: none; margin-top: 12px; }
+    .related { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 24px 0; }
+    .related a { padding: 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; text-decoration: none; color: #1e293b; font-size: 14px; font-weight: 600; }
+    .related a:hover { border-color: #2563eb; background: #eff6ff; }
+    footer { border-top: 1px solid #e2e8f0; padding: 24px 0; margin-top: 40px; text-align: center; }
+    footer a { color: #2563eb; text-decoration: none; margin: 0 10px; font-size: 13px; }
+    footer p { color: #94a3b8; font-size: 12px; margin-top: 8px; }
+    @media (max-width: 640px) { h1 { font-size: 28px; } .related { grid-template-columns: 1fr; } .step-card { padding-left: 24px; padding-top: 60px; } .step-card .num { top: 16px; } }
+  </style>
+</head>
+<body>
+  <nav class="top">
+    <div class="inner">
+      <a href="https://www.proofedge.io/" class="brand">ProofEdge</a>
+      <div>
+        <a href="/guides/social-proof-guide.html">Guide Hub</a>
+        <a href="https://www.proofedge.io/#pricing" style="margin-left:20px">Pricing</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="breadcrumb">
+      <a href="https://www.proofedge.io/">Home</a> → <a href="/guides/social-proof-guide.html">Social Proof Guide</a> → Setup Tutorial
+    </div>
+
+    <h1>How to Add Social Proof to Your Website in 2 Minutes</h1>
+
+    <div class="answer">
+      Adding social proof to your website takes under 2 minutes with ProofEdge. Create a free account, copy a single line of JavaScript, and paste it into your website's header. Works with Shopify, WordPress, Webflow, Wix, Squarespace, and any custom HTML site. No coding knowledge required.
+    </div>
+
+    <span class="time-badge">⏱ Total setup time: ~2 minutes</span>
+
+    <h2>Step-by-Step Setup Guide</h2>
+
+    <div class="step-card">
+      <div class="num">1</div>
+      <h3>Create a Free ProofEdge Account</h3>
+      <p>Go to <a href="https://www.proofedge.io/">proofedge.io</a> and click "Start Free Trial." Enter your email, create a password, and add your website URL. No credit card required — the Starter plan is free forever with up to 1,000 visitors/month.</p>
+    </div>
+
+    <div class="step-card">
+      <div class="num">2</div>
+      <h3>Copy the Tracking Pixel</h3>
+      <p>After signing up, your dashboard will show a unique JavaScript pixel. Copy this single line of code:</p>
+      <code>&lt;script src="https://www.proofedge.io/pixel.js" data-site="YOUR_SITE_ID" async&gt;&lt;/script&gt;</code>
+      <p>The <code style="display:inline; padding: 2px 6px;">async</code> attribute ensures the script loads without blocking your page — zero speed impact.</p>
+    </div>
+
+    <div class="step-card">
+      <div class="num">3</div>
+      <h3>Paste Into Your Website Header</h3>
+      <p>Add the pixel code to your website's <code style="display:inline; padding: 2px 6px;">&lt;head&gt;</code> section. Here's how for each platform:</p>
+    </div>
+
+    <h2>Platform-Specific Instructions</h2>
+
+    <div class="platform">
+      <h4>Shopify</h4>
+      <p>Go to <strong>Online Store → Themes → Edit Code → theme.liquid</strong>. Paste the pixel just before the closing <code style="display:inline; padding: 2px 6px;">&lt;/head&gt;</code> tag. Click Save.</p>
+    </div>
+
+    <div class="platform">
+      <h4>WordPress</h4>
+      <p>Install the <strong>Insert Headers and Footers</strong> plugin (or use your theme's header scripts option). Paste the pixel in the "Scripts in Header" field. Click Save.</p>
+    </div>
+
+    <div class="platform">
+      <h4>Webflow</h4>
+      <p>Go to <strong>Project Settings → Custom Code → Head Code</strong>. Paste the pixel. Click Save and publish.</p>
+    </div>
+
+    <div class="platform">
+      <h4>Wix</h4>
+      <p>Go to <strong>Settings → Custom Code → Add Code</strong>. Paste the pixel, set placement to "Head," and apply to "All Pages."</p>
+    </div>
+
+    <div class="platform">
+      <h4>Squarespace</h4>
+      <p>Go to <strong>Settings → Advanced → Code Injection → Header</strong>. Paste the pixel. Click Save.</p>
+    </div>
+
+    <div class="platform">
+      <h4>Custom HTML / React / Next.js</h4>
+      <p>Add the pixel directly to your <code style="display:inline; padding: 2px 6px;">&lt;head&gt;</code> section in your HTML file, or use a <code style="display:inline; padding: 2px 6px;">useEffect</code> hook in React to inject it dynamically.</p>
+    </div>
+
+    <div class="step-card">
+      <div class="num">4</div>
+      <h3>Configure Notification Types</h3>
+      <p>In your ProofEdge dashboard, choose which types of notifications to display:</p>
+      <ul>
+        <li><strong>Purchase alerts</strong> — "Sarah purchased Product X — 5 min ago"</li>
+        <li><strong>Live visitor count</strong> — "47 people are viewing this page"</li>
+        <li><strong>Signup alerts</strong> — "150 people signed up today"</li>
+        <li><strong>Review highlights</strong> — Surface your best reviews</li>
+      </ul>
+      <p>Place notifications on pages where buying decisions happen: checkout, pricing, and signup pages.</p>
+    </div>
+
+    <div class="step-card">
+      <div class="num">5</div>
+      <h3>Go Live and Track Results</h3>
+      <p>Activate your widget. Social proof notifications start appearing to visitors immediately. Use your ProofEdge analytics dashboard to track:</p>
+      <ul>
+        <li>Total notification impressions</li>
+        <li>Unique viewers</li>
+        <li>Conversion trends over time</li>
+      </ul>
+    </div>
+
+    <div class="snippet">
+      <strong>Pro tip:</strong> Start with purchase notifications on your product or checkout pages. This is the highest-converting notification type for most e-commerce stores. After a week of data, A/B test adding live visitor counts to your pricing page.
+    </div>
+
+    <h2>Troubleshooting Common Issues</h2>
+
+    <h3>Notifications not showing?</h3>
+    <p>Make sure the pixel is placed inside the <code style="display:inline; padding: 2px 6px;">&lt;head&gt;</code> tag, not the <code style="display:inline; padding: 2px 6px;">&lt;body&gt;</code>. Check that your site ID is correct. Notifications only appear when there is real activity data to show.</p>
+
+    <h3>Widget affecting page speed?</h3>
+    <p>ProofEdge's pixel is under 2KB and loads asynchronously. It should have zero impact on your Lighthouse score. If you notice any issues, ensure the <code style="display:inline; padding: 2px 6px;">async</code> attribute is present on the script tag.</p>
+
+    <div class="cta">
+      <h2>Ready to Set Up ProofEdge?</h2>
+      <p>Free plan. 2-minute setup. Real data only.</p>
+      <a href="https://www.proofedge.io/#pricing">Create Free Account →</a>
+    </div>
+
+    <h2>Related Guides</h2>
+    <div class="related">
+      <a href="/guides/social-proof-guide.html">📖 Complete Social Proof Guide</a>
+      <a href="/guides/what-is-social-proof-widget.html">💡 What Is a Social Proof Widget?</a>
+      <a href="/guides/social-proof-conversion-psychology.html">🧠 Conversion Psychology</a>
+      <a href="/guides/social-proof-tools-comparison.html">📊 Tools Comparison</a>
+    </div>
+
+    <footer>
+      <div>
+        <a href="https://www.proofedge.io/">Home</a>
+        <a href="https://www.proofedge.io/#features">Features</a>
+        <a href="https://www.proofedge.io/#pricing">Pricing</a>
+        <a href="https://www.proofedge.io/terms">Terms</a>
+        <a href="https://www.proofedge.io/privacy">Privacy</a>
+      </div>
+      <p>&copy; 2025 ProofEdge Inc.</p>
+    </footer>
+  </div>
+</body>
+</html>

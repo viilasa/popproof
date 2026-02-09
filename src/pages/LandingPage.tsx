@@ -699,6 +699,47 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
         </div>
       </section>
 
+      {/* --- What Is Social Proof (Definition + TL;DR) --- */}
+      <section className="py-20 bg-gradient-to-b from-white to-slate-50" aria-labelledby="definition-heading">
+        <div className="max-w-4xl mx-auto px-6 lg:px-8">
+          <div className="bg-white rounded-3xl border border-gray-200 p-10 md:p-14 shadow-sm">
+            <h2 id="definition-heading" className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-6">What Is a Social Proof Widget?</h2>
+            <p className="text-gray-700 text-lg leading-relaxed mb-8">
+              A social proof widget is a small notification that appears on your website showing real-time user activity — like recent purchases, signups, or live visitor counts. It builds trust with new visitors by showing that other people are actively using your product or buying from your store. ProofEdge is a social proof widget designed for e-commerce stores and SaaS websites that only uses verified, authentic data.
+            </p>
+
+            <div className="bg-slate-50 rounded-2xl p-6 md:p-8 border border-slate-200 mb-8">
+              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <Zap size={18} className="text-blue-600" />
+                TL;DR — Why ProofEdge?
+              </h3>
+              <ul className="space-y-3 text-gray-700 text-base">
+                <li className="flex items-start gap-3"><Check size={18} className="text-emerald-500 shrink-0 mt-0.5" /><span><strong>Real data only</strong> — never fabricates notifications or inflates numbers</span></li>
+                <li className="flex items-start gap-3"><Check size={18} className="text-emerald-500 shrink-0 mt-0.5" /><span><strong>Under 2KB</strong> — zero impact on page speed or Core Web Vitals</span></li>
+                <li className="flex items-start gap-3"><Check size={18} className="text-emerald-500 shrink-0 mt-0.5" /><span><strong>2-minute setup</strong> — one line of JavaScript, works with Shopify, WordPress, Webflow</span></li>
+                <li className="flex items-start gap-3"><Check size={18} className="text-emerald-500 shrink-0 mt-0.5" /><span><strong>Up to 15% conversion lift</strong> — driven by authentic urgency and trust signals</span></li>
+                <li className="flex items-start gap-3"><Check size={18} className="text-emerald-500 shrink-0 mt-0.5" /><span><strong>Free plan available</strong> — 1,000 visitors/month included at no cost</span></li>
+              </ul>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6 text-center">
+              <div className="p-5 rounded-xl bg-blue-50 border border-blue-100">
+                <p className="text-3xl font-extrabold text-blue-700">{"<"}2KB</p>
+                <p className="text-sm text-blue-600 font-medium mt-1">Widget Size</p>
+              </div>
+              <div className="p-5 rounded-xl bg-emerald-50 border border-emerald-100">
+                <p className="text-3xl font-extrabold text-emerald-700">2 min</p>
+                <p className="text-sm text-emerald-600 font-medium mt-1">Setup Time</p>
+              </div>
+              <div className="p-5 rounded-xl bg-violet-50 border border-violet-100">
+                <p className="text-3xl font-extrabold text-violet-700">0%</p>
+                <p className="text-sm text-violet-600 font-medium mt-1">Page Speed Impact</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* --- Why Fails Section (Features Grid) --- */}
       <section id="features" className="py-28 bg-white mesh-gradient relative" aria-labelledby="features-heading">
         <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
@@ -873,6 +914,63 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
                 <span><span className="text-[#569CD6]">export default</span> widgetConfig;</span>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* --- Comparison Table --- */}
+      <section className="py-28 bg-slate-50" aria-labelledby="comparison-heading" id="comparison">
+        <div className="max-w-5xl mx-auto px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-50 text-indigo-600 text-sm font-semibold mb-6 border border-indigo-100">
+              <BarChart3 size={16} />
+              <span>Side-by-Side</span>
+            </div>
+            <h2 id="comparison-heading" className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6">How Does ProofEdge <span className="text-gradient">Compare?</span></h2>
+            <p className="text-gray-600 text-xl max-w-2xl mx-auto">See how ProofEdge stacks up against traditional social proof tools like UseProof, FOMO, and Nudgify.</p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+              <thead>
+                <tr className="bg-gray-900 text-white">
+                  <th className="text-left px-6 py-5 text-base font-semibold">Feature</th>
+                  <th className="text-center px-6 py-5 text-base font-semibold">ProofEdge</th>
+                  <th className="text-center px-6 py-5 text-base font-semibold text-gray-400">Traditional Tools</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {[
+                  { feature: 'Uses real data only', proofedge: true, others: false },
+                  { feature: 'Widget size', proofedge: '<2KB', others: '50–200KB' },
+                  { feature: 'Setup time', proofedge: '2 minutes', others: '15–30 min' },
+                  { feature: 'Free plan', proofedge: true, others: false },
+                  { feature: 'Dynamic timestamps', proofedge: true, others: false },
+                  { feature: 'Context-aware placement', proofedge: true, others: false },
+                  { feature: 'Page speed impact', proofedge: 'None', others: 'Significant' },
+                  { feature: 'Clean, modern UI', proofedge: true, others: false },
+                  { feature: 'GDPR compliant', proofedge: true, others: 'Varies' },
+                ].map((row, i) => (
+                  <tr key={i} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 text-gray-900 font-medium">{row.feature}</td>
+                    <td className="px-6 py-4 text-center">
+                      {row.proofedge === true ? (
+                        <Check size={20} className="text-emerald-500 mx-auto" />
+                      ) : (
+                        <span className="text-emerald-600 font-semibold">{row.proofedge}</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      {row.others === false ? (
+                        <X size={20} className="text-red-400 mx-auto" />
+                      ) : (
+                        <span className="text-gray-500">{row.others}</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </section>

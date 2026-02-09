@@ -35,5 +35,53 @@
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
+
+  <!-- Guide Hub Page -->
+  <url>
+    <loc>https://www.proofedge.io/guides/social-proof-guide.html</loc>
+    <lastmod>2026-02-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Guide: What Is a Social Proof Widget -->
+  <url>
+    <loc>https://www.proofedge.io/guides/what-is-social-proof-widget.html</loc>
+    <lastmod>2026-02-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Guide: Conversion Psychology -->
+  <url>
+    <loc>https://www.proofedge.io/guides/social-proof-conversion-psychology.html</loc>
+    <lastmod>2026-02-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Guide: Setup Tutorial -->
+  <url>
+    <loc>https://www.proofedge.io/guides/social-proof-setup-tutorial.html</loc>
+    <lastmod>2026-02-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Guide: Tools Comparison -->
+  <url>
+    <loc>https://www.proofedge.io/guides/social-proof-tools-comparison.html</loc>
+    <lastmod>2026-02-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- LLMs.txt -->
+  <url>
+    <loc>https://www.proofedge.io/llms.txt</loc>
+    <lastmod>2026-02-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
   
 </urlset>
