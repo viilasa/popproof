@@ -527,6 +527,7 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-gray-900 leading-[1.1] mb-6">
               Turn Visitors Into
               <span className="block text-gradient">Customers</span>
+              <span className="block text-2xl md:text-3xl font-bold text-gray-500 mt-3">with Real-Time Social Proof</span>
             </h1>
 
             <p className="text-xl text-gray-600 mb-8 max-w-xl leading-relaxed">
