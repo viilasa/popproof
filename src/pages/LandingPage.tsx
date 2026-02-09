@@ -143,6 +143,26 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
     };
   }, []);
 
+  // Microsoft Clarity - only loads on LandingPage
+  useEffect(() => {
+    const clarityScript = document.createElement('script');
+    clarityScript.type = 'text/javascript';
+    clarityScript.innerHTML = `
+      (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+      })(window, document, "clarity", "script", "venkwhdiqk");
+    `;
+    document.head.appendChild(clarityScript);
+
+    return () => {
+      document.head.removeChild(clarityScript);
+      // @ts-ignore
+      if (window.clarity) delete window.clarity;
+    };
+  }, []);
+
   // Google Analytics - only loads on LandingPage
   useEffect(() => {
     // Load gtag.js script
