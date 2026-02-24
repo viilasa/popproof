@@ -25,6 +25,16 @@ export function Dashboard({ initialSection, pendingPlanSlug }: DashboardProps = 
     }
   }, [pendingPlanSlug]);
   
+  // Clean up any leftover widget elements from landing page pixel
+  useEffect(() => {
+    document.querySelectorAll(
+      '.sp-widget-container, .sp-notification, #social-proof-widget-styles, ' +
+      '[id^="proofedge"], [id^="proof-edge"], [id^="proofpop"], ' +
+      '[class*="proofedge"], [class*="proof-edge"], [class*="proofpop"], ' +
+      '[data-proofedge], [data-widget-id], .social-proof-widget, .notification-widget'
+    ).forEach(el => el.remove());
+  }, []);
+
   // Check URL parameters for widget ID
   useEffect(() => {
     try {

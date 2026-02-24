@@ -3,9 +3,16 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    "packages/medusa-plugin-proofedge",
+    "packages/medusa-storefront"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:plugin": "cd packages/medusa-plugin-proofedge && npm run build",
+    "build:storefront": "cd packages/medusa-storefront && npm run build",
+    "build:packages": "npm run build:plugin && npm run build:storefront",
     "lint": "eslint .",
     "preview": "vite preview",
     "server": "node server.js"

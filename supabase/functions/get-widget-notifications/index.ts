@@ -50,6 +50,48 @@ Deno.serve(async (req) => {
 
     console.log('Querying widgets for:', { widgetId, siteId });
 
+    // Check visitor limit — if exceeded, return empty notifications (widget stops)
+    if (siteId) {
+      try {
+        const { data: siteOwner } = await supabase
+          .from('sites')
+          .select('user_id')
+          .eq('id', siteId)
+          .single();
+
+        if (siteOwner?.user_id) {
+          const { data: sub } = await supabase
+            .from('user_subscriptions')
+            .select('visitors_used, status, plan:subscription_plans(visitor_limit, tier)')
+            .eq('user_id', siteOwner.user_id)
+            .single();
+
+          const visitorLimit = (sub as any)?.plan?.visitor_limit;
+          const visitorsUsed = sub?.visitors_used || 0;
+          const planTier = (sub as any)?.plan?.tier || 'starter';
+
+          if (visitorLimit && visitorLimit > 0 && visitorsUsed >= visitorLimit) {
+            console.log(`Visitor limit reached for site ${siteId}: ${visitorsUsed}/${visitorLimit}`);
+            return new Response(JSON.stringify({
+              success: true,
+              notifications: [],
+              limit_reached: true,
+              message: 'Visitor limit reached. Upgrade your plan to continue showing notifications.'
+            }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+            });
+          }
+
+          // Store plan tier for branding enforcement later
+          (globalThis as any).__planTier = planTier;
+        }
+      } catch (limitError) {
+        console.error('Error checking visitor limit:', limitError);
+        // Don't block widget on error — continue serving
+      }
+    }
+
     // DEBUG: First check ALL widgets for this site (regardless of is_active)
     const { data: allWidgets, error: allWidgetsError } = await supabase
       .from('widgets')
@@ -870,6 +912,19 @@ Deno.serve(async (req) => {
         reduced_motion_support: widget.reduced_motion_support
       });
     }
+
+    // Enforce branding for free/starter/trial plans
+    const planTier = (globalThis as any).__planTier || 'starter';
+    if (planTier === 'starter' || planTier === 'trial') {
+      for (const wn of widgetNotifications) {
+        // Force "Powered by ProofEdge" branding ON for free users
+        if (wn.design_settings?.branding?.identity) {
+          wn.design_settings.branding.identity.showPoweredBy = true;
+        }
+      }
+    }
+    // Clean up global
+    delete (globalThis as any).__planTier;
 
     return new Response(JSON.stringify({
       success: true,

@@ -1,129 +1,160 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { IntegrationCard, Integration } from './IntegrationCard';
 import { Puzzle, ShoppingBag, Code, Star } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 interface IntegrationsSectionProps {
   siteId: string;
   onPlatformSelect?: (platformId: string) => void;
 }
 
+// Base integration definitions (status will be hydrated from DB)
+const BASE_INTEGRATIONS: Omit<Integration, 'status'>[] = [
+  {
+    id: 'shopify',
+    name: 'Shopify',
+    description: '',
+    icon: 'https://cdn.freebiesupply.com/logos/large/2x/shopify-logo-png-transparent.png',
+    category: 'ecommerce',
+    setupComplexity: 'easy',
+  },
+  {
+    id: 'woocommerce',
+    name: 'WooCommerce',
+    description: '',
+    icon: 'https://download.logo.wine/logo/WooCommerce/WooCommerce-Logo.wine.png',
+    category: 'ecommerce',
+    setupComplexity: 'easy',
+  },
+  {
+    id: 'medusa',
+    name: 'Medusa',
+    description: '',
+    icon: 'https://user-images.githubusercontent.com/7554214/153162406-bf8fd16f-aa98-4604-b87b-e13ab4baf604.png',
+    category: 'ecommerce',
+    setupComplexity: 'medium',
+  },
+  {
+    id: 'wordpress',
+    name: 'WordPress',
+    description: '',
+    icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSiQqvP9mSAN_KNxZlbvD9VT-yl4Vf_PuT6Cw&s',
+    category: 'cms',
+    setupComplexity: 'easy',
+  },
+  {
+    id: 'html',
+    name: 'HTML',
+    description: '',
+    icon: '📄',
+    category: 'cms',
+    setupComplexity: 'easy',
+  },
+  {
+    id: 'webhook',
+    name: 'Webhook',
+    description: '',
+    icon: '🔗',
+    category: 'developer',
+    setupComplexity: 'easy',
+  },
+  {
+    id: 'zapier',
+    name: 'Zapier',
+    description: '',
+    icon: 'https://1000logos.net/wp-content/uploads/2022/09/Zapier-Emblem.png',
+    category: 'developer',
+    setupComplexity: 'easy',
+  },
+  {
+    id: 'google-reviews',
+    name: 'Google Reviews',
+    description: '',
+    icon: 'https://w7.pngwing.com/pngs/89/167/png-transparent-google-customer-review-business-company-google-search-engine-optimization-company-text-thumbnail.png',
+    category: 'review',
+    setupComplexity: 'medium',
+  },
+];
+
 export function IntegrationsSection({ siteId, onPlatformSelect }: IntegrationsSectionProps) {
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'ecommerce' | 'cms' | 'developer' | 'review'>('all');
+  const [connectedTypes, setConnectedTypes] = useState<Set<string>>(new Set());
 
-  // Integration definitions
-  const integrations: Integration[] = [
-    // E-commerce Integrations
-    {
-      id: 'shopify',
-      name: 'Shopify',
-      description: '',
-      icon: 'https://cdn.freebiesupply.com/logos/large/2x/shopify-logo-png-transparent.png',
-      category: 'ecommerce',
-      status: 'not_connected',
-      setupComplexity: 'easy'
-    },
-    {
-      id: 'woocommerce',
-      name: 'WooCommerce',
-      description: '',
-      icon: 'https://download.logo.wine/logo/WooCommerce/WooCommerce-Logo.wine.png',
-      category: 'ecommerce',
-      status: 'not_connected',
-      setupComplexity: 'easy'
-    },
-    {
-      id: 'medusa',
-      name: 'Medusa',
-      description: '',
-      icon: 'https://user-images.githubusercontent.com/7554214/153162406-bf8fd16f-aa98-4604-b87b-e13ab4baf604.png',
-      category: 'ecommerce',
-      status: 'not_connected',
-      setupComplexity: 'medium'
-    },
+  // Fetch real integration status from site_integrations table
+  const fetchIntegrationStatus = useCallback(async () => {
+    if (!siteId) return;
+    try {
+      const { data, error } = await supabase
+        .from('site_integrations')
+        .select('integration_type, is_active, sync_status')
+        .eq('site_id', siteId)
+        .eq('is_active', true);
 
-    // CMS Integrations
-    {
-      id: 'wordpress',
-      name: 'WordPress',
-      description: '',
-      icon: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSiQqvP9mSAN_KNxZlbvD9VT-yl4Vf_PuT6Cw&s',
-      category: 'cms',
-      status: 'not_connected',
-      setupComplexity: 'easy'
-    },
-    {
-      id: 'html',
-      name: 'HTML',
-      description: '',
-      icon: '📄',
-      category: 'cms',
-      status: 'not_connected',
-      setupComplexity: 'easy'
-    },
+      if (error) {
+        console.error('Error fetching integration status:', error);
+        return;
+      }
 
-    // Developer Tools
-    {
-      id: 'webhook',
-      name: 'Webhook',
-      description: '',
-      icon: '🔗',
-      category: 'developer',
-      status: 'not_connected',
-      setupComplexity: 'easy'
-    },
-    {
-      id: 'zapier',
-      name: 'Zapier',
-      description: '',
-      icon: 'https://1000logos.net/wp-content/uploads/2022/09/Zapier-Emblem.png',
-      category: 'developer',
-      status: 'not_connected',
-      setupComplexity: 'easy'
-    },
-
-    // Review Platforms
-    {
-      id: 'google-reviews',
-      name: 'Google Reviews',
-      description: '',
-      icon: 'https://w7.pngwing.com/pngs/89/167/png-transparent-google-customer-review-business-company-google-search-engine-optimization-company-text-thumbnail.png',
-      category: 'review',
-      status: 'not_connected',
-      setupComplexity: 'medium'
+      const connected = new Set<string>();
+      if (data) {
+        for (const row of data) {
+          connected.add(row.integration_type);
+        }
+      }
+      setConnectedTypes(connected);
+    } catch (err) {
+      console.error('Error fetching integration status:', err);
     }
-  ];
+  }, [siteId]);
+
+  useEffect(() => {
+    fetchIntegrationStatus();
+  }, [fetchIntegrationStatus]);
+
+  // Merge real status into integration definitions
+  const integrations: Integration[] = BASE_INTEGRATIONS.map((base) => ({
+    ...base,
+    status: connectedTypes.has(base.id) ? 'connected' as const : 'not_connected' as const,
+  }));
 
   const categories = [
     { id: 'all', label: 'All Integrations', icon: Puzzle },
     { id: 'ecommerce', label: 'E-commerce', icon: ShoppingBag },
     { id: 'cms', label: 'CMS', icon: Code },
     { id: 'developer', label: 'Developer', icon: Code },
-    { id: 'review', label: 'Reviews', icon: Star }
+    { id: 'review', label: 'Reviews', icon: Star },
   ];
 
-  const filteredIntegrations = selectedCategory === 'all' 
-    ? integrations 
-    : integrations.filter(i => i.category === selectedCategory);
+  const filteredIntegrations = selectedCategory === 'all'
+    ? integrations
+    : integrations.filter((i) => i.category === selectedCategory);
 
   const handleConnect = (integrationId: string) => {
-    console.log('Connect integration:', integrationId);
-    // If onPlatformSelect is provided, use it (new flow)
     if (onPlatformSelect) {
       onPlatformSelect(integrationId);
-    } else {
-      // Fallback to old flow
-      alert(`Connecting ${integrationId}... (Coming soon!)`);
     }
   };
 
   const handleSettings = (integrationId: string) => {
-    console.log('Open settings for:', integrationId);
-    // TODO: Implement settings modal
+    // Navigate to the integration's setup page (same as connect)
+    if (onPlatformSelect) {
+      onPlatformSelect(integrationId);
+    }
   };
 
-  const handleDisconnect = (integrationId: string) => {
-    console.log('Disconnect integration:', integrationId);
-    // TODO: Implement disconnect flow
+  const handleDisconnect = async (integrationId: string) => {
+    try {
+      await supabase
+        .from('site_integrations')
+        .update({ is_active: false })
+        .eq('site_id', siteId)
+        .eq('integration_type', integrationId);
+
+      // Refresh status
+      await fetchIntegrationStatus();
+    } catch (err) {
+      console.error('Error disconnecting integration:', err);
+    }
   };
 
   return (
@@ -164,9 +195,9 @@ export function IntegrationsSection({ siteId, onPlatformSelect }: IntegrationsSe
                       ? 'bg-blue-500 text-white'
                       : 'bg-gray-200 text-gray-600'
                   }`}>
-                    {category.id === 'all' 
-                      ? integrations.length 
-                      : integrations.filter(i => i.category === category.id).length}
+                    {category.id === 'all'
+                      ? integrations.length
+                      : integrations.filter((i) => i.category === category.id).length}
                   </span>
                 </button>
               );
@@ -206,7 +237,7 @@ export function IntegrationsSection({ siteId, onPlatformSelect }: IntegrationsSe
           <div className="min-w-0 flex-1">
             <p className="text-sm sm:text-base text-gray-900 font-semibold">Need a custom integration?</p>
             <p className="text-xs sm:text-sm text-gray-600 mt-1">
-              Use our <span className="font-semibold text-blue-600">Webhook</span> integration to connect any platform, 
+              Use our <span className="font-semibold text-blue-600">Webhook</span> integration to connect any platform,
               or contact support for help setting up a custom integration.
             </p>
           </div>

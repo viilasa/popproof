@@ -43,6 +43,12 @@ export function PixelIntegration({ selectedSite, onBack }: PixelIntegrationProps
   const [googleReviewsMessage, setGoogleReviewsMessage] = useState<string | null>(null);
   const [googleReviewsData, setGoogleReviewsData] = useState<any>(null);
 
+  // Medusa state
+  const [medusaApiKey, setMedusaApiKey] = useState<string | null>(null);
+  const [medusaKeyLoading, setMedusaKeyLoading] = useState(false);
+  const [medusaKeyError, setMedusaKeyError] = useState<string | null>(null);
+  const [medusaTab, setMedusaTab] = useState<'quick' | 'npm'>('quick');
+
   const generateApiKey = () => {
     return 'sp_' + Array.from(crypto.getRandomValues(new Uint8Array(24)))
       .map(b => b.toString(16).padStart(2, '0'))
@@ -163,6 +169,67 @@ export function PixelIntegration({ selectedSite, onBack }: PixelIntegrationProps
     };
 
     ensureWooApiKey();
+  }, [selectedPlatform, user, selectedSite]);
+
+  // Auto-generate API key for Medusa (same pattern as WooCommerce)
+  useEffect(() => {
+    const ensureMedusaApiKey = async () => {
+      if (selectedPlatform !== 'medusa' || !user || !selectedSite) {
+        return;
+      }
+
+      setMedusaKeyLoading(true);
+      setMedusaKeyError(null);
+
+      try {
+        // Check for existing active key
+        const { data, error } = await supabase
+          .from('api_keys')
+          .select('id, public_key, is_active')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          setMedusaApiKey(data[0].public_key);
+        } else {
+          // Generate new key
+          const newKey = generateApiKey();
+          const { data: inserted, error: insertError } = await supabase
+            .from('api_keys')
+            .insert([{
+              user_id: user.id,
+              name: `Medusa - ${selectedSite.domain || selectedSite.name}`,
+              public_key: newKey,
+              domain: selectedSite.domain || null,
+            }])
+            .select('public_key')
+            .single();
+
+          if (insertError) throw insertError;
+          setMedusaApiKey(inserted.public_key);
+        }
+
+        // Upsert site_integrations to track connection
+        await supabase.from('site_integrations').upsert({
+          site_id: selectedSite.id,
+          integration_type: 'medusa',
+          is_active: true,
+          settings: { setup_started: true },
+          sync_status: 'pending',
+        }, { onConflict: 'site_id,integration_type' });
+      } catch (error: any) {
+        console.error('Error ensuring Medusa API key:', error);
+        setMedusaKeyError('Could not generate API key. Please try again.');
+      } finally {
+        setMedusaKeyLoading(false);
+      }
+    };
+
+    ensureMedusaApiKey();
   }, [selectedPlatform, user, selectedSite]);
 
   if (!selectedSite) {
@@ -613,7 +680,7 @@ export function PixelIntegration({ selectedSite, onBack }: PixelIntegrationProps
   }
 }`;
 
-  // Medusa.js subscriber code
+  // Medusa.js — Quick Setup (direct subscriber code)
   const medusaSubscriberCode = `// src/subscribers/proofedge-notification.ts
 import { SubscriberArgs, SubscriberConfig } from "@medusajs/medusa";
 
@@ -626,13 +693,13 @@ export default async function proofedgeHandler({
     relations: ["items", "customer", "shipping_address"],
   });
 
-  // Send to ProofEdge webhook
   await fetch("${webhookUrl}", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       site_id: "${selectedSite.id}",
       event_type: "purchase",
+      platform: "medusajs",
       url: "https://${selectedSite.domain || 'your-store.com'}/order-confirmed",
       event_data: {
         customer_name: order.shipping_address?.first_name || "Someone",
@@ -650,6 +717,21 @@ export const config: SubscriberConfig = {
   event: "order.placed",
   context: { subscriberId: "proofedge-notification" },
 };`;
+
+  // Medusa.js — npm Plugin approach
+  const medusaInstallCmd = 'npm install medusa-plugin-proofedge';
+
+  const medusaConfigCode = `// medusa-config.js
+const plugins = [
+  // ... your other plugins
+  {
+    resolve: \`medusa-plugin-proofedge\`,
+    options: {
+      site_id: "${selectedSite.id}",
+      api_key: "${medusaApiKey || 'YOUR_API_KEY'}",
+    },
+  },
+];`;
 
   const medusaStorefrontCode = `<!-- Add to your Medusa storefront (Next.js, Gatsby, etc.) -->
 <!-- In your _app.tsx or layout.tsx -->
@@ -951,7 +1033,7 @@ export const config: SubscriberConfig = {
                               : selectedPlatform === 'google-reviews'
                               ? 'Display your Google Reviews as social proof notifications. Enter your Place ID and API key below.'
                               : selectedPlatform === 'medusa'
-                              ? 'Add a subscriber to your Medusa backend to send order events to ProofEdge.'
+                              ? 'Install the ProofEdge plugin for your Medusa.js backend in 3 easy steps.'
                               : 'Copy the code snippet below to integrate the social proof widget into your website.'}
                           </p>
                           
@@ -1246,96 +1328,240 @@ export const config: SubscriberConfig = {
                             </div>
                           ) : selectedPlatform === 'medusa' ? (
                             <div className="space-y-4">
-                              {/* Medusa Setup Instructions */}
+                              {/* Medusa Header */}
                               <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 sm:p-4">
                                 <div className="flex items-start space-x-3">
                                   <div className="flex-shrink-0">
-                                    <img 
-                                      src="https://user-images.githubusercontent.com/7554214/153162406-bf8fd16f-aa98-4604-b87b-e13ab4baf604.png" 
-                                      alt="Medusa" 
+                                    <img
+                                      src="https://user-images.githubusercontent.com/7554214/153162406-bf8fd16f-aa98-4604-b87b-e13ab4baf604.png"
+                                      alt="Medusa"
                                       className="w-8 h-8 object-contain"
                                     />
                                   </div>
                                   <div>
                                     <h4 className="font-medium text-sm text-purple-900 mb-1">Medusa.js Integration</h4>
                                     <p className="text-xs text-purple-800">
-                                      Add a subscriber to your Medusa backend to automatically send order events to ProofEdge.
+                                      Automatically track orders and send social proof notifications from your Medusa store.
                                     </p>
                                   </div>
                                 </div>
                               </div>
 
-                              {/* Step 1: Backend Subscriber */}
-                              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4">
-                                <div className="flex items-center justify-between mb-2">
-                                  <span className="text-xs sm:text-sm font-medium text-gray-700">
-                                    Step 1: Create Subscriber (Backend)
-                                  </span>
-                                  <button
-                                    onClick={() => copyToClipboard(medusaSubscriberCode, 'medusa-subscriber')}
-                                    className="inline-flex items-center px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
-                                  >
-                                    <Copy className="w-3 h-3 mr-1" />
-                                    <span>Copy</span>
-                                  </button>
-                                </div>
-                                <p className="text-xs text-gray-500 mb-2">
-                                  Create this file in your Medusa backend: <code className="bg-gray-200 px-1 rounded">src/subscribers/proofedge-notification.ts</code>
-                                </p>
-                                <pre className="bg-gray-900 text-gray-100 p-3 rounded-lg overflow-x-auto text-[10px] sm:text-xs font-mono max-h-[200px]">
-                                  <code>{medusaSubscriberCode}</code>
-                                </pre>
-                                {copiedCode === 'medusa-subscriber' && (
-                                  <div className="mt-1 text-xs text-green-600">Copied subscriber code</div>
-                                )}
+                              {/* Tab Switcher */}
+                              <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+                                <button
+                                  onClick={() => setMedusaTab('quick')}
+                                  className={`flex-1 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
+                                    medusaTab === 'quick'
+                                      ? 'bg-white text-gray-900 shadow-sm'
+                                      : 'text-gray-500 hover:text-gray-700'
+                                  }`}
+                                >
+                                  Quick Setup
+                                </button>
+                                <button
+                                  onClick={() => setMedusaTab('npm')}
+                                  className={`flex-1 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
+                                    medusaTab === 'npm'
+                                      ? 'bg-white text-gray-900 shadow-sm'
+                                      : 'text-gray-500 hover:text-gray-700'
+                                  }`}
+                                >
+                                  npm Plugin
+                                </button>
                               </div>
 
-                              {/* Step 2: Storefront Pixel */}
-                              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4">
-                                <div className="flex items-center justify-between mb-2">
-                                  <span className="text-xs sm:text-sm font-medium text-gray-700">
-                                    Step 2: Add Pixel to Storefront
-                                  </span>
-                                  <button
-                                    onClick={() => copyToClipboard(medusaStorefrontCode, 'medusa-storefront')}
-                                    className="inline-flex items-center px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
-                                  >
-                                    <Copy className="w-3 h-3 mr-1" />
-                                    <span>Copy</span>
-                                  </button>
-                                </div>
-                                <p className="text-xs text-gray-500 mb-2">
-                                  Add this to your storefront (Next.js, Gatsby, etc.) in the layout or _app file:
-                                </p>
-                                <pre className="bg-gray-900 text-gray-100 p-3 rounded-lg overflow-x-auto text-[10px] sm:text-xs font-mono">
-                                  <code>{medusaStorefrontCode}</code>
-                                </pre>
-                                {copiedCode === 'medusa-storefront' && (
-                                  <div className="mt-1 text-xs text-green-600">Copied storefront code</div>
-                                )}
-                              </div>
+                              {medusaTab === 'quick' ? (
+                                <>
+                                  {/* Quick Setup: Step 1 — Subscriber Code */}
+                                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="text-xs sm:text-sm font-medium text-gray-700">
+                                        Step 1: Create Subscriber
+                                      </span>
+                                      <button
+                                        onClick={() => copyToClipboard(medusaSubscriberCode, 'medusa-subscriber')}
+                                        className="inline-flex items-center px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
+                                      >
+                                        <Copy className="w-3 h-3 mr-1" />
+                                        <span>Copy</span>
+                                      </button>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mb-2">
+                                      Create this file in your Medusa backend: <code className="bg-gray-200 px-1 rounded">src/subscribers/proofedge-notification.ts</code>
+                                    </p>
+                                    <pre className="bg-gray-900 text-gray-100 p-3 rounded-lg overflow-x-auto text-[10px] sm:text-xs font-mono max-h-[200px]">
+                                      <code>{medusaSubscriberCode}</code>
+                                    </pre>
+                                    {copiedCode === 'medusa-subscriber' && (
+                                      <div className="mt-1 text-xs text-green-600">Copied subscriber code</div>
+                                    )}
+                                  </div>
 
-                              {/* Webhook URL for testing */}
+                                  {/* Quick Setup: Step 2 — Storefront Pixel */}
+                                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="text-xs sm:text-sm font-medium text-gray-700">
+                                        Step 2: Add Pixel to Storefront
+                                      </span>
+                                      <button
+                                        onClick={() => copyToClipboard(medusaStorefrontCode, 'medusa-storefront')}
+                                        className="inline-flex items-center px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
+                                      >
+                                        <Copy className="w-3 h-3 mr-1" />
+                                        <span>Copy</span>
+                                      </button>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mb-2">
+                                      Add this to your storefront (Next.js, Gatsby, etc.) in the layout or _app file:
+                                    </p>
+                                    <pre className="bg-gray-900 text-gray-100 p-3 rounded-lg overflow-x-auto text-[10px] sm:text-xs font-mono">
+                                      <code>{medusaStorefrontCode}</code>
+                                    </pre>
+                                    {copiedCode === 'medusa-storefront' && (
+                                      <div className="mt-1 text-xs text-green-600">Copied storefront code</div>
+                                    )}
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  {/* npm Plugin: Step 1 — Install */}
+                                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="text-xs sm:text-sm font-medium text-gray-700">
+                                        Step 1: Install Plugin
+                                      </span>
+                                      <button
+                                        onClick={() => copyToClipboard(medusaInstallCmd, 'medusa-install')}
+                                        className="inline-flex items-center px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
+                                      >
+                                        <Copy className="w-3 h-3 mr-1" />
+                                        <span>Copy</span>
+                                      </button>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mb-2">
+                                      Run this in your <strong>Medusa backend</strong> directory:
+                                    </p>
+                                    <pre className="bg-gray-900 text-gray-100 p-3 rounded-lg overflow-x-auto text-[10px] sm:text-xs font-mono">
+                                      <code>{medusaInstallCmd}</code>
+                                    </pre>
+                                    {copiedCode === 'medusa-install' && (
+                                      <div className="mt-1 text-xs text-green-600">Copied install command</div>
+                                    )}
+                                  </div>
+
+                                  {/* npm Plugin: Step 2 — Config */}
+                                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="text-xs sm:text-sm font-medium text-gray-700">
+                                        Step 2: Add to medusa-config.js
+                                      </span>
+                                      <button
+                                        onClick={() => copyToClipboard(medusaConfigCode, 'medusa-config')}
+                                        className="inline-flex items-center px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
+                                      >
+                                        <Copy className="w-3 h-3 mr-1" />
+                                        <span>Copy</span>
+                                      </button>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mb-2">
+                                      Add this plugin to the <code className="bg-gray-200 px-1 rounded">plugins</code> array in your <code className="bg-gray-200 px-1 rounded">medusa-config.js</code>:
+                                    </p>
+                                    <pre className="bg-gray-900 text-gray-100 p-3 rounded-lg overflow-x-auto text-[10px] sm:text-xs font-mono">
+                                      <code>{medusaConfigCode}</code>
+                                    </pre>
+                                    {copiedCode === 'medusa-config' && (
+                                      <div className="mt-1 text-xs text-green-600">Copied config code</div>
+                                    )}
+                                  </div>
+
+                                  {/* npm Plugin: API Key */}
+                                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="text-xs sm:text-sm font-medium text-gray-700">Your API Key</span>
+                                      <button
+                                        onClick={() => medusaApiKey && copyToClipboard(medusaApiKey, 'medusa-api-key')}
+                                        className="inline-flex items-center px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                                        disabled={!medusaApiKey || medusaKeyLoading}
+                                      >
+                                        <Copy className="w-3 h-3 mr-1" />
+                                        <span>Copy</span>
+                                      </button>
+                                    </div>
+                                    <div className="bg-white rounded-md px-3 py-2 border border-gray-200 font-mono text-xs sm:text-sm text-gray-900 break-all">
+                                      {medusaKeyLoading && 'Generating API key...'}
+                                      {!medusaKeyLoading && medusaApiKey && medusaApiKey}
+                                      {!medusaKeyLoading && !medusaApiKey && !medusaKeyError && 'No key available'}
+                                      {medusaKeyError && (
+                                        <span className="text-red-600">{medusaKeyError}</span>
+                                      )}
+                                    </div>
+                                    {copiedCode === 'medusa-api-key' && (
+                                      <div className="mt-1 text-xs text-green-600">Copied API key</div>
+                                    )}
+                                    <p className="text-xs text-gray-500 mt-2">
+                                      This key is already included in the config snippet above.
+                                    </p>
+                                  </div>
+
+                                  {/* npm Plugin: Step 3 — Storefront Pixel */}
+                                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="text-xs sm:text-sm font-medium text-gray-700">
+                                        Step 3: Add Pixel to Storefront
+                                      </span>
+                                      <button
+                                        onClick={() => copyToClipboard(medusaStorefrontCode, 'medusa-storefront')}
+                                        className="inline-flex items-center px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
+                                      >
+                                        <Copy className="w-3 h-3 mr-1" />
+                                        <span>Copy</span>
+                                      </button>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mb-2">
+                                      Add this to your storefront (Next.js, Gatsby, etc.) in the layout or _app file:
+                                    </p>
+                                    <pre className="bg-gray-900 text-gray-100 p-3 rounded-lg overflow-x-auto text-[10px] sm:text-xs font-mono">
+                                      <code>{medusaStorefrontCode}</code>
+                                    </pre>
+                                    {copiedCode === 'medusa-storefront' && (
+                                      <div className="mt-1 text-xs text-green-600">Copied storefront code</div>
+                                    )}
+                                  </div>
+                                </>
+                              )}
+
+                              {/* Shared: Webhook URL */}
                               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
-                                <h4 className="font-medium text-sm text-blue-900 mb-2">Webhook Endpoint</h4>
-                                <div className="flex items-center space-x-2">
-                                  <code className="flex-1 bg-white px-3 py-2 rounded border border-blue-200 text-xs font-mono text-gray-800 break-all">
-                                    {webhookUrl}
-                                  </code>
+                                <div className="flex items-center justify-between mb-2">
+                                  <h4 className="font-medium text-sm text-blue-900">Test Connection</h4>
                                   <button
-                                    onClick={() => copyToClipboard(webhookUrl, 'medusa-webhook')}
-                                    className="px-3 py-2 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700"
+                                    onClick={testWebhook}
+                                    disabled={webhookTestStatus === 'testing'}
+                                    className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
                                   >
-                                    Copy
+                                    {webhookTestStatus === 'testing' ? 'Testing...' : 'Send Test Event'}
                                   </button>
                                 </div>
-                                {copiedCode === 'medusa-webhook' && (
-                                  <div className="mt-1 text-xs text-green-600">Copied webhook URL</div>
+                                <p className="text-xs text-gray-600 mb-2">
+                                  Send a test purchase event to verify your setup is working.
+                                </p>
+                                {webhookTestStatus === 'success' && (
+                                  <div className="text-xs text-green-600 flex items-center space-x-1">
+                                    <CheckCircle className="w-3 h-3" />
+                                    <span>{webhookTestMessage || 'Test event sent successfully!'}</span>
+                                  </div>
+                                )}
+                                {webhookTestStatus === 'error' && (
+                                  <div className="text-xs text-red-600 flex items-center space-x-1">
+                                    <AlertCircle className="w-3 h-3" />
+                                    <span>{webhookTestMessage || 'Failed to send test event.'}</span>
+                                  </div>
                                 )}
                               </div>
 
                               <div className="text-xs sm:text-sm text-gray-600">
-                                <strong>Events supported:</strong> order.placed, order.completed, order.canceled, customer.created
+                                <strong>Events tracked:</strong> order.placed (purchases), product.viewed (optional)
                               </div>
                             </div>
                           ) : (

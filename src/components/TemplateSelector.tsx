@@ -23,6 +23,8 @@ import {
 import type { DesignSettings, DisplaySettings } from '../types/widget-config';
 import { DEFAULT_DESIGN_SETTINGS, DEFAULT_DISPLAY_SETTINGS } from '../lib/widgetConfigDefaults';
 import { Card, Badge, Spinner } from './ui';
+import { useSubscription, FEATURES } from '../contexts/SubscriptionContext';
+import { Lock } from 'lucide-react';
 
 function isObject(value: any): value is Record<string, any> {
   return value && typeof value === 'object' && !Array.isArray(value);
@@ -77,6 +79,11 @@ export function TemplateSelector({
   const [mode, setMode] = useState<'template' | 'design'>('template');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<'all' | NotificationTemplateId>('all');
+  const { hasFeature } = useSubscription();
+  const hasAllStyles = hasFeature(FEATURES.ALL_WIDGET_STYLES);
+
+  // Layouts available on the free plan
+  const FREE_LAYOUTS = ['card', 'compact', 'minimal'];
 
   const templatesById = Object.fromEntries(notificationTemplates.map((t) => [t.id, t]));
 
@@ -445,20 +452,35 @@ export function TemplateSelector({
                 ) : (
                   filteredPresets.map((preset) => {
                     const template = templatesById[preset.templateId];
+                    const presetLayout = preset.design?.layout?.layout || 'card';
+                    const isProOnly = !FREE_LAYOUTS.includes(presetLayout) && !hasAllStyles;
 
                     return (
                       <button
                         key={preset.id}
-                        onClick={() => createWidgetWithPreset(preset)}
-                        disabled={isCreating || !template}
-                        className="p-5 bg-white border border-surface-200 rounded-2xl hover:border-brand-400 hover:shadow-soft-lg transition-all duration-300 text-left disabled:opacity-50 disabled:cursor-not-allowed group"
+                        onClick={() => {
+                          if (isProOnly) return;
+                          createWidgetWithPreset(preset);
+                        }}
+                        disabled={isCreating || !template || isProOnly}
+                        className={`p-5 bg-white border rounded-2xl transition-all duration-300 text-left group relative ${
+                          isProOnly
+                            ? 'border-surface-200 opacity-60 cursor-not-allowed'
+                            : 'border-surface-200 hover:border-brand-400 hover:shadow-soft-lg disabled:opacity-50 disabled:cursor-not-allowed'
+                        }`}
                       >
+                        {isProOnly && (
+                          <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-800 rounded-full text-[10px] font-semibold">
+                            <Lock className="w-3 h-3" />
+                            Pro
+                          </div>
+                        )}
                         <div className="flex items-start justify-between mb-3">
                           <div>
                             <Badge variant="brand" size="sm" className="mb-2">
                               {template ? template.name : 'Template'}
                             </Badge>
-                            <h3 className="font-semibold text-surface-900 text-sm group-hover:text-brand-600 transition-colors">
+                            <h3 className={`font-semibold text-sm transition-colors ${isProOnly ? 'text-surface-400' : 'text-surface-900 group-hover:text-brand-600'}`}>
                               {preset.name}
                             </h3>
                             <p className="text-xs text-surface-500 mt-1 line-clamp-2">

@@ -95,53 +95,29 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
 
     return () => {
       // Cleanup: remove script when leaving LandingPage
-      try {
-        document.head.removeChild(script);
-      } catch (e) {
-        // Script may already be removed
-      }
+      try { document.head.removeChild(script); } catch (e) {}
 
-      // Remove the specific widget container created by widget.js
-      const spWidgetContainer = document.querySelector('.sp-widget-container');
-      if (spWidgetContainer) spWidgetContainer.remove();
+      // Clear ALL intervals to kill any engine heartbeats/fetches
+      const highestId = window.setTimeout(() => {}, 0);
+      for (let i = 0; i < highestId; i++) window.clearInterval(i);
 
-      // Remove the widget styles
-      const widgetStyles = document.getElementById('social-proof-widget-styles');
-      if (widgetStyles) widgetStyles.remove();
+      // Remove ALL widget-related DOM elements
+      document.querySelectorAll(
+        '.sp-widget-container, .sp-notification, #social-proof-widget-styles, ' +
+        '[id^="proofedge"], [id^="proof-edge"], [id^="proofpop"], ' +
+        '[class*="proofedge"], [class*="proof-edge"], [class*="proofpop"], ' +
+        '[data-proofedge], [data-widget-id], .social-proof-widget, .notification-widget'
+      ).forEach(el => el.remove());
 
-      // Remove all ProofEdge/ProofPop widget elements from the DOM
-      const widgetContainers = document.querySelectorAll('[id^="proofedge"], [id^="proof-edge"], [id^="proofpop"], [class*="proofedge"], [class*="proof-edge"], [class*="proofpop"], .sp-notification');
-      widgetContainers.forEach(el => el.remove());
-
-      // Also remove any widget containers with common patterns
-      const genericWidgets = document.querySelectorAll('[data-proofedge], [data-widget-id], .social-proof-widget, .notification-widget');
-      genericWidgets.forEach(el => el.remove());
-
-      // Clear any global ProofEdge state and intervals
-      if (typeof window !== 'undefined') {
-        // @ts-ignore - Clear widget instance
-        if (window.ProofEdge) {
-          // @ts-ignore
-          if (window.ProofEdge.fetchInterval) clearInterval(window.ProofEdge.fetchInterval);
-          // @ts-ignore
-          if (window.ProofEdge.verificationInterval) clearInterval(window.ProofEdge.verificationInterval);
-          // @ts-ignore
-          delete window.ProofEdge;
-        }
-        // @ts-ignore
-        if (window.proofedge) delete window.proofedge;
-        // @ts-ignore
-        if (window.ProofPop) {
-          // @ts-ignore
-          if (window.ProofPop.fetchInterval) clearInterval(window.ProofPop.fetchInterval);
-          // @ts-ignore
-          if (window.ProofPop.verificationInterval) clearInterval(window.ProofPop.verificationInterval);
-          // @ts-ignore
-          delete window.ProofPop;
-        }
-        // @ts-ignore
-        if (window.SocialProofWidget) delete window.SocialProofWidget;
-      }
+      // Clear global state
+      // @ts-ignore
+      delete window.ProofEdge;
+      // @ts-ignore
+      delete window.proofedge;
+      // @ts-ignore
+      delete window.ProofPop;
+      // @ts-ignore
+      delete window.SocialProofWidget;
     };
   }, []);
 
@@ -523,7 +499,7 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
             {/* Badge */}
             <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/80 backdrop-blur-sm border border-indigo-100 text-sm font-semibold text-indigo-700 mb-8 shadow-sm" role="status">
               <Sparkles size={16} className="text-indigo-500" aria-hidden="true" />
-              <span>Trusted by 2,000+ brands worldwide</span>
+              <span>Real-time social proof for your website</span>
             </div>
 
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-gray-900 leading-[1.1] mb-6">
@@ -687,17 +663,7 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
         </div>
       </section>
 
-      {/* --- Logos --- */}
-      <section className="py-16 border-y border-slate-200 bg-slate-50" aria-label="Trusted by leading companies">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 text-center">
-          <p className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-10">Proven increases without the hype</p>
-          <div className="flex flex-wrap justify-center items-center gap-x-16 gap-y-8">
-            {['Acme Corp', 'GlobalBank', 'Nebula', 'FocalPoint', 'Vertex'].map((brand) => (
-              <span key={brand} className="text-2xl font-bold text-gray-400 hover:text-gray-600 transition-colors cursor-default">{brand}</span>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* --- Logos section removed --- */}
 
       {/* --- What Is Social Proof (Definition + TL;DR) --- */}
       <section className="py-20 bg-gradient-to-b from-white to-slate-50" aria-labelledby="definition-heading">

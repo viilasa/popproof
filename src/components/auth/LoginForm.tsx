@@ -21,11 +21,16 @@ export function LoginForm({ onSwitchToRegister, onSwitchToForgotPassword }: Logi
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
-  // Load saved email on mount if "Remember me" was checked previously
+  // Load saved credentials on mount if "Remember me" was checked previously
   useEffect(() => {
     const savedEmail = localStorage.getItem('proofedge_remember_email');
+    const savedPwd = localStorage.getItem('proofedge_remember_pwd');
     if (savedEmail) {
-      setFormData(prev => ({ ...prev, email: savedEmail }));
+      setFormData(prev => ({
+        ...prev,
+        email: savedEmail,
+        password: savedPwd ? atob(savedPwd) : '',
+      }));
       setRememberMe(true);
     }
   }, []);
@@ -69,8 +74,10 @@ export function LoginForm({ onSwitchToRegister, onSwitchToForgotPassword }: Logi
       } else {
         if (rememberMe) {
           localStorage.setItem('proofedge_remember_email', formData.email);
+          localStorage.setItem('proofedge_remember_pwd', btoa(formData.password));
         } else {
           localStorage.removeItem('proofedge_remember_email');
+          localStorage.removeItem('proofedge_remember_pwd');
         }
       }
     } catch (err) {

@@ -1,0 +1,38 @@
+{
+  "name": "medusa-plugin-proofedge",
+  "version": "1.1.1",
+  "description": "Official ProofEdge social proof widget plugin for Medusa.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "medusa",
+    "medusa-plugin",
+    "social-proof",
+    "proofedge",
+    "notifications"
+  ],
+  "author": "ProofEdge",
+  "license": "MIT",
+  "peerDependencies": {
+    "@medusajs/medusa": ">=1.0.0 <3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@medusajs/medusa": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {}
+}

@@ -72,6 +72,38 @@ Deno.serve(async (req)=>{
     }
     // Initialize Supabase client
     const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
+
+    // Optional API key validation (if header is present, validate it)
+    const apiKeyHeader = req.headers.get('x-proofedge-api-key');
+    if (apiKeyHeader) {
+      const { data: keyRecord, error: keyError } = await supabase
+        .from('api_keys')
+        .select('id, is_active, usage_count')
+        .eq('public_key', apiKeyHeader)
+        .eq('is_active', true)
+        .single();
+
+      if (keyError || !keyRecord) {
+        console.log('Invalid API key provided:', apiKeyHeader);
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Invalid API key',
+          message: 'The provided API key is invalid or inactive'
+        }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Bump usage count
+      await supabase
+        .from('api_keys')
+        .update({ usage_count: (keyRecord.usage_count || 0) + 1, last_used: new Date().toISOString() })
+        .eq('id', keyRecord.id);
+
+      console.log('API key validated:', keyRecord.id);
+    }
+
     // Extract domain from URL if available
     let domain = null;
     if (eventData.url) {
@@ -194,6 +226,48 @@ Deno.serve(async (req)=>{
       // Just log the error, don't fail the request
       console.error('Failed to update site activity:', updateError);
     }
+
+    // Increment visitors_used counter for page_view events
+    if (eventData.event_type === 'page_view') {
+      try {
+        const { data: siteData } = await supabase
+          .from('sites')
+          .select('user_id')
+          .eq('id', eventData.site_id)
+          .single();
+
+        if (siteData?.user_id) {
+          await supabase.rpc('increment_visitors_used', { p_user_id: siteData.user_id });
+        }
+      } catch (visitorError) {
+        console.error('Failed to increment visitors_used:', visitorError);
+      }
+    }
+
+    // Auto-detect platform integrations and mark as connected
+    const platform = eventData.platform || metadata.platform;
+    const platformToIntegrationType: Record<string, string> = {
+      'medusajs': 'medusa',
+      'woocommerce': 'woocommerce',
+      'shopify': 'shopify',
+      'wordpress': 'wordpress',
+    };
+    const integrationType = platformToIntegrationType[platform];
+    if (integrationType) {
+      try {
+        await supabase.from('site_integrations').upsert({
+          site_id: eventData.site_id,
+          integration_type: integrationType,
+          is_active: true,
+          last_sync: new Date().toISOString(),
+          sync_status: 'success',
+        }, { onConflict: 'site_id,integration_type' });
+        console.log(`Auto-detected ${integrationType} integration for site:`, eventData.site_id);
+      } catch (integrationError) {
+        console.error('Failed to auto-detect integration:', integrationError);
+      }
+    }
+
     return new Response(JSON.stringify({
       success: true,
       message: 'Event tracked successfully',
