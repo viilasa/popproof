@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Check, CreditCard, Calendar, Users, Globe, Zap, Crown, Clock, AlertTriangle, LifeBuoy } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/auth/AuthProvider';
@@ -50,7 +50,7 @@ export default function Billing({ onNavigate }: BillingProps) {
   const [selectedProTier, setSelectedProTier] = useState(0);
   const [selectedGrowthTier, setSelectedGrowthTier] = useState(0);
   const { createCheckout, loading: checkoutLoading, error: checkoutError } = useDodoPayments();
-  const { toast, success, error: showError, hideToast } = useToast();
+  const { toast, success, error: showError, warning, hideToast } = useToast();
 
   // Get current plan slug to detect which tier is active
   const currentPlanSlug = subscription?.plan?.slug || 'starter';
@@ -122,21 +122,65 @@ export default function Billing({ onNavigate }: BillingProps) {
     }
   }, [checkoutError, showError]);
 
-  // Handle successful payment return
+  // Dodo sends users back here whether they paid or cancelled, so never trust the URL:
+  // check the payment's real status before announcing anything.
+  const notifyRef = useRef({ success, showError, warning, refreshSubscription });
+  notifyRef.current = { success, showError, warning, refreshSubscription };
+
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const payment = urlParams.get('payment');
+    if (!urlParams.has('payment') || !user) return;
+    const notify = () => notifyRef.current;
+
     const plan = urlParams.get('plan');
-    
-    if (payment === 'success') {
-      success(`Successfully upgraded to ${plan || 'new plan'}!`);
-      window.history.replaceState({}, '', window.location.pathname);
-      // The webhook may land a few seconds after the redirect, so re-check a few times
-      refreshSubscription();
-      const timers = [3000, 8000, 15000].map((ms) => setTimeout(() => refreshSubscription(), ms));
-      return () => timers.forEach(clearTimeout);
+    const returnedStatus = (urlParams.get('status') || '').toLowerCase();
+    window.history.replaceState({}, '', window.location.pathname);
+
+    if (['failed', 'cancelled', 'canceled', 'expired', 'requires_payment_method'].includes(returnedStatus)) {
+      notify().showError('Payment failed or was cancelled. You have not been charged and your plan is unchanged.');
+      return;
     }
-  }, [success, refreshSubscription]);
+
+    let cancelled = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const startedAt = Date.now();
+
+    const check = async () => {
+      if (cancelled) return;
+      const { data } = await supabase
+        .from('payment_history')
+        .select('status')
+        .eq('user_id', user.id)
+        .eq('payment_gateway', 'dodo')
+        .gte('created_at', new Date(startedAt - 60 * 60 * 1000).toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (cancelled) return;
+
+      if (data?.status === 'completed') {
+        notify().success(`Payment successful! Your ${plan || 'new'} plan is now active.`);
+        notify().refreshSubscription();
+        return;
+      }
+      if (data?.status === 'failed') {
+        notify().showError('Payment failed. You have not been charged and your plan is unchanged.');
+        return;
+      }
+      if (Date.now() - startedAt > 25000) {
+        notify().warning('We have not received a confirmed payment. If you cancelled, nothing was charged. If you paid, your plan will activate shortly.');
+        notify().refreshSubscription();
+        return;
+      }
+      timers.push(setTimeout(check, 2500));
+    };
+    check();
+
+    return () => {
+      cancelled = true;
+      timers.forEach(clearTimeout);
+    };
+  }, [user?.id]);
 
   // Fetch payment history
   useEffect(() => {

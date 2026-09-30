@@ -103,7 +103,7 @@ serve(async (req) => {
           email: user.email,
           name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Customer',
         },
-        return_url: return_url || `${req.headers.get('origin')}/billing?payment=success`,
+        return_url: return_url || `${req.headers.get('origin')}/billing?payment=return`,
         metadata: {
           user_id: user.id,
           user_email: user.email,

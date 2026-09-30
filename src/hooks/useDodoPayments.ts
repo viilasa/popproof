@@ -45,7 +45,7 @@ export function useDodoPayments(): UseDodoPaymentsReturn {
           },
           body: JSON.stringify({ 
             plan_slug: planSlug,
-            return_url: returnUrl || `${window.location.origin}/billing?payment=success&plan=${planSlug}`,
+            return_url: returnUrl || `${window.location.origin}/billing?payment=return&plan=${planSlug}`,
           }),
         }
       );
