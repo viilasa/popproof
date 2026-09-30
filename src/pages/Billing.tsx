@@ -4,6 +4,9 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/auth/AuthProvider';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { TrialBanner } from '../components/FeatureGate';
+import { useDodoPayments } from '../hooks/useDodoPayments';
+import { useToast } from '../hooks/useToast';
+import { Toast } from '../components/Toast';
 
 interface BillingProps {
   onNavigate?: (section: string) => void;
@@ -41,11 +44,80 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://ghiobuubmnvla
 
 export default function Billing({ onNavigate }: BillingProps) {
   const { user } = useAuth();
-  const { subscription, isPaidPlan, isTrialing, trialDaysLeft, isTrialExpired } = useSubscription();
+  const { subscription, isPaidPlan, isTrialing, trialDaysLeft, isTrialExpired, refreshSubscription } = useSubscription();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProTier, setSelectedProTier] = useState(0);
   const [selectedGrowthTier, setSelectedGrowthTier] = useState(0);
+  const { createCheckout, loading: checkoutLoading, error: checkoutError } = useDodoPayments();
+  const { toast, success, error: showError, hideToast } = useToast();
+
+  // Get current plan slug to detect which tier is active
+  const currentPlanSlug = subscription?.plan?.slug || 'starter';
+  const currentPlanTier = subscription?.plan?.tier || 'starter';
+
+  // Find current tier index for Pro and Growth
+  const currentProTierIndex = PRO_TIERS.findIndex(t => t.slug === currentPlanSlug);
+  const currentGrowthTierIndex = GROWTH_TIERS.findIndex(t => t.slug === currentPlanSlug);
+  const isOnProPlan = currentPlanTier === 'pro';
+  const isOnGrowthPlan = currentPlanTier === 'growth';
+
+  // Determine button state for Pro plan
+  const getProButtonState = () => {
+    if (isOnProPlan && PRO_TIERS[selectedProTier].slug === currentPlanSlug) {
+      return { text: 'Current Plan', disabled: true, style: 'current' };
+    }
+    if (isOnProPlan && selectedProTier > currentProTierIndex) {
+      return { text: 'Upgrade', disabled: false, style: 'upgrade' };
+    }
+    if (isOnProPlan && selectedProTier < currentProTierIndex) {
+      return { text: 'Downgrade', disabled: false, style: 'downgrade' };
+    }
+    if (isOnGrowthPlan) {
+      return { text: 'Downgrade to Pro', disabled: false, style: 'downgrade' };
+    }
+    return { text: 'Upgrade to Pro', disabled: false, style: 'upgrade' };
+  };
+
+  // Determine button state for Growth plan
+  const getGrowthButtonState = () => {
+    if (isOnGrowthPlan && GROWTH_TIERS[selectedGrowthTier].slug === currentPlanSlug) {
+      return { text: 'Current Plan', disabled: true, style: 'current' };
+    }
+    if (isOnGrowthPlan && selectedGrowthTier > currentGrowthTierIndex) {
+      return { text: 'Upgrade', disabled: false, style: 'upgrade' };
+    }
+    if (isOnGrowthPlan && selectedGrowthTier < currentGrowthTierIndex) {
+      return { text: 'Downgrade', disabled: false, style: 'downgrade' };
+    }
+    return { text: 'Upgrade to Growth', disabled: false, style: 'upgrade' };
+  };
+
+  const proButtonState = getProButtonState();
+  const growthButtonState = getGrowthButtonState();
+
+  // Handle checkout errors
+  useEffect(() => {
+    if (checkoutError) {
+      showError(checkoutError);
+    }
+  }, [checkoutError, showError]);
+
+  // Handle successful payment return
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const payment = urlParams.get('payment');
+    const plan = urlParams.get('plan');
+    
+    if (payment === 'success') {
+      success(`Successfully upgraded to ${plan || 'new plan'}!`);
+      window.history.replaceState({}, '', window.location.pathname);
+      // The webhook may land a few seconds after the redirect, so re-check a few times
+      refreshSubscription();
+      const timers = [3000, 8000, 15000].map((ms) => setTimeout(() => refreshSubscription(), ms));
+      return () => timers.forEach(clearTimeout);
+    }
+  }, [success, refreshSubscription]);
 
   // Fetch payment history
   useEffect(() => {
@@ -226,20 +298,6 @@ export default function Billing({ onNavigate }: BillingProps) {
         </div>
       </div>
 
-      {/* Payment Integration Coming Soon Notice */}
-      {!isPaidPlan && (
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
-              <Zap className="w-6 h-6 text-amber-600" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Paid Plans Coming Soon!</h3>
-              <p className="text-gray-600 text-sm mt-1">We're working on payment integration. Enjoy the free Starter plan with 1 website and 1,000 visitors/month.</p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Upgrade Plans */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -290,9 +348,9 @@ export default function Billing({ onNavigate }: BillingProps) {
           </div>
 
           {/* Pro Plan */}
-          <div className="rounded-xl border-2 p-6 relative border-gray-900 bg-gray-900 opacity-75">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-              COMING SOON
+          <div className={`rounded-xl border-2 p-6 relative ${isOnProPlan ? 'border-emerald-500 bg-gray-900 ring-2 ring-emerald-500/20' : 'border-gray-900 bg-gray-900'}`}>
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+              {isOnProPlan ? '✓ YOUR PLAN' : 'MOST POPULAR'}
             </div>
             <h3 className="text-xl font-bold mb-1 text-white">Pro</h3>
             <p className="text-sm mb-4 text-gray-400">For growing businesses</p>
@@ -311,18 +369,25 @@ export default function Billing({ onNavigate }: BillingProps) {
                 <span className="text-blue-400 font-semibold">{PRO_TIERS[selectedProTier].visitors}</span>
               </div>
               <div className="grid grid-cols-5 gap-1 p-1 bg-gray-800/50 rounded-lg">
-                {PRO_TIERS.map((tier, index) => (
-                  <button
-                    key={tier.slug}
-                    onClick={() => setSelectedProTier(index)}
-                    className={`py-1.5 rounded text-xs font-semibold transition-all ${selectedProTier === index
-                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white'
-                      : 'text-gray-400 hover:text-white'
+                {PRO_TIERS.map((tier, index) => {
+                  const isCurrentTier = tier.slug === currentPlanSlug;
+                  return (
+                    <button
+                      key={tier.slug}
+                      onClick={() => setSelectedProTier(index)}
+                      className={`py-1.5 rounded text-xs font-semibold transition-all relative ${
+                        selectedProTier === index
+                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white'
+                          : isCurrentTier
+                            ? 'bg-emerald-600/30 text-emerald-400 ring-1 ring-emerald-500'
+                            : 'text-gray-400 hover:text-white'
                       }`}
-                  >
-                    {tier.visitors.replace(',000', 'k')}
-                  </button>
-                ))}
+                    >
+                      {tier.visitors.replace(',000', 'k')}
+                      {isCurrentTier && <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full"></span>}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -341,16 +406,28 @@ export default function Billing({ onNavigate }: BillingProps) {
               </li>
             </ul>
 
-            <button disabled className="w-full py-2 rounded-lg bg-gray-700 text-gray-400 font-medium cursor-not-allowed">
-              Coming Soon
+            <button 
+              onClick={() => !proButtonState.disabled && createCheckout(PRO_TIERS[selectedProTier].slug)}
+              disabled={checkoutLoading || proButtonState.disabled}
+              className={`w-full py-2 rounded-lg font-medium transition-all disabled:cursor-not-allowed ${
+                proButtonState.style === 'current'
+                  ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/50'
+                  : proButtonState.style === 'downgrade'
+                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700'
+              }`}
+            >
+              {checkoutLoading ? 'Processing...' : proButtonState.text}
             </button>
           </div>
 
           {/* Growth Plan */}
-          <div className="rounded-xl border-2 p-6 relative border-gray-200 opacity-75">
-            <div className="absolute -top-3 right-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-              COMING SOON
-            </div>
+          <div className={`rounded-xl border-2 p-6 relative ${isOnGrowthPlan ? 'border-emerald-500 bg-white ring-2 ring-emerald-500/20' : 'border-gray-200'}`}>
+            {isOnGrowthPlan && (
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                ✓ YOUR PLAN
+              </div>
+            )}
             <h3 className="text-xl font-bold text-gray-900 mb-1">Growth</h3>
             <p className="text-gray-500 text-sm mb-4">For high-traffic sites</p>
 
@@ -366,18 +443,25 @@ export default function Billing({ onNavigate }: BillingProps) {
                 <span className="text-violet-600 font-semibold">{GROWTH_TIERS[selectedGrowthTier].visitors}</span>
               </div>
               <div className="grid grid-cols-5 gap-1 p-1 bg-gray-100 rounded-lg">
-                {GROWTH_TIERS.map((tier, index) => (
-                  <button
-                    key={tier.slug}
-                    onClick={() => setSelectedGrowthTier(index)}
-                    className={`py-1.5 rounded text-xs font-semibold transition-all ${selectedGrowthTier === index
-                      ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white'
-                      : 'text-gray-500 hover:text-gray-900'
+                {GROWTH_TIERS.map((tier, index) => {
+                  const isCurrentTier = tier.slug === currentPlanSlug;
+                  return (
+                    <button
+                      key={tier.slug}
+                      onClick={() => setSelectedGrowthTier(index)}
+                      className={`py-1.5 rounded text-xs font-semibold transition-all relative ${
+                        selectedGrowthTier === index
+                          ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white'
+                          : isCurrentTier
+                            ? 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-500'
+                            : 'text-gray-500 hover:text-gray-900'
                       }`}
-                  >
-                    {tier.visitors.replace(',000', 'k').replace('1,000k', '1M')}
-                  </button>
-                ))}
+                    >
+                      {tier.visitors.replace(',000', 'k').replace('1,000k', '1M')}
+                      {isCurrentTier && <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full"></span>}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -396,12 +480,23 @@ export default function Billing({ onNavigate }: BillingProps) {
               </li>
             </ul>
 
-            <button disabled className="w-full py-2 rounded-lg bg-gray-200 text-gray-500 font-medium cursor-not-allowed">
-              Coming Soon
+            <button 
+              onClick={() => !growthButtonState.disabled && createCheckout(GROWTH_TIERS[selectedGrowthTier].slug)}
+              disabled={checkoutLoading || growthButtonState.disabled}
+              className={`w-full py-2 rounded-lg font-medium transition-all disabled:cursor-not-allowed ${
+                growthButtonState.style === 'current'
+                  ? 'bg-emerald-100 text-emerald-700 border border-emerald-500/50'
+                  : growthButtonState.style === 'downgrade'
+                    ? 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                    : 'bg-gradient-to-r from-violet-600 to-purple-600 text-white hover:from-violet-700 hover:to-purple-700'
+              }`}
+            >
+              {checkoutLoading ? 'Processing...' : growthButtonState.text}
             </button>
           </div>
         </div>
       </div>
+
 
       {/* Payment History */}
       {payments.length > 0 && (
@@ -451,6 +546,14 @@ export default function Billing({ onNavigate }: BillingProps) {
           Contact Support
         </button>
       </div>
+
+      {/* Toast notifications */}
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={hideToast}
+      />
     </div>
   );
 }

@@ -131,13 +131,13 @@ export default function RefundPage({ onBack }: RefundPageProps) {
             <section className="mb-8">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">8. Payment Methods</h2>
               <p className="text-gray-600 leading-relaxed mb-4">
-                We accept payments through Razorpay and PayPal, which support:
+                We process payments securely through Dodo Payments, which supports:
               </p>
               <ul className="list-disc list-inside text-gray-600 space-y-2 ml-4">
                 <li>Credit Cards (Visa, Mastercard, American Express)</li>
                 <li>Debit Cards</li>
                 <li>Net Banking</li>
-                <li>PayPal Balance</li>
+                <li>Other local payment methods available at checkout</li>
               </ul>
               <p className="text-gray-600 leading-relaxed mt-4">
                 All payments are processed in USD. Refunds will be credited to the original payment method used for the transaction.

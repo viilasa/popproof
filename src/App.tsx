@@ -34,13 +34,17 @@ function AppContent() {
     );
   }
 
-  // If user is authenticated, show dashboard
+  // If user is authenticated, show dashboard or payment processing
   if (user) {
+    const path = window.location.pathname;
+    // Billing path - show dashboard with billing section
+    if (path === '/billing') {
+      return <Dashboard initialSection="billing" />;
+    }
     // Check if there's a pending plan to redirect to billing
     const pendingPlan = localStorage.getItem('proofedge_pending_plan');
     if (pendingPlan) {
       localStorage.removeItem('proofedge_pending_plan');
-      // Pass the pending plan to Dashboard to auto-navigate to billing
       return <Dashboard initialSection="billing" pendingPlanSlug={pendingPlan} />;
     }
     return <Dashboard />;
