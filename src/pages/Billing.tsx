@@ -96,6 +96,25 @@ export default function Billing({ onNavigate }: BillingProps) {
   const proButtonState = getProButtonState();
   const growthButtonState = getGrowthButtonState();
 
+  // Plan chosen on the landing page: start checkout once the subscription has loaded
+  useEffect(() => {
+    if (!user || !subscription) return;
+    let slug: string | null = null;
+    try {
+      slug = sessionStorage.getItem('proofedge_checkout_plan');
+      if (slug) sessionStorage.removeItem('proofedge_checkout_plan');
+    } catch {
+      return;
+    }
+    if (!slug) return;
+    const proIdx = PRO_TIERS.findIndex(t => t.slug === slug);
+    const growthIdx = GROWTH_TIERS.findIndex(t => t.slug === slug);
+    if (proIdx === -1 && growthIdx === -1) return;
+    if (proIdx !== -1) setSelectedProTier(proIdx);
+    if (growthIdx !== -1) setSelectedGrowthTier(growthIdx);
+    if (slug !== currentPlanSlug) createCheckout(slug);
+  }, [user, subscription, currentPlanSlug, createCheckout]);
+
   // Handle checkout errors
   useEffect(() => {
     if (checkoutError) {

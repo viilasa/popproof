@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect } from 'react';
 import { useAuth } from './auth/AuthProvider';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
@@ -18,7 +18,7 @@ export function Dashboard({ initialSection, pendingPlanSlug }: DashboardProps = 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Store pending plan slug for billing page
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (pendingPlanSlug) {
       // Store in sessionStorage so Billing page can access it
       sessionStorage.setItem('proofedge_checkout_plan', pendingPlanSlug);

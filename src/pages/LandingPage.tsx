@@ -1097,7 +1097,7 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
                 </li>
               </ul>
               <button
-                onClick={() => onShowSignup(`pro-${PRO_TIERS[selectedProTier].visitors.replace(',', '').toLowerCase()}`)}
+                onClick={() => onShowSignup(PRO_TIERS[selectedProTier].slug)}
                 className="w-full py-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold text-lg hover:from-blue-700 hover:to-indigo-700 transition-all focus:outline-none focus:ring-4 focus:ring-blue-500/30 shadow-lg"
                 aria-label="Get started with Pro plan"
               >
@@ -1158,7 +1158,7 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
                 </li>
               </ul>
               <button
-                onClick={() => onShowSignup(`growth-${GROWTH_TIERS[selectedGrowthTier].visitors.replace(',', '').replace('1000k', '1m').toLowerCase()}`)}
+                onClick={() => onShowSignup(GROWTH_TIERS[selectedGrowthTier].slug)}
                 className="w-full py-4 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white font-semibold text-lg hover:from-violet-700 hover:to-purple-700 transition-all focus:outline-none focus:ring-4 focus:ring-violet-500/30 shadow-lg"
                 aria-label="Get started with Growth plan"
               >
