@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './components/auth/AuthProvider';
 import { AuthPage } from './components/auth/AuthPage';
 import { Dashboard } from './components/Dashboard';
@@ -9,7 +9,18 @@ import RefundPage from './pages/RefundPage';
 
 function AppContent() {
   const { user, loading } = useAuth();
-  
+
+  // A password-recovery link signs the user in; keep them on the reset form instead of the dashboard
+  const [recovering, setRecovering] = useState(() => {
+    const hash = window.location.hash;
+    return hash.includes('type=recovery') || hash === '#reset-password';
+  });
+  useEffect(() => {
+    const onHash = () => { if (window.location.hash === '#reset-password') setRecovering(true); };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+
   // Check URL path for terms/privacy/refund pages
   const getInitialMode = (): 'landing' | 'login' | 'signup' | 'terms' | 'privacy' | 'refund' => {
     const path = window.location.pathname;
@@ -32,6 +43,10 @@ function AppContent() {
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
+  }
+
+  if (recovering) {
+    return <AuthPage initialMode="reset-password" />;
   }
 
   // If user is authenticated, show dashboard or payment processing

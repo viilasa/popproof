@@ -1039,7 +1039,40 @@ Deno.serve((req) => {
         return container;
     }
 
+    // SECURITY: visitor-supplied event data is interpolated into HTML below, so neutralise it first.
+    var ESC_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    function escapeText(v) {
+        return String(v).replace(/[&<>"']/g, function(c) { return ESC_MAP[c]; });
+    }
+    function safeUrl(v) {
+        var u = String(v).trim();
+        if (!/^(https?:)?[/][/]/i.test(u) && !/^data:image[/](png|jpe?g|gif|webp);/i.test(u)) return '';
+        return u.replace(/[<>"' ]/g, function(c) { return encodeURIComponent(c); });
+    }
+    function sanitizeValue(key, v, depth) {
+        if (v === null || v === undefined || depth > 6) return v;
+        if (typeof v === 'string') {
+            return /image|img|avatar|photo|thumbnail|logo|icon|url|link|href/i.test(key || '') ? safeUrl(v) : escapeText(v);
+        }
+        if (Array.isArray(v)) return v.map(function(x) { return sanitizeValue(key, x, depth + 1); });
+        if (typeof v === 'object') {
+            var out = {};
+            Object.keys(v).forEach(function(k) { out[k] = sanitizeValue(k, v[k], depth + 1); });
+            return out;
+        }
+        return v;
+    }
+    var VISITOR_FIELDS = ['title', 'message', 'location', 'timeAgo', 'product_name', 'customer_name', 'review_content', 'value', 'rating', 'product_image', 'user_avatar', 'metadata'];
+    function sanitizeNotification(n) {
+        var copy = Object.assign({}, n);
+        VISITOR_FIELDS.forEach(function(k) {
+            if (copy[k] !== undefined) copy[k] = sanitizeValue(k, copy[k], 0);
+        });
+        return copy;
+    }
+
     function showNotificationWidget(notification, displaySettings = {}) {
+        notification = sanitizeNotification(notification);
         // Remove previous notification if still visible
         if (currentNotificationElement) {
             const outgoing = currentNotificationElement;

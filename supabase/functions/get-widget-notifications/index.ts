@@ -1,6 +1,33 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 
+// Only these metadata fields are exposed to the public widget endpoint.
+// Never add ip_address, user_agent, emails, session ids or raw URLs here.
+const PUBLIC_METADATA = new Set([
+  'customer_name', 'user_name', 'name', 'location', 'city', 'region', 'country', 'geo_city',
+  'product_name', 'product', 'product_image', 'image', 'image_url', 'productImage', 'img', 'photo', 'thumbnail',
+  'avatar', 'user_avatar', 'customer_avatar', 'profile_image',
+  'value', 'amount', 'price', 'currency', 'rating', 'review_content', 'review', 'comment',
+  'role', 'title', 'message', 'text', 'subtext', 'label', 'action', 'time', 'count', 'visitor_count',
+  'page_title', 'event_type', 'click_url',
+])
+
+// deno-lint-ignore no-explicit-any
+function publicMetadata(metadata: any): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  if (!metadata || typeof metadata !== 'object') return out
+  for (const [k, v] of Object.entries(metadata)) {
+    if (PUBLIC_METADATA.has(k) && (v === null || ['string', 'number', 'boolean'].includes(typeof v))) out[k] = v
+  }
+  // deno-lint-ignore no-explicit-any
+  const geo = (metadata as any).geo
+  if (geo && typeof geo === 'object') {
+    out.geo = { city: geo.city ?? null, region: geo.region ?? null, country: geo.country ?? null }
+  }
+  return out
+}
+
+
 // Edge function to get notifications for a specific widget based on its rules
 // Public endpoint - no auth required since we use service role internally
 Deno.serve(async (req) => {
@@ -810,7 +837,7 @@ Deno.serve(async (req) => {
           value: metadata.value || metadata.amount || metadata.price || null,
           rating: metadata.rating || null,
           review_content: metadata.review_content || metadata.review || metadata.comment || null,
-          metadata: metadata
+          metadata: publicMetadata(metadata)
         };
       });
 

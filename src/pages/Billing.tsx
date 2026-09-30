@@ -520,7 +520,7 @@ export default function Billing({ onNavigate }: BillingProps) {
                             : 'text-gray-500 hover:text-gray-900'
                       }`}
                     >
-                      {tier.visitors.replace(',000', 'k').replace('1,000k', '1M')}
+                      {tier.visitors === '1,000,000' ? '1M' : tier.visitors.replace(',000', 'k')}
                       {isCurrentTier && <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full"></span>}
                     </button>
                   );

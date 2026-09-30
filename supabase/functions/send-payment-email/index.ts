@@ -36,7 +36,28 @@ serve(async (req) => {
       )
     }
 
-    const { to, type, data }: EmailRequest = await req.json()
+    // Internal only: the webhook calls this with the service-role key. Without this check
+    // anyone holding the public anon key could send mail through our Resend account.
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!serviceKey || req.headers.get('Authorization') !== `Bearer ${serviceKey}`) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const body: EmailRequest = await req.json()
+    const { to, type } = body
+    if (typeof to !== 'string' || !/^[^@\s<>"']+@[^@\s<>"']+$/.test(to)) {
+      throw new Error('Invalid recipient')
+    }
+    // Escape everything interpolated into the HTML templates.
+    const esc = (v: unknown) => String(v ?? '').replace(/[&<>"']/g, (c) => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' } as Record<string, string>
+    )[c])
+    const data = Object.fromEntries(
+      Object.entries(body.data ?? {}).map(([k, v]) => [k, typeof v === 'number' ? v : esc(v)])
+    ) as EmailRequest['data']
 
     let subject = ''
     let html = ''

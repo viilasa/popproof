@@ -9,7 +9,7 @@ type AuthMode = 'login' | 'register' | 'forgot-password' | 'reset-password';
 
 interface AuthPageProps {
   onBackToLanding?: () => void;
-  initialMode?: 'login' | 'register';
+  initialMode?: 'login' | 'register' | 'reset-password';
 }
 
 export function AuthPage({ onBackToLanding, initialMode = 'login' }: AuthPageProps) {

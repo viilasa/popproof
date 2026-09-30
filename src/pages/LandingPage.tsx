@@ -1132,7 +1132,7 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
                         : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200'
                         }`}
                     >
-                      {tier.visitors.replace(',000', 'k').replace('1,000k', '1M')}
+                      {tier.visitors === '1,000,000' ? '1M' : tier.visitors.replace(',000', 'k')}
                     </button>
                   ))}
                 </div>
