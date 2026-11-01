@@ -164,7 +164,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
     setNotificationsLoading(true);
     try {
       // Fetch widgets for the selected site
-      const { data: widgets, error } = await supabase
+      const { data: allSiteWidgets, error } = await supabase
         .from('widgets')
         .select('*')
         .eq('site_id', selectedSiteId)
@@ -172,6 +172,17 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+
+      // Unsaved drafts (template picked, never saved) aren't real notifications.
+      // Ones abandoned for over an hour (tab closed mid-edit) are cleaned up.
+      const drafts = (allSiteWidgets || []).filter(w => w.config?.draft === true);
+      const staleDraftIds = drafts
+        .filter(w => Date.now() - new Date(w.created_at).getTime() > 60 * 60 * 1000)
+        .map(w => w.id);
+      if (staleDraftIds.length > 0) {
+        await supabase.from('widgets').delete().in('id', staleDraftIds);
+      }
+      const widgets = (allSiteWidgets || []).filter(w => w.config?.draft !== true);
 
       console.log('Fetched widgets for site:', widgets);
 
@@ -287,7 +298,7 @@ export function MainContent({ activeSection, userId, onSectionChange, initialWid
         throw widgetsError;
       }
       console.log('Fetched all widgets:', allWidgetsData);
-      setAllWidgets(allWidgetsData || []);
+      setAllWidgets((allWidgetsData || []).filter(w => w.config?.draft !== true));
     } catch (error) {
       console.error('Error fetching sites:', error);
     } finally {

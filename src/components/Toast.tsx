@@ -67,9 +67,9 @@ export function Toast({ message, type, isOpen, onClose, duration = 5000, action 
             {action && (
               <button
                 onClick={action.onClick}
-                className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                className={`mt-2 inline-flex items-center gap-1 text-sm font-semibold transition-colors ${type === 'warning' ? 'text-yellow-900 underline hover:text-yellow-700' : 'text-blue-600 hover:text-blue-700'}`}
               >
-                <Crown className="w-4 h-4" />
+                {type === 'upgrade' && <Crown className="w-4 h-4" />}
                 {action.label}
               </button>
             )}

@@ -17,7 +17,9 @@ interface UseWidgetConfigReturn {
   updateConfig: (updates: PartialWidgetConfig) => void;
   saveConfig: () => Promise<void>;
   resetConfig: () => void;
+  discardDraft: () => Promise<void>;
   isDirty: boolean;
+  isDraft: boolean;
 }
 
 export function useWidgetConfig({
@@ -31,6 +33,8 @@ export function useWidgetConfig({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+  // A widget fresh from the template picker stays a draft until its first save
+  const [isDraft, setIsDraft] = useState(false);
 
   // Fetch widget configuration
   const fetchConfig = useCallback(async () => {
@@ -64,6 +68,7 @@ export function useWidgetConfig({
         const fullConfig = mergeWithDefaults(widgetConfig);
         setConfig(fullConfig);
         setOriginalConfig(fullConfig);
+        setIsDraft(data.config?.draft === true);
       }
     } catch (err) {
       console.error('Error fetching widget config:', err);
@@ -129,7 +134,8 @@ export function useWidgetConfig({
         .from('widgets')
         .update({
           name: name,
-          is_active: isActive,
+          // First save publishes a draft
+          is_active: isDraft ? true : isActive,
           config: configData,
           version: version + 1,
           // Save design settings as individual columns
@@ -218,7 +224,19 @@ export function useWidgetConfig({
     } finally {
       setSaving(false);
     }
-  }, [config, widgetId, fetchConfig, onSaveSuccess, onSaveError]);
+  }, [config, isDraft, widgetId, fetchConfig, onSaveSuccess, onSaveError]);
+
+  // Delete a never-saved draft when the user leaves the editor
+  const discardDraft = useCallback(async () => {
+    if (!isDraft) return;
+    const { error: deleteError } = await supabase
+      .from('widgets')
+      .delete()
+      .eq('id', widgetId);
+    if (deleteError) {
+      console.error('Error discarding draft widget:', deleteError);
+    }
+  }, [isDraft, widgetId]);
 
   // Reset configuration to original state
   const resetConfig = useCallback(() => {
@@ -236,7 +254,9 @@ export function useWidgetConfig({
     updateConfig,
     saveConfig,
     resetConfig,
+    discardDraft,
     isDirty,
+    isDraft,
   };
 }
 

@@ -196,10 +196,7 @@ Deno.serve((req) => {
                 localStorage.setItem(storageKey, Date.now().toString());
                 return true;
             } else {
-                // all_time - check max per session
-                let count = parseInt(sessionStorage.getItem(sessionKey) || '0');
-                if (count >= maxPerSession) return false;
-                sessionStorage.setItem(sessionKey, (count + 1).toString());
+                // all_time - the editor labels this "All the time", so there is no cap
                 return true;
             }
         } catch (e) {
@@ -411,36 +408,11 @@ Deno.serve((req) => {
         // Create pill badge element
         const pillBadge = document.createElement('div');
         pillBadge.setAttribute('data-proofpop-pill-badge', widgetId);
-        pillBadge.style.cssText = 'position: fixed; z-index: 9999; pointer-events: auto; cursor: default; user-select: none; animation: proofpop-fade-in-up 0.5s ease-out forwards;';
-        
-        // Position the pill badge
-        const offsetX = design.offset_x || 24;
-        const offsetY = design.offset_y || 24;
-        
-        switch (position) {
-            case 'top-left':
-                pillBadge.style.top = offsetY + 'px';
-                pillBadge.style.left = offsetX + 'px';
-                break;
-            case 'top-right':
-                pillBadge.style.top = offsetY + 'px';
-                pillBadge.style.right = offsetX + 'px';
-                break;
-            case 'bottom-right':
-                pillBadge.style.bottom = offsetY + 'px';
-                pillBadge.style.right = offsetX + 'px';
-                break;
-            case 'center-top':
-                pillBadge.style.top = offsetY + 'px';
-                pillBadge.style.left = '50%';
-                pillBadge.style.transform = 'translateX(-50%)';
-                break;
-            case 'bottom-left':
-            default:
-                pillBadge.style.bottom = offsetY + 'px';
-                pillBadge.style.left = offsetX + 'px';
-                break;
-        }
+        // No 'forwards' fill: a held animation would override the inline opacity/transform used for the exit fade
+        pillBadge.style.cssText = 'position: relative; z-index: 9999; pointer-events: auto; cursor: default; user-select: none; animation: proofpop-fade-in-up 0.5s ease-out;';
+
+        // Sit in the corner closest to the screen edge so notifications in the same corner stack beside it instead of on top
+        pillBadge.style.order = position.indexOf('top') !== -1 ? '-1' : '1';
         
         // Build the pill badge HTML
         pillBadge.innerHTML = '<div style="display: flex; align-items: center; gap: 10px; padding: 10px 20px; background: white; border: 1px solid #e5e7eb; border-radius: 50px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-family: -apple-system, BlinkMacSystemFont, \\'Segoe UI\\', Roboto, sans-serif; font-size: 14px; transition: all 0.3s ease;">' +
@@ -470,7 +442,8 @@ Deno.serve((req) => {
             document.head.appendChild(style);
         }
         
-        document.body.appendChild(pillBadge);
+        // Share the corner container with regular notifications so they stack with a gap rather than overlap
+        getOrCreateContainer(position, design).appendChild(pillBadge);
         pillBadgeElements[widgetId] = pillBadge;
         
         console.log('ProofPop: Pill badge rendered for widget', widgetId, 'count:', count);
@@ -514,7 +487,8 @@ Deno.serve((req) => {
         
         // Render each pill badge
         pillBadgeWidgets.forEach(widget => {
-            renderPillBadge(widget, stats);
+            // Wait until the tab is visible so the badge isn't counted as a view while nobody sees it
+            whenPageVisible(() => renderPillBadge(widget, stats));
         });
     }
 
@@ -553,7 +527,9 @@ Deno.serve((req) => {
                     const simple = new Intl.NumberFormat(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(numericValue);
                     return simple + ' ' + currency;
                 }
-                return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(numericValue);
+                // Whole amounts read cleaner without ".00" (e.g. $299)
+                const fractionDigits = Number.isInteger(numericValue) ? 0 : 2;
+                return new Intl.NumberFormat(undefined, { style: 'currency', currency, minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits }).format(numericValue);
             } catch (error) {
                 console.warn('ProofPop: Currency formatting failed, falling back', error);
                 return currency + ' ' + numericValue.toFixed(2);
@@ -933,20 +909,57 @@ Deno.serve((req) => {
         }
     }
 
+    // Run fn now if the tab is visible, otherwise once it becomes visible again
+    function whenPageVisible(fn) {
+        if (document.visibilityState !== 'hidden') {
+            fn();
+            return;
+        }
+        const onVisible = () => {
+            if (document.visibilityState === 'hidden') return;
+            document.removeEventListener('visibilitychange', onVisible);
+            fn();
+        };
+        document.addEventListener('visibilitychange', onVisible);
+    }
+
     function showNextNotification() {
-        if (notificationQueue.length === 0) return;
-        
+        // Don't show (or count views for) notifications nobody can see
+        if (document.visibilityState === 'hidden') {
+            whenPageVisible(showNextNotification);
+            return;
+        }
+
         // Prevent overlapping notifications
         if (isDisplaying) {
             console.log('ProofPop: Notification already displaying, skipping...');
             return;
         }
-        
-        // Get next notification (cycle through)
-        const nextNotification = notificationQueue[currentNotificationIndex];
+
+        // Cycle through the queue (timestamps are recomputed at display, so replays stay accurate),
+        // skipping notifications that lack real content or exceed the widget's frequency setting
+        let nextNotification = null;
+        for (let attempts = 0; attempts < notificationQueue.length; attempts++) {
+            const candidate = notificationQueue[currentNotificationIndex];
+            currentNotificationIndex = (currentNotificationIndex + 1) % notificationQueue.length;
+            if (!hasRealContent(candidate)) {
+                console.log('ProofPop: Skipping notification without real content', candidate.widget_id);
+                continue;
+            }
+            const trigger = widgetTriggerSettings[candidate.widget_id] || {};
+            if (!checkFrequencyLimit(candidate.widget_id, trigger.displayFrequency || 'all_time', trigger.maxNotificationsPerSession || 3)) {
+                console.log('ProofPop: Frequency limit reached for widget', candidate.widget_id);
+                continue;
+            }
+            nextNotification = candidate;
+            break;
+        }
+        if (!nextNotification) {
+            console.log('ProofPop: No notification eligible to show right now');
+            return;
+        }
         const widgetId = nextNotification.widget_id;
         const widgetDisplay = widgetDisplaySettings[widgetId] || {};
-        currentNotificationIndex = (currentNotificationIndex + 1) % notificationQueue.length;
 
         showNotificationWidget(nextNotification, widgetDisplay);
         
@@ -1071,8 +1084,188 @@ Deno.serve((req) => {
         return copy;
     }
 
+    // Shared keyframes used by layouts. Host sites usually don't define these, so the engine ships its own.
+    function ensureSharedKeyframes() {
+        if (document.getElementById('proofpop-shared-keyframes')) return;
+        const style = document.createElement('style');
+        style.id = 'proofpop-shared-keyframes';
+        style.textContent =
+            '@keyframes proofpop-kf-ping{75%,100%{transform:scale(2);opacity:0}}' +
+            '@keyframes proofpop-kf-pulse{50%{opacity:0.5}}' +
+            '@keyframes proofpop-kf-bounce{0%,100%{transform:translateY(-25%);animation-timing-function:cubic-bezier(0.8,0,1,1)}50%{transform:none;animation-timing-function:cubic-bezier(0,0,0.2,1)}}' +
+            '@keyframes proofpop-kf-ripple{0%{transform:scale(1);opacity:0.45}100%{transform:scale(1.9);opacity:0}}' +
+            '@keyframes proofpop-kf-kenburns{from{transform:scale(1)}to{transform:scale(1.08)}}' +
+            '@keyframes proofpop-kf-progress{from{width:0%}to{width:100%}}' +
+            '@media (prefers-reduced-motion: reduce){[data-proofpop-notification] *{animation:none !important}}';
+        document.head.appendChild(style);
+    }
+
+    function isPresent(v) {
+        return v !== null && v !== undefined && String(v).trim() !== '';
+    }
+
+    function isLiveVisitorNotification(n) {
+        return n.event_type === 'visitor_active' || !!(n.metadata && n.metadata.visitor_count);
+    }
+
+    // Only show a notification when the fields its layout displays come from a real event.
+    // Layouts never fall back to made-up numbers or text.
+    function hasRealContent(n) {
+        const meta = n.metadata || {};
+        const layout = (widgetDesignSettings[n.widget_id] || {}).layout_style || 'card';
+        const isLive = isLiveVisitorNotification(n);
+        switch (layout) {
+            case 'floating-tag':
+                return isLive ? (isPresent(n.title) && isPresent(n.message)) : (isPresent(meta.text) || isPresent(n.title));
+            case 'frosted-token':
+                return isLive
+                    ? (isPresent(n.title) && isPresent(n.message))
+                    : ((isPresent(meta.count) || isPresent(meta.value) || isPresent(n.title)) && (isPresent(meta.label) || isPresent(n.message)));
+            case 'peekaboo': {
+                const isViewCount = n.event_type === 'page_view' || isLive || isPresent(meta.count);
+                return isViewCount
+                    ? (isPresent(meta.count) || isPresent(meta.value) || isPresent(n.title))
+                    : isPresent(n.title) || isPresent(n.message);
+            }
+            case 'story-pop':
+                return isPresent(meta.action) || isPresent(n.message) ||
+                    n.event_type === 'purchase' || n.event_type === 'add_to_cart' ||
+                    meta.event_type === 'purchase' || meta.event_type === 'add_to_cart';
+            default:
+                return isPresent(n.title) || isPresent(n.message);
+        }
+    }
+
+    // Per-event colour, short label and icon (SVG inner markup, stroke style) shared by layouts
+    var EVENT_STYLES = {
+        purchase: { color: '#10b981', label: 'Purchased', svg: '<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path>' },
+        add_to_cart: { color: '#f59e0b', label: 'Added to cart', svg: '<circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>' },
+        signup: { color: '#6366f1', label: 'Signed up', svg: '<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line>' },
+        review: { color: '#f59e0b', label: 'Reviewed', svg: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>' },
+        form_submit: { color: '#0ea5e9', label: 'Submitted', svg: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><polyline points="9 15 11 17 15 13"></polyline>' },
+        page_view: { color: '#3b82f6', label: 'Browsing', svg: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>' },
+        other: { color: '#8b5cf6', label: 'New activity', svg: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path>' }
+    };
+
+    function eventIconSvg(style, size, color) {
+        return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + style.svg + '</svg>';
+    }
+
+    // Run fn once the starting styles have been painted. Uses two animation frames, with a timer
+    // fallback for contexts where frames are throttled (embedded iframes, low-power mode).
+    function afterPaint(fn) {
+        let done = false;
+        const run = function() { if (!done) { done = true; fn(); } };
+        requestAnimationFrame(function() { requestAnimationFrame(run); });
+        setTimeout(run, 60);
+    }
+
+    function prefersReducedMotion() {
+        return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    }
+
+    // Everything a layout needs to describe an event, taken only from real event fields.
+    // The action is split as lead + object + tail so layouts can bold the product/page/form name.
+    function getEventDetails(n) {
+        const meta = n.metadata || {};
+        const type = n.event_type || meta.event_type || '';
+        const productName = n.product_name || meta.product_name || meta.product || '';
+        const productImage = n.product_image || meta.product_image || meta.image || meta.image_url ||
+            meta.productImage || meta.img || meta.thumbnail || meta.photo || '';
+        const userAvatar = n.user_avatar || meta.avatar || meta.user_avatar || meta.customer_avatar || meta.profile_image || '';
+        // Location only when the widget's location setting allows it
+        const location = n.showLocation && n.location ? n.location : '';
+        // Server messages may end with " from <city>"; strip it so it never repeats or leaks
+        const fromSuffix = n.location ? ' from ' + n.location : '';
+        let message = String(n.message || '');
+        if (fromSuffix && message.slice(-fromSuffix.length) === fromSuffix) message = message.slice(0, -fromSuffix.length);
+
+        let lead = message, object = '', tail = '';
+        if (type === 'purchase') {
+            if (productName) { lead = 'purchased '; object = productName; } else { lead = 'made a purchase'; }
+        } else if (type === 'add_to_cart') {
+            if (productName) { lead = 'added '; object = productName; tail = ' to cart'; } else { lead = 'added an item to cart'; }
+        } else if (type === 'signup') {
+            lead = 'signed up';
+        } else if (type === 'review') {
+            if (productName) { lead = 'reviewed '; object = productName; } else { lead = 'left a review'; }
+        } else if (type === 'form_submit') {
+            if (message.indexOf('submitted ') === 0 && message !== 'submitted a form') { lead = 'submitted '; object = message.slice(10); }
+        } else if (type === 'page_view' && meta.page_title) {
+            lead = 'is browsing '; object = meta.page_title;
+        } else if (!message && meta.action) {
+            lead = meta.action;
+        }
+
+        const style = EVENT_STYLES[type] || EVENT_STYLES.other;
+        return {
+            type: type,
+            style: style,
+            label: EVENT_STYLES[type] ? style.label : (meta.action || style.label),
+            productName: productName,
+            productImage: productImage,
+            userAvatar: n.showUserAvatar === false ? '' : userAvatar,
+            location: location,
+            lead: lead,
+            object: object,
+            tail: tail,
+            sentence: lead + object + tail
+        };
+    }
+
+    // Action sentence as HTML with the object emphasised
+    function eventActionHtml(d, objectStyle) {
+        return d.lead + (d.object ? '<strong style="' + objectStyle + '">' + d.object + '</strong>' : '') + d.tail;
+    }
+
+    // Relative time computed at display time so it never goes stale while the queue plays
+    function formatTimeAgo(timestamp) {
+        const time = new Date(timestamp).getTime();
+        if (!timestamp || isNaN(time)) return '';
+        const diffMins = Math.max(0, Math.floor((Date.now() - time) / 60000));
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return diffMins + (diffMins === 1 ? ' minute' : ' minutes') + ' ago';
+        const hours = Math.floor(diffMins / 60);
+        if (diffMins < 1440) return hours + (hours === 1 ? ' hour' : ' hours') + ' ago';
+        const days = Math.floor(diffMins / 1440);
+        return days + (days === 1 ? ' day' : ' days') + ' ago';
+    }
+
+    // Play a layout's exit motion, then remove it. Safe to call twice (close button + auto-hide).
+    function dismissNotification(el, kind, waitMs) {
+        if (!el || el.getAttribute('data-proofpop-dismissed')) return;
+        el.setAttribute('data-proofpop-dismissed', 'true');
+        const reduceMotion = prefersReducedMotion();
+        if (kind === 'puzzle') {
+            el.querySelectorAll('[data-puzzle-piece]').forEach((piece) => {
+                piece.style.transition = 'transform 0.35s ease-in, opacity 0.3s ease-in';
+                piece.style.transform = reduceMotion ? 'none' : (piece.getAttribute('data-puzzle-from') || 'none');
+                piece.style.opacity = '0';
+            });
+        } else if (kind === 'story-pop') {
+            el.style.transition = 'opacity 0.3s ease-in, transform 0.35s ease-in';
+            el.style.transform = el.getAttribute('data-story-hidden') || 'none';
+            el.style.opacity = '0';
+        } else {
+            el.style.opacity = '0';
+        }
+        setTimeout(() => {
+            if (el.parentNode) el.remove();
+            if (currentNotificationElement === el) {
+                isDisplaying = false;
+                currentNotificationElement = null;
+            }
+        }, waitMs);
+    }
+
     function showNotificationWidget(notification, displaySettings = {}) {
         notification = sanitizeNotification(notification);
+        ensureSharedKeyframes();
+        // Refresh relative time from the real event timestamp (live visitor counts keep their 'Live' label)
+        if (!isLiveVisitorNotification(notification)) {
+            const freshTimeAgo = formatTimeAgo(notification.timestamp);
+            if (freshTimeAgo) notification.timeAgo = freshTimeAgo;
+        }
         // Remove previous notification if still visible
         if (currentNotificationElement) {
             const outgoing = currentNotificationElement;
@@ -1176,12 +1369,18 @@ Deno.serve((req) => {
 
         // Special styling for Ripple layout - clean white pill
         if (isRipple) {
-            baseStyles.borderRadius = '9999px';
-            baseStyles.borderWidth = '0';
-            baseStyles.borderStyle = 'none';
-            baseStyles.borderColor = 'transparent';
+            // Pill on one or two lines; a fixed radius keeps taller content from looking like a stretched oval
+            baseStyles.borderRadius = '30px';
+            baseStyles.borderWidth = '1px';
+            baseStyles.borderStyle = 'solid';
+            baseStyles.borderColor = 'rgba(15, 23, 42, 0.05)';
             baseStyles.backgroundColor = '#ffffff';
-            baseStyles.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)';
+            baseStyles.boxShadow = '0 8px 24px -6px rgba(15, 23, 42, 0.16), 0 1px 3px rgba(15, 23, 42, 0.06)';
+            baseStyles.padding = '8px 18px 8px 8px';
+            baseStyles.maxWidth = 'min(' + Math.max(design.max_width || 0, 340) + 'px, calc(100vw - 32px))';
+            baseStyles.minWidth = '0';
+            // The ripple rings spread past the avatar
+            baseStyles.overflow = 'visible';
         } else if (isParallax) {
             // Special styling for Parallax 3D card - dark glassmorphic card
             baseStyles.borderRadius = '12px';
@@ -1204,6 +1403,9 @@ Deno.serve((req) => {
             baseStyles.boxShadow = 'none';
             baseStyles.padding = '0';
             baseStyles.overflow = 'visible';
+            // Room for both square pieces plus readable text; never wider than the screen
+            baseStyles.maxWidth = 'min(440px, calc(100vw - 24px))';
+            baseStyles.minWidth = '0';
         } else if (isPeekaboo) {
             // Special styling for Peekaboo layout - white card with rounded right edge
             baseStyles.borderRadius = '12px 24px 24px 12px';
@@ -1220,19 +1422,21 @@ Deno.serve((req) => {
             baseStyles.borderRadius = '50px';
             baseStyles.borderWidth = '1px';
             baseStyles.borderStyle = 'solid';
-            baseStyles.borderColor = 'rgba(255, 255, 255, 0.4)';
-            baseStyles.backgroundColor = 'rgba(255, 255, 255, 0.7)';
-            baseStyles.backdropFilter = 'blur(12px)';
-            baseStyles.WebkitBackdropFilter = 'blur(12px)';
-            baseStyles.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.05)';
-            baseStyles.padding = '8px 16px 8px 8px';
+            baseStyles.borderColor = 'rgba(15, 23, 42, 0.06)';
+            baseStyles.backgroundColor = 'rgba(255, 255, 255, 0.88)';
+            baseStyles.backdropFilter = 'blur(16px) saturate(180%)';
+            baseStyles.WebkitBackdropFilter = 'blur(16px) saturate(180%)';
+            baseStyles.boxShadow = '0 10px 30px -8px rgba(15, 23, 42, 0.18), 0 2px 6px rgba(15, 23, 42, 0.06)';
+            baseStyles.padding = '6px 18px 6px 6px';
             baseStyles.overflow = 'visible';
+            baseStyles.minWidth = '0';
+            baseStyles.maxWidth = 'calc(100vw - 32px)';
         } else if (isStoryPop) {
             // Special styling for Story Pop layout - vertical card like stories
-            baseStyles.width = '160px';
-            baseStyles.height = '220px';
-            baseStyles.maxWidth = '160px';
-            baseStyles.minWidth = '160px';
+            baseStyles.width = '176px';
+            baseStyles.height = '248px';
+            baseStyles.maxWidth = '176px';
+            baseStyles.minWidth = '176px';
             baseStyles.borderRadius = '16px';
             baseStyles.borderWidth = '2px';
             baseStyles.borderStyle = 'solid';
@@ -1281,8 +1485,9 @@ Deno.serve((req) => {
                 const blurAmount = design.backdrop_blur || 16;
                 baseStyles.backdropFilter = 'blur(' + blurAmount + 'px)';
                 baseStyles.WebkitBackdropFilter = 'blur(' + blurAmount + 'px)';
-                baseStyles.backgroundColor = 'rgba(255, 255, 255, 0.3)';
-                baseStyles.borderColor = 'rgba(255, 255, 255, 0.5)';
+                // Mostly opaque so text stays readable on busy or colourful sites
+                baseStyles.backgroundColor = 'rgba(255, 255, 255, 0.88)';
+                baseStyles.borderColor = 'rgba(255, 255, 255, 0.6)';
                 baseStyles.boxShadow = 'inset 0 1px 1px 0 rgba(255, 255, 255, 0.3), 0 20px 27px rgba(0, 0, 0, 0.05)';
                 if (design.border_left_accent) {
                     baseStyles.borderLeftColor = design.border_left_accent_color || '#3B82F6';
@@ -1346,96 +1551,53 @@ Deno.serve((req) => {
         
         let html = '';
         
-        // DEBUG: Log product image availability for special layouts
-        console.log('ProofPop IMAGE DEBUG:', {
-            widget_id: notification.widget_id,
-            layout: layoutStyle,
-            product_image: notification.product_image,
-            metadata_product_image: notification.metadata?.product_image,
-            metadata_image: notification.metadata?.image,
-            user_avatar: notification.user_avatar,
-            metadata_avatar: notification.metadata?.avatar,
-            all_metadata_keys: notification.metadata ? Object.keys(notification.metadata) : []
-        });
-        
-        // Special Ripple Bubble Layout - Exact match to design
+        // Special Ripple Bubble Layout
         if (isRipple) {
-            // Get product image from all possible sources (same as Puzzle widget)
-            const productImage = notification.product_image || 
-                                notification.metadata?.product_image || 
-                                notification.metadata?.image || 
-                                notification.metadata?.image_url ||
-                                notification.metadata?.productImage ||
-                                notification.metadata?.img ||
-                                notification.metadata?.thumbnail ||
-                                notification.metadata?.photo ||
-                                '';
-            const userAvatar = notification.user_avatar || notification.metadata?.avatar || notification.metadata?.user_avatar || '';
-            // Get location from multiple sources
-            const locationCity = notification.location || 
-                                notification.metadata?.location || 
-                                notification.metadata?.city ||
-                                notification.metadata?.geo?.city ||
-                                notification.metadata?.geo_city ||
-                                notification.metadata?.region ||
-                                '';
-            const productName = notification.product_name || notification.metadata?.product_name || notification.metadata?.product || '';
-            
-            // Determine action text based on event type
-            let actionMessage = notification.message || 'is looking at this';
-            if (notification.event_type === 'add_to_cart' || notification.metadata?.event_type === 'add_to_cart') {
-                actionMessage = productName ? 'added ' + productName + ' to cart' : 'added to cart';
-            } else if (notification.event_type === 'purchase' || notification.metadata?.event_type === 'purchase') {
-                actionMessage = productName ? 'purchased ' + productName : 'made a purchase';
-            }
-            
-            console.log('Ripple widget - product image:', productImage, 'location:', locationCity, 'metadata:', JSON.stringify(notification.metadata));
-            
-            // Main content wrapper - horizontal flex
-            html += '<div style="display: flex; align-items: center; gap: 12px;">';
-            
-            // Image cluster container (overlapping circles)
-            html += '<div style="position: relative; flex-shrink: 0; width: 56px; height: 44px;">';
-            
-            // User avatar (back circle - behind product)
-            if (userAvatar) {
-                html += '<img src="' + userAvatar + '" alt="' + displayName + '" style="position: absolute; left: 0; top: 2px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid white; object-fit: cover; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 1;" />';
+            const d = getEventDetails(notification);
+            const hasProduct = !!d.productImage;
+
+            html += '<div style="display: flex; align-items: center; gap: 12px; min-width: 0;">';
+
+            // Image cluster: person (photo or initial) with the product overlapping when there is one
+            html += '<div style="position: relative; flex-shrink: 0; width: ' + (hasProduct ? '64px' : '44px') + '; height: 44px;">';
+            // Ripple rings spread out from the person on entrance (two pulses, then still)
+            html += '<span data-ripple-ring style="position: absolute; left: 0; top: 0; width: 44px; height: 44px; border-radius: 50%; background: ' + d.style.color + '; opacity: 0; animation: proofpop-kf-ripple 1.6s ease-out 0.35s 2;"></span>';
+            html += '<span data-ripple-ring style="position: absolute; left: 0; top: 0; width: 44px; height: 44px; border-radius: 50%; background: ' + d.style.color + '; opacity: 0; animation: proofpop-kf-ripple 1.6s ease-out 0.85s 2;"></span>';
+            if (d.userAvatar) {
+                html += '<img src="' + d.userAvatar + '" alt="' + displayName + '" style="position: absolute; left: 0; top: 0; width: 44px; height: 44px; border-radius: 50%; border: 2px solid #ffffff; object-fit: cover; box-sizing: border-box; background: #e5e7eb; z-index: 1;" />';
             } else {
-                html += '<div style="position: absolute; left: 0; top: 2px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid white; background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 1; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 16px;">' + initial + '</div>';
+                html += '<div style="position: absolute; left: 0; top: 0; width: 44px; height: 44px; border-radius: 50%; border: 2px solid #ffffff; box-sizing: border-box; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); z-index: 1; display: flex; align-items: center; justify-content: center; color: #ffffff; font-weight: 600; font-size: 16px;">' + initial + '</div>';
             }
-            
-            // Product image (front circle - on top)
-            if (productImage) {
-                html += '<img src="' + productImage + '" alt="Product" style="position: absolute; left: 20px; top: 2px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid white; object-fit: cover; background: #fbbf24; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 2;" />';
-            } else {
-                html += '<div style="position: absolute; left: 20px; top: 2px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid white; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 2;"></div>';
+            if (hasProduct) {
+                html += '<img src="' + d.productImage + '" alt="' + (d.productName || 'Product') + '" style="position: absolute; left: 22px; top: 0; width: 44px; height: 44px; border-radius: 50%; border: 2px solid #ffffff; object-fit: cover; box-sizing: border-box; background: #f3f4f6; box-shadow: -2px 0 6px rgba(0,0,0,0.08); z-index: 2;" />';
             }
-            
-            // Heart badge (small red heart at bottom)
-            html += '<div style="position: absolute; left: 24px; bottom: 0; z-index: 3; background: white; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.12);">';
-            html += '<svg width="10" height="10" viewBox="0 0 24 24" fill="#ef4444"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
+            // Event badge: tells what happened at a glance
+            html += '<div style="position: absolute; left: ' + (hasProduct ? '48px' : '28px') + '; bottom: -3px; z-index: 3; width: 18px; height: 18px; border-radius: 50%; background: ' + d.style.color + '; box-shadow: 0 0 0 2px #ffffff; display: flex; align-items: center; justify-content: center;">';
+            html += eventIconSvg(d.style, 10, '#ffffff');
             html += '</div>';
-            
             html += '</div>'; // End image cluster
-            
-            // Text content
-            html += '<div style="display: flex; flex-direction: column; justify-content: center; min-width: 0; padding-right: 8px;">';
-            
-            // First line: "Maya from Toronto" or just "Maya" if no location
-            html += '<div style="font-size: 14px; color: #374151; font-weight: 400; white-space: nowrap;">';
-            html += '<span style="font-weight: 600; color: #6366f1;">' + displayName + '</span>';
-            if (locationCity) {
-                html += ' from ' + locationCity;
+
+            html += '<div style="display: flex; flex-direction: column; justify-content: center; min-width: 0; flex: 1;">';
+
+            // Line 1: name + "from city"; long names truncate first
+            html += '<div style="display: flex; align-items: baseline; gap: 4px; min-width: 0; white-space: nowrap; font-size: 14px; line-height: 1.35;">';
+            html += '<span style="font-weight: 600; color: #4f46e5; overflow: hidden; text-overflow: ellipsis; min-width: 0;">' + displayName + '</span>';
+            if (d.location) {
+                html += '<span style="color: #6b7280; font-size: 12px; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; max-width: 50%;">from ' + d.location + '</span>';
             }
             html += '</div>';
-            
-            // Second line: action message (e.g., "added Product to cart")
-            html += '<div style="font-size: 13px; color: #9ca3af; font-weight: 400; max-width: 280px;">';
-            html += actionMessage;
+
+            // Line 2: action, up to two lines
+            html += '<div style="font-size: 13px; color: #4b5563; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">';
+            html += eventActionHtml(d, 'font-weight: 600; color: #111827;');
             html += '</div>';
-            
+
+            // Line 3: time
+            if (showTimestamp && notification.timeAgo) {
+                html += '<div style="font-size: 11px; color: #9ca3af; margin-top: 1px; white-space: nowrap;">' + notification.timeAgo + '</div>';
+            }
+
             html += '</div>'; // End text content
-            
             html += '</div>'; // End main wrapper
         } else if (isParallax) {
             // 3D Parallax Card Layout - Dark glassmorphic with floating product image
@@ -1493,100 +1655,69 @@ Deno.serve((req) => {
             // Bottom gradient bar
             html += '<div style="position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: linear-gradient(to right, #6366f1, #a855f7, #ec4899); opacity: 0.5; border-radius: 0 0 12px 12px;"></div>';
         } else if (isPuzzle) {
-            // Puzzle Reveal Layout - Three pieces that snap together
-            const userAvatar = notification.user_avatar || notification.metadata?.avatar || notification.metadata?.user_avatar || '';
-            const productImage = notification.product_image || 
-                                notification.metadata?.product_image || 
-                                notification.metadata?.image || 
-                                notification.metadata?.image_url ||
-                                notification.metadata?.productImage ||
-                                notification.metadata?.img ||
-                                notification.metadata?.thumbnail ||
-                                notification.metadata?.photo ||
-                                '';
-            const productName = notification.product_name || notification.metadata?.product_name || notification.metadata?.product || 'Product';
-            
-            console.log('Puzzle widget - product image:', productImage, 'metadata:', JSON.stringify(notification.metadata));
-            
-            // Determine action text based on event type
-            let actionText = 'purchased';
-            let actionVerb = 'got';
-            if (notification.event_type === 'add_to_cart' || notification.metadata?.event_type === 'add_to_cart') {
-                actionText = 'added to cart';
-                actionVerb = 'added';
-            } else if (notification.event_type === 'purchase' || notification.metadata?.event_type === 'purchase') {
-                actionText = 'purchased';
-                actionVerb = 'got';
-            } else if (notification.event_type === 'signup' || notification.metadata?.event_type === 'signup') {
-                actionText = 'signed up';
-                actionVerb = 'joined';
-            } else if (notification.event_type === 'review' || notification.metadata?.event_type === 'review') {
-                actionText = 'reviewed';
-                actionVerb = 'reviewed';
-            } else if (notification.metadata?.action) {
-                actionText = notification.metadata.action;
-            }
-            
-            const accentColor = notification.metadata?.color || '#facc15'; // Yellow default
-            
-            // Container for all pieces - clean horizontal layout
-            html += '<div data-puzzle-container style="position: relative; display: flex; align-items: center; filter: drop-shadow(0 8px 20px rgba(0,0,0,0.15));">';
-            
-            // PIECE 1: Avatar (Left) - slides from left
-            html += '<div data-puzzle-piece="1" style="position: relative; z-index: 30; display: flex; align-items: center; justify-content: center; width: 82px; height: 82px; background: white; border-radius: 18px 4px 4px 18px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); transform: translateX(-50px); opacity: 0; transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);">';
-            if (userAvatar) {
-                html += '<img src="' + userAvatar + '" alt="' + displayName + '" style="width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />';
+            // Puzzle Reveal Layout - three pieces that snap together: person, message, product/event
+            const d = getEventDetails(notification);
+            const pieceSize = 92;
+            const pieceTransition = 'transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.35s ease-out';
+            const accentColor = notification.metadata?.color || d.style.color;
+
+            html += '<div data-puzzle-container style="position: relative; display: flex; align-items: center; min-width: 0; filter: drop-shadow(0 8px 20px rgba(0,0,0,0.15));">';
+
+            // PIECE 1: person - slides in from the left
+            html += '<div data-puzzle-piece="1" data-puzzle-from="translateX(-40px)" style="position: relative; z-index: 30; flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: ' + pieceSize + 'px; height: ' + pieceSize + 'px; background: #ffffff; border-radius: 18px 4px 4px 18px; transform: translateX(-40px); opacity: 0; transition: ' + pieceTransition + ';">';
+            if (d.userAvatar) {
+                html += '<img src="' + d.userAvatar + '" alt="' + displayName + '" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; background: #e5e7eb; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />';
             } else {
-                html += '<div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 22px; border: 2px solid white;">' + initial + '</div>';
+                html += '<div style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; color: #ffffff; font-weight: 600; font-size: 24px;">' + initial + '</div>';
             }
-            // Connector dot (puzzle tab)
-            html += '<div style="position: absolute; right: -6px; width: 12px; height: 12px; background: white; border-radius: 50%; z-index: 10;"></div>';
+            // Connector tab
+            html += '<div style="position: absolute; right: -6px; top: 50%; margin-top: -6px; width: 12px; height: 12px; background: #ffffff; border-radius: 50%; z-index: 10;"></div>';
             html += '</div>';
-            
-            // PIECE 2: Message (Middle) - three-row layout for full product name
-            html += '<div data-puzzle-piece="2" style="position: relative; z-index: 10; margin-left: -8px; padding: 12px 20px; height: 82px; background: #1f2937; color: white; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: center; transform: translateY(-50px); opacity: 0; transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s;">';
-            
-            // Top row: Badge + Branding
-            html += '<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">';
-            // Action badge - single line
-            html += '<div style="display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 4px; background: ' + accentColor + ';">';
-            html += '<svg width="11" height="11" viewBox="0 0 24 24" fill="#111827"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>';
-            html += '<span style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: #111827; white-space: nowrap;">' + actionText + '</span>';
-            html += '</div>';
-            // Branding
+
+            // PIECE 2: message - drops in from above; shrinks and truncates instead of pushing the image out
+            html += '<div data-puzzle-piece="2" data-puzzle-from="translateY(-30px)" style="position: relative; z-index: 10; flex: 1 1 auto; min-width: 0; max-width: 260px; margin-left: -8px; padding: 10px 16px 10px 18px; height: ' + pieceSize + 'px; box-sizing: border-box; background: #1f2937; color: #ffffff; border-radius: 4px; display: flex; flex-direction: column; justify-content: center; gap: 3px; transform: translateY(-30px); opacity: 0; transition: ' + pieceTransition + ' 0.08s;">';
+
+            // Row 1: event badge + branding
+            html += '<div style="display: flex; align-items: center; gap: 8px; min-width: 0;">';
+            html += '<span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; background: ' + accentColor + '; color: #ffffff; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap; flex-shrink: 0;">';
+            html += eventIconSvg(d.style, 10, '#ffffff') + '<span style="overflow: hidden; text-overflow: ellipsis;">' + d.label + '</span></span>';
             if (showPoweredBy) {
-                html += '<a href="https://proofedge.io" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 3px; font-size: 9px; color: rgba(255,255,255,0.6); text-decoration: none; white-space: nowrap;">';
+                html += '<a href="https://proofedge.io" target="_blank" rel="noopener noreferrer" style="margin-left: auto; min-width: 0; overflow: hidden; display: flex; align-items: center; gap: 3px; font-size: 9px; color: rgba(255,255,255,0.55); text-decoration: none; white-space: nowrap;">';
                 html += '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>';
                 html += '<span>ProofEdge</span>';
                 html += '</a>';
             }
             html += '</div>';
-            
-            // Middle row: Name + action verb
-            html += '<div style="font-size: 13px; font-weight: 600; color: white; margin-bottom: 2px;">';
-            html += displayName + ' <span style="font-weight: 400; color: #9ca3af;">' + actionVerb + '</span>';
+
+            // Row 2: name
+            html += '<div style="font-size: 13px; font-weight: 600; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">' + displayName + '</div>';
+
+            // Row 3: action with the product/page/form name highlighted
+            html += '<div title="' + d.sentence + '" style="font-size: 12px; color: #d1d5db; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">' + eventActionHtml(d, 'font-weight: 600; color: #ffffff;') + '</div>';
+
+            // Row 4: time + location
+            const puzzleMeta = [];
+            if (showTimestamp && notification.timeAgo) puzzleMeta.push(notification.timeAgo);
+            if (d.location) puzzleMeta.push(d.location);
+            if (puzzleMeta.length) {
+                html += '<div style="font-size: 10px; color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">' + puzzleMeta.join(' · ') + '</div>';
+            }
             html += '</div>';
-            
-            // Bottom row: Product name (full visibility)
-            html += '<div style="font-size: 13px; font-weight: 500; color: #e5e7eb; max-width: 240px;">' + productName + '</div>';
-            
-            html += '</div>';
-            
-            // PIECE 3: Product Image (Right) - larger size
-            html += '<div data-puzzle-piece="3" style="position: relative; z-index: 20; margin-left: -8px; width: 82px; height: 82px; background: white; border-radius: 4px 18px 18px 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); overflow: hidden; transform: translateX(50px); opacity: 0; transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s;">';
-            // Connector dot (puzzle notch - dark to match middle piece)
-            html += '<div style="position: absolute; left: -6px; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; background: #1f2937; border-radius: 50%; z-index: 20;"></div>';
-            if (productImage) {
-                html += '<img src="' + productImage + '" alt="' + productName + '" style="width: 100%; height: 100%; object-fit: cover;" />';
+
+            // PIECE 3: product image, or the event icon when the event has no product
+            html += '<div data-puzzle-piece="3" data-puzzle-from="translateX(40px)" style="position: relative; z-index: 20; flex-shrink: 0; margin-left: -8px; width: ' + pieceSize + 'px; height: ' + pieceSize + 'px; background: #ffffff; border-radius: 4px 18px 18px 4px; overflow: hidden; transform: translateX(40px); opacity: 0; transition: ' + pieceTransition + ' 0.16s;">';
+            if (d.productImage) {
+                html += '<img src="' + d.productImage + '" alt="' + (d.productName || 'Product') + '" style="width: 100%; height: 100%; object-fit: cover; display: block; background: #f3f4f6;" />';
             } else {
-                html += '<div style="width: 100%; height: 100%; background: linear-gradient(135deg, #fbbf24, #f59e0b); display: flex; align-items: center; justify-content: center;">';
-                html += '<svg width="30" height="30" viewBox="0 0 24 24" fill="white"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>';
+                html += '<div style="width: 100%; height: 100%; background: linear-gradient(135deg, ' + d.style.color + ', #111827 160%); display: flex; align-items: center; justify-content: center;">';
+                html += eventIconSvg(d.style, 32, '#ffffff');
                 html += '</div>';
             }
-            // Close button
-            html += '<button data-puzzle-close style="position: absolute; top: 4px; right: 4px; width: 18px; height: 18px; background: rgba(0,0,0,0.35); border: none; border-radius: 50%; color: white; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;">×</button>';
+            // Connector notch (dark, matches the middle piece)
+            html += '<div style="position: absolute; left: -6px; top: 50%; margin-top: -6px; width: 12px; height: 12px; background: #1f2937; border-radius: 50%; z-index: 20;"></div>';
+            html += '<button data-puzzle-close aria-label="Close notification" style="position: absolute; top: 5px; right: 5px; width: 20px; height: 20px; background: rgba(0,0,0,0.35); border: none; border-radius: 50%; color: #ffffff; font-size: 12px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; padding: 0;">×</button>';
             html += '</div>';
-            
+
             html += '</div>'; // End puzzle container
         } else if (isPeekaboo) {
             // Peekaboo Layout - Playful peek animation with blinking eye
@@ -1603,14 +1734,14 @@ Deno.serve((req) => {
             let primaryText, secondaryText, timeText;
             
             if (isViewCount) {
-                primaryText = notification.metadata?.count || notification.metadata?.value || notification.title || '18';
+                primaryText = notification.metadata?.count || notification.metadata?.value || notification.title || '';
                 secondaryText = notification.metadata?.message || notification.message || 'people viewed this';
-                timeText = notification.metadata?.time || 'last hour';
+                timeText = notification.metadata?.time || '';
             } else {
                 // Regular notification - use title and message
                 primaryText = notification.title || 'Someone';
                 secondaryText = notification.message || 'completed an action';
-                timeText = notification.timeAgo || 'just now';
+                timeText = notification.timeAgo || '';
             }
             
             // Choose icon based on event type
@@ -1638,7 +1769,7 @@ Deno.serve((req) => {
             
             // Decoration dot on right edge
             html += '<div style="position: absolute; right: -12px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; background: white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(243,244,246,1); z-index: 0;">';
-            html += '<div style="width: 6px; height: 6px; background: #818cf8; border-radius: 50%; animation: pulse 2s infinite;"></div>';
+            html += '<div style="width: 6px; height: 6px; background: #818cf8; border-radius: 50%; animation: proofpop-kf-pulse 2s infinite;"></div>';
             html += '</div>';
             
             // Content container
@@ -1663,12 +1794,16 @@ Deno.serve((req) => {
                 html += '<span style="font-size: 18px; font-weight: 700; color: #111827;">' + primaryText + '</span>';
                 html += '<span style="font-size: 14px; font-weight: 500; color: #6b7280;">' + secondaryText + '</span>';
                 html += '</div>';
-                html += '<div style="font-size: 12px; font-weight: 500; color: #6366f1; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">In the ' + timeText + '</div>';
+                if (timeText) {
+                    html += '<div style="font-size: 12px; font-weight: 500; color: #6366f1; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">In the ' + timeText + '</div>';
+                }
             } else {
                 // Regular notification layout
                 html += '<div style="font-size: 14px; font-weight: 600; color: #111827; line-height: 1.2;">' + primaryText + '</div>';
                 html += '<div style="font-size: 13px; font-weight: 400; color: #6b7280; line-height: 1.3; margin-top: 2px;">' + secondaryText + '</div>';
-                html += '<div style="font-size: 11px; font-weight: 500; color: #6366f1; margin-top: 4px;">' + timeText + '</div>';
+                if (timeText) {
+                    html += '<div style="font-size: 11px; font-weight: 500; color: #6366f1; margin-top: 4px;">' + timeText + '</div>';
+                }
             }
             html += '</div>';
             
@@ -1684,7 +1819,7 @@ Deno.serve((req) => {
             const isLiveVisitor = notification.event_type === 'visitor_active' || notification.metadata?.visitor_count;
             const tagText = isLiveVisitor 
                 ? (notification.title + ' ' + notification.message)
-                : (notification.metadata?.text || notification.title || 'Popular in Design');
+                : (notification.metadata?.text || notification.title || '');
             const subText = isLiveVisitor 
                 ? null  // Don't show subtext for live visitors since it's already in tagText
                 : (notification.metadata?.subtext || notification.metadata?.value || notification.timeAgo || '');
@@ -1697,14 +1832,17 @@ Deno.serve((req) => {
             else if (iconType === 'verified') { iconColor = '#6366f1'; iconBg = 'rgba(99, 102, 241, 0.1)'; }
             else if (iconType === 'zap') { iconColor = '#8b5cf6'; iconBg = 'rgba(139, 92, 246, 0.1)'; }
             
-            // Inject float animation CSS
-            html += '<style>@keyframes proofpop-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}.proofpop-float{animation:proofpop-float 3s ease-in-out infinite}@keyframes proofpop-ping{75%,100%{transform:scale(2);opacity:0}}</style>';
-            
-            // Floating container
-            html += '<div class="proofpop-float" style="display: flex; align-items: center; gap: 12px;">';
-            
+            // Live dot uses green for real-time visitors, brand indigo otherwise
+            const dotColor = isLiveVisitor ? '#10b981' : '#6366f1';
+
+            // Inject ping animation CSS (calmer ping, disabled for reduced-motion users)
+            html += '<style>@keyframes proofpop-ping{0%{transform:scale(1);opacity:0.6}80%,100%{transform:scale(2.4);opacity:0}}.proofpop-ping{animation:proofpop-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite}@media (prefers-reduced-motion: reduce){.proofpop-ping{animation:none;opacity:0}}</style>';
+
+            // Tag content
+            html += '<div style="display: flex; align-items: center; gap: 10px; min-width: 0;">';
+
             // Icon container
-            html += '<div style="width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: ' + iconBg + '; backdrop-filter: blur(4px);">';
+            html += '<div style="width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: ' + iconBg + '; box-shadow: inset 0 0 0 1px ' + iconBg + ';">';
             // Sparkles icon (default)
             if (iconType === 'trending') {
                 html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="' + iconColor + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>';
@@ -1718,157 +1856,117 @@ Deno.serve((req) => {
             html += '</div>';
             
             // Text content
-            html += '<div style="display: flex; align-items: baseline; gap: 8px;">';
-            html += '<span style="font-size: 14px; font-weight: 500; color: #1f2937; letter-spacing: -0.01em;">' + tagText + '</span>';
+            html += '<div style="display: flex; align-items: center; gap: 8px; min-width: 0;">';
+            if (isLiveVisitor) {
+                // Emphasize the count so it reads at a glance
+                html += '<span style="font-size: 14px; line-height: 1.3; color: #475569; letter-spacing: -0.01em;"><strong style="font-weight: 700; color: #0f172a; font-variant-numeric: tabular-nums;">' + notification.title + '</strong> ' + notification.message + '</span>';
+            } else {
+                html += '<span style="font-size: 14px; line-height: 1.3; font-weight: 600; color: #0f172a; letter-spacing: -0.01em;">' + tagText + '</span>';
+            }
             if (subText) {
-                html += '<span style="width: 4px; height: 4px; border-radius: 50%; background: #d1d5db;"></span>';
-                html += '<span style="font-size: 12px; font-weight: 500; color: #6b7280;">' + subText + '</span>';
+                html += '<span style="width: 3px; height: 3px; border-radius: 50%; background: #cbd5e1; flex-shrink: 0;"></span>';
+                html += '<span style="font-size: 12px; font-weight: 500; color: #64748b; white-space: nowrap;">' + subText + '</span>';
             }
             html += '</div>';
-            
-            // Ping indicator dot
-            html += '<div style="position: absolute; top: -4px; right: -4px;">';
-            html += '<span style="position: relative; display: flex; width: 8px; height: 8px;">';
-            html += '<span style="animation: proofpop-ping 1s cubic-bezier(0, 0, 0.2, 1) infinite; position: absolute; display: inline-flex; width: 100%; height: 100%; border-radius: 50%; background: #818cf8; opacity: 0.75;"></span>';
-            html += '<span style="position: relative; display: inline-flex; border-radius: 50%; width: 8px; height: 8px; background: #6366f1;"></span>';
+
+            // Live indicator dot (white ring keeps it crisp over the pill edge)
+            html += '<div style="position: absolute; top: -2px; right: 6px;">';
+            html += '<span style="position: relative; display: flex; width: 10px; height: 10px;">';
+            html += '<span class="proofpop-ping" style="position: absolute; display: inline-flex; width: 100%; height: 100%; border-radius: 50%; background: ' + dotColor + ';"></span>';
+            html += '<span style="position: relative; display: inline-flex; border-radius: 50%; width: 10px; height: 10px; background: ' + dotColor + '; box-shadow: 0 0 0 2px #ffffff;"></span>';
             html += '</span>';
             html += '</div>';
-            
-            html += '</div>'; // End floating container
+
+            html += '</div>'; // End tag content
         } else if (isStoryPop) {
-            // Story Pop Layout - Vertical card with micro-animations like stories
-            const productImage = notification.product_image || 
-                                notification.metadata?.product_image || 
-                                notification.metadata?.image || 
-                                notification.metadata?.image_url ||
-                                notification.metadata?.productImage ||
-                                notification.metadata?.img ||
-                                notification.metadata?.thumbnail ||
-                                '';
-            const userName = notification.customer_name || notification.metadata?.customer_name || notification.metadata?.name || 'Someone';
-            const productName = notification.product_name || notification.metadata?.product_name || notification.metadata?.product || '';
-            
-            // Dynamic action text based on event type
-            let actionText = notification.metadata?.action || notification.message || 'just bought this!';
-            if (notification.event_type === 'add_to_cart' || notification.metadata?.event_type === 'add_to_cart') {
-                actionText = productName ? 'added ' + productName + ' to cart' : 'added to cart';
-            } else if (notification.event_type === 'purchase' || notification.metadata?.event_type === 'purchase') {
-                actionText = productName ? 'purchased ' + productName : 'made a purchase';
-            }
-            
-            const timeText = notification.timeAgo || notification.metadata?.time || '2s ago';
-            const locationCity = notification.location || notification.metadata?.location || notification.metadata?.city || '';
-            const storyType = notification.metadata?.storyType || 'product-spin';
-            
-            // Determine accent color based on type
-            let accentColor = '#ef4444'; // red default
-            if (storyType === 'check-draw') accentColor = '#22c55e';
-            else if (storyType === 'location-pulse') accentColor = '#3b82f6';
-            
-            // Inject animations CSS
-            html += '<style>';
-            html += '@keyframes proofpop-spin-slow{0%{transform:rotateY(0deg)}100%{transform:rotateY(360deg)}}';
-            html += '@keyframes proofpop-draw-check{to{stroke-dashoffset:0}}';
-            html += '@keyframes proofpop-bounce-gentle{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}';
-            html += '@keyframes proofpop-progress{from{width:0%}to{width:100%}}';
-            html += '.proofpop-preserve-3d{transform-style:preserve-3d}';
-            html += '</style>';
-            
+            // Story Pop Layout - vertical story card: visual on top, who/what/when below
+            const d = getEventDetails(notification);
+            const storyType = notification.metadata?.storyType || '';
+            const timeText = showTimestamp ? (notification.timeAgo || notification.metadata?.time || '') : '';
+
             // Close button
-            html += '<button data-story-close style="position: absolute; top: 8px; right: 8px; z-index: 30; width: 24px; height: 24px; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); border: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; transition: background 0.2s;">';
-            html += '<span style="font-size: 12px; font-weight: bold;">×</span>';
+            html += '<button data-story-close aria-label="Close notification" style="position: absolute; top: 10px; right: 8px; z-index: 30; width: 24px; height: 24px; padding: 0; background: rgba(0,0,0,0.35); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); border: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #ffffff; cursor: pointer; transition: background 0.2s;">';
+            html += '<span style="font-size: 13px; font-weight: bold; line-height: 1;">×</span>';
             html += '</button>';
-            
-            // Story content layer (the visual)
-            html += '<div style="position: absolute; inset: 0; background: #f3f4f6; z-index: 0;">';
-            
-            if (storyType === 'product-spin' && productImage) {
-                // Spinning product
-                html += '<div style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; perspective: 1000px; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);">';
-                html += '<div class="proofpop-preserve-3d" style="width: 100px; height: 100px; animation: proofpop-spin-slow 4s linear infinite;">';
-                html += '<img src="' + productImage + '" alt="Product" style="width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.2));" />';
-                html += '</div>';
-                html += '<div style="position: absolute; top: 25%; left: 25%; width: 4px; height: 4px; background: white; border-radius: 50%; animation: ping 1s infinite;"></div>';
-                html += '<div style="position: absolute; bottom: 33%; right: 25%; width: 6px; height: 6px; background: white; border-radius: 50%; animation: pulse 2s infinite;"></div>';
-                html += '</div>';
-            } else if (storyType === 'check-draw') {
-                // Animated checkmark
-                html += '<div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #ecfdf5;">';
-                html += '<div style="position: relative; width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 50%; box-shadow: 0 10px 25px rgba(0,0,0,0.1); animation: proofpop-bounce-gentle 2s infinite;">';
-                html += '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">';
-                html += '<path d="M5 13l4 4L19 7" style="stroke-dasharray: 24; stroke-dashoffset: 24; animation: proofpop-draw-check 1s ease-out forwards;"></path>';
-                html += '</svg>';
-                html += '</div>';
-                html += '</div>';
-            } else if (storyType === 'location-pulse') {
-                // Pulsing location pin
-                html += '<div style="position: relative; width: 100%; height: 100%; background: #eff6ff; display: flex; align-items: center; justify-content: center; overflow: hidden;">';
-                html += '<div style="position: absolute; width: 192px; height: 192px; background: rgba(59, 130, 246, 0.2); border-radius: 50%; animation: ping 2s infinite;"></div>';
-                html += '<div style="position: absolute; width: 128px; height: 128px; background: rgba(59, 130, 246, 0.2); border-radius: 50%; animation: ping 2s infinite 0.3s;"></div>';
-                html += '<div style="position: relative; z-index: 10; color: #2563eb; animation: bounce 1s infinite;">';
-                html += '<svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>';
-                html += '</div>';
-                html += '</div>';
+
+            // Visual layer
+            html += '<div style="position: absolute; inset: 0; background: #f3f4f6; z-index: 0; overflow: hidden;">';
+            if (storyType === 'check-draw') {
+                html += '<div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 62%; background: #ecfdf5;">';
+                html += '<div style="width: 76px; height: 76px; display: flex; align-items: center; justify-content: center; background: #ffffff; border-radius: 50%; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">';
+                html += '<svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">';
+                html += '<path d="M5 13l4 4L19 7" style="stroke-dasharray: 24; stroke-dashoffset: 24; animation: proofpop-draw-check 0.8s ease-out 0.4s forwards;"></path>';
+                html += '</svg></div></div>';
+                html += '<style>@keyframes proofpop-draw-check{to{stroke-dashoffset:0}}@media (prefers-reduced-motion: reduce){[data-proofpop-notification] path{stroke-dashoffset:0 !important}}</style>';
+            } else if (storyType === 'location-pulse' && d.location) {
+                html += '<div style="position: relative; width: 100%; height: 62%; background: #eff6ff; display: flex; align-items: center; justify-content: center; overflow: hidden;">';
+                html += '<div style="position: absolute; width: 120px; height: 120px; background: rgba(59, 130, 246, 0.2); border-radius: 50%; animation: proofpop-kf-ping 2s ease-out 3;"></div>';
+                html += '<div style="position: relative; z-index: 10; color: #2563eb;">';
+                html += '<svg width="44" height="44" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>';
+                html += '</div></div>';
+            } else if (d.productImage) {
+                // Full-bleed product photo with a slow zoom over the display time
+                html += '<img src="' + d.productImage + '" alt="' + (d.productName || 'Product') + '" style="width: 100%; height: 100%; object-fit: cover; display: block; animation: proofpop-kf-kenburns ' + (displayDuration / 1000) + 's ease-out forwards;" />';
             } else {
-                // Default - show product image or gradient
-                if (productImage) {
-                    html += '<img src="' + productImage + '" alt="Product" style="width: 100%; height: 100%; object-fit: cover;" />';
-                } else {
-                    html += '<div style="width: 100%; height: 100%; background: linear-gradient(135deg, #6366f1, #8b5cf6);"></div>';
-                }
+                // No image: event-coloured backdrop with the event icon, never a blank block
+                html += '<div style="width: 100%; height: 100%; background: linear-gradient(160deg, ' + d.style.color + ' 0%, #312e81 100%); display: flex; align-items: flex-start; justify-content: center; padding-top: 52px; box-sizing: border-box;">';
+                html += '<div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center;">' + eventIconSvg(d.style, 30, '#ffffff') + '</div>';
+                html += '</div>';
             }
             html += '</div>';
-            
-            // Gradient overlay for text readability - stronger gradient
-            html += '<div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0.1) 70%, transparent 100%); z-index: 10; pointer-events: none;"></div>';
-            
-            // Text content layer - improved readability
-            html += '<div style="position: absolute; bottom: 0; left: 0; width: 100%; padding: 14px; z-index: 20; color: white;">';
-            
-            // User info row
-            html += '<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">';
-            html += '<div style="width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; background: ' + accentColor + '; border: 2px solid rgba(255,255,255,0.3);">' + userName.charAt(0).toUpperCase() + '</div>';
+
+            // Readability gradient: dark only behind the text, image stays visible above
+            html += '<div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.86) 0%, rgba(0,0,0,0.6) 32%, rgba(0,0,0,0) 60%); z-index: 10; pointer-events: none;"></div>';
+
+            // Text layer
+            html += '<div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 12px; z-index: 20; color: #ffffff; box-sizing: border-box;">';
+
+            // Person row
+            html += '<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; min-width: 0;">';
+            if (d.userAvatar) {
+                html += '<img src="' + d.userAvatar + '" alt="' + displayName + '" style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.6); box-sizing: border-box; background: #e5e7eb;" />';
+            } else {
+                html += '<div style="width: 26px; height: 26px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; background: ' + d.style.color + '; border: 2px solid rgba(255,255,255,0.4); box-sizing: border-box;">' + initial + '</div>';
+            }
             html += '<div style="flex: 1; min-width: 0;">';
-            html += '<span style="font-size: 13px; font-weight: 700; display: block; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">' + userName + '</span>';
-            if (locationCity) {
-                html += '<span style="font-size: 10px; opacity: 0.8; display: block;">from ' + locationCity + '</span>';
+            html += '<span style="font-size: 13px; font-weight: 700; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">' + displayName + '</span>';
+            if (d.location) {
+                html += '<span style="font-size: 10px; opacity: 0.85; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">from ' + d.location + '</span>';
             }
             html += '</div>';
             html += '</div>';
-            
-            // Action text - larger and more readable
-            html += '<p style="font-size: 12px; font-weight: 500; line-height: 1.4; margin-bottom: 6px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">' + actionText + '</p>';
-            
-            // Bottom row: Timestamp + Branding
-            html += '<div style="display: flex; align-items: center; justify-content: space-between;">';
-            html += '<span style="font-size: 10px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.5px;">' + timeText + '</span>';
-            
-            // ProofEdge branding inside Story Pop
+
+            // Action, up to three lines
+            html += '<p style="font-size: 12px; font-weight: 400; line-height: 1.4; margin: 0 0 6px 0; color: rgba(255,255,255,0.92); text-shadow: 0 1px 2px rgba(0,0,0,0.3); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">' + eventActionHtml(d, 'font-weight: 700; color: #ffffff;') + '</p>';
+
+            // Time + branding; time truncates before the branding is cut
+            html += '<div style="display: flex; align-items: center; gap: 6px; min-width: 0;">';
+            html += '<span style="flex: 1; min-width: 0; font-size: 10px; opacity: 0.75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">' + timeText + '</span>';
             if (showPoweredBy) {
-                html += '<a href="https://proofedge.io" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 3px; font-size: 9px; color: rgba(255,255,255,0.7); text-decoration: none;">';
+                html += '<a href="https://proofedge.io" target="_blank" rel="noopener noreferrer" style="flex-shrink: 0; display: flex; align-items: center; gap: 3px; font-size: 9px; color: rgba(255,255,255,0.7); text-decoration: none;">';
                 html += '<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>';
                 html += '<span>ProofEdge</span>';
                 html += '</a>';
             }
             html += '</div>';
-            
+
             html += '</div>';
-            
-            // Progress bar (story-like)
-            html += '<div style="position: absolute; top: 0; left: 0; height: 3px; background: rgba(255,255,255,0.3); width: 100%; z-index: 30; border-radius: 12px 12px 0 0;">';
-            html += '<div data-story-progress style="height: 100%; background: white; width: 0%; animation: proofpop-progress ' + (displayDuration / 1000) + 's linear forwards;"></div>';
+
+            // Story progress bar
+            html += '<div style="position: absolute; top: 6px; left: 8px; right: 40px; height: 3px; background: rgba(255,255,255,0.35); z-index: 30; border-radius: 3px; overflow: hidden;">';
+            html += '<div data-story-progress style="height: 100%; background: #ffffff; width: 0%; border-radius: 3px; animation: proofpop-kf-progress ' + (displayDuration / 1000) + 's linear forwards;"></div>';
             html += '</div>';
-            
+
         } else if (isFrostedToken) {
             // Frosted Token Layout - Glassmorphic token with breathing animation
             // For live visitor widgets, use title (count) and message (viewing text)
             const isLiveVisitor = notification.event_type === 'visitor_active' || notification.metadata?.visitor_count;
             const countValue = isLiveVisitor 
                 ? notification.title 
-                : (notification.metadata?.count || notification.metadata?.value || notification.title || '32');
-            const labelText = isLiveVisitor 
-                ? notification.message 
-                : (notification.metadata?.label || notification.message || 'purchased today');
+                : (notification.metadata?.count || notification.metadata?.value || notification.title || '');
+            const labelText = isLiveVisitor
+                ? notification.message
+                : (notification.metadata?.label || notification.message || '');
             const tokenType = isLiveVisitor ? 'eye' : (notification.metadata?.tokenType || 'shopping');
             
             // Determine gradient color based on type
@@ -1909,7 +2007,7 @@ Deno.serve((req) => {
             
             // Status dot on rim
             html += '<div style="position: absolute; top: 0; right: 0; width: 12px; height: 12px; background: white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center;">';
-            html += '<div style="width: 6px; height: 6px; border-radius: 50%; background: #ef4444; animation: pulse 2s infinite;"></div>';
+            html += '<div style="width: 6px; height: 6px; border-radius: 50%; background: #ef4444; animation: proofpop-kf-pulse 2s infinite;"></div>';
             html += '</div>';
             
             html += '</div>'; // End token
@@ -1941,77 +2039,139 @@ Deno.serve((req) => {
                                 '';
             const productName = notification.product_name || notification.metadata?.product_name || notification.metadata?.product || '';
             
-            html += '<div style="display: flex; align-items: flex-start; gap: 12px;">';
-            
+            const eventType = notification.event_type || notification.metadata?.event_type || '';
+            const locationText = notification.showLocation && notification.location ? notification.location : '';
+            const message = String(notification.message || '');
+
+            // Price: formatted with the widget's currency settings, shown once as a chip
+            const rawValue = isPresent(notification.value) ? notification.value : notification.metadata?.value;
+            const valueNumber = isPresent(rawValue) ? parseFloat(String(rawValue).replace(/[^0-9.]/g, '')) : NaN;
+            const messageNumbers = (message.replace(/,/g, '').match(/[0-9]+(?:[.][0-9]+)?/g) || []).map(Number);
+
+            // Action line: purchases and cart adds are rebuilt from structured fields so the product stands out
+            // and the price isn't repeated; other events keep the server message without a duplicate "from <city>"
+            const strong = function(text) { return '<strong style="font-weight: 600; color: #111827;">' + text + '</strong>'; };
+            // Server messages end with " from <city>"; strip it always so it's never shown twice
+            // and never leaks when the location toggle is off
+            const fromSuffix = notification.location ? ' from ' + notification.location : '';
+            const baseMessage = fromSuffix && message.slice(-fromSuffix.length) === fromSuffix
+                ? message.slice(0, -fromSuffix.length)
+                : message;
+            const ratingValue = Math.max(0, Math.min(5, Math.round(Number(notification.rating || notification.metadata?.rating) || 0)));
+            const pageTitle = notification.metadata?.page_title || '';
+            let actionHtml;
+            let messageHasPrice = false;
+            let inlineStars = false;
+            if (eventType === 'purchase') {
+                actionHtml = productName ? 'purchased ' + strong(productName) : 'made a purchase';
+            } else if (eventType === 'add_to_cart') {
+                actionHtml = productName ? 'added ' + strong(productName) + ' to cart' : 'added an item to cart';
+            } else if (eventType === 'signup') {
+                actionHtml = 'signed up';
+            } else if (eventType === 'review') {
+                // Stars sit on the action line instead of repeating "5-star" in words
+                inlineStars = showRating && ratingValue > 0;
+                actionHtml = productName ? 'reviewed ' + strong(productName) : 'left a review';
+            } else if (eventType === 'page_view' && pageTitle) {
+                actionHtml = 'is browsing ' + strong(pageTitle);
+            } else if (eventType === 'form_submit') {
+                // "submitted Contact Form" → bold the form name; custom messages pass through untouched
+                actionHtml = baseMessage.indexOf('submitted ') === 0 && baseMessage !== 'submitted a form'
+                    ? 'submitted ' + strong(baseMessage.slice(10))
+                    : baseMessage;
+            } else {
+                actionHtml = baseMessage;
+                messageHasPrice = !isNaN(valueNumber) && messageNumbers.indexOf(valueNumber) !== -1;
+            }
+            if (inlineStars) {
+                actionHtml += ' <span style="white-space: nowrap; letter-spacing: 1px; font-size: 12px;" aria-label="' + ratingValue + ' out of 5 stars">';
+                for (let i = 0; i < 5; i++) {
+                    actionHtml += '<span style="color: ' + (i < ratingValue ? '#FBBF24' : '#E5E7EB') + ';">★</span>';
+                }
+                actionHtml += '</span>';
+            }
+            const priceText = showValue && !isNaN(valueNumber) && !messageHasPrice
+                ? formatValue(valueNumber, contentSettings.valueFormat || 'currency', contentSettings.currency || 'USD', contentSettings.currencyPosition || 'before')
+                : '';
+
+            const userAvatar = notification.showUserAvatar !== false ? (notification.user_avatar || notification.metadata?.avatar || notification.metadata?.user_avatar || '') : '';
+            // Person-centric events show the person; product events show the product
+            const personEvent = eventType === 'signup' || eventType === 'review' || eventType === 'form_submit' || eventType === 'page_view';
+            const avatarImage = personEvent ? (userAvatar || productImage) : (productImage || userAvatar);
+            // Small event badge on the avatar so the action type reads at a glance
+            const badge = EVENT_STYLES[eventType];
+
+            html += '<div style="display: flex; align-items: center; gap: 12px;">';
+
             // Avatar or Product Image
             if (showEventIcon) {
-                if (productImage) {
-                    // Show product image if available
-                    html += '<div style="width: 48px; height: 48px; border-radius: 10px; overflow: hidden; flex-shrink: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">';
-                    html += '<img src="' + productImage + '" alt="Product" style="width: 100%; height: 100%; object-fit: cover;" />';
-                    html += '</div>';
+                html += '<div style="position: relative; width: 44px; height: 44px; flex-shrink: 0;">';
+                if (avatarImage) {
+                    const isPersonImage = avatarImage === userAvatar;
+                    html += '<img src="' + avatarImage + '" alt="' + (isPersonImage ? displayName : (productName || 'Product')) + '" style="width: 44px; height: 44px; border-radius: ' + (isPersonImage ? '50%' : '10px') + '; object-fit: cover; display: block; box-shadow: 0 1px 3px rgba(0,0,0,0.12);" />';
                 } else {
-                    // Clean rounded square avatar with gradient
-                    html += '<div style="width: 48px; height: 48px; border-radius: 10px; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 18px; flex-shrink: 0;">' + initial + '</div>';
+                    html += '<div style="width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 17px;">' + initial + '</div>';
                 }
-            }
-            
-            html += '<div style="flex: 1; min-width: 0;">';
-            
-            // First line: Customer name (bold)
-            if (showCustomerName) {
-                html += '<div style="font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 2px;">' + displayName + '</div>';
-            }
-            
-            // Second line: Action message
-            html += '<div style="font-size: 13px; color: #4b5563; line-height: 1.4; margin-bottom: 4px;">';
-            html += notification.message;
-            if (showValue && notification.metadata && notification.metadata.value) {
-                html += ' <span style="font-weight: 600; color: #059669;">' + formatValue(
-                    notification.metadata.value,
-                    contentSettings.valueFormat || 'currency',
-                    contentSettings.currency || 'USD',
-                    contentSettings.currencyPosition || 'before'
-                ) + '</span>';
-            }
-            html += '</div>';
-            
-            // Rating Stars for Reviews
-            if (showRating && notification.metadata && notification.metadata.rating) {
-                const rating = notification.metadata.rating;
-                html += '<div style="display: flex; align-items: center; gap: 2px; margin-bottom: 4px;">';
-                for (let i = 0; i < 5; i++) {
-                    html += '<span style="color: ' + (i < rating ? '#FBBF24' : '#D1D5DB') + '; font-size: 14px;">★</span>';
+                if (badge) {
+                    html += '<div style="position: absolute; right: -4px; bottom: -4px; width: 18px; height: 18px; border-radius: 50%; background: ' + badge.color + '; box-shadow: 0 0 0 2px #ffffff; display: flex; align-items: center; justify-content: center;">';
+                    html += '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">' + badge.svg + '</svg>';
+                    html += '</div>';
                 }
                 html += '</div>';
             }
+
+            html += '<div style="flex: 1; min-width: 0;">';
+
+            // First line: customer name + location, kept to one line
+            if (showCustomerName) {
+                html += '<div style="display: flex; align-items: baseline; gap: 4px; min-width: 0; white-space: nowrap; margin-bottom: 1px;">';
+                html += '<span style="font-size: 14px; font-weight: 600; color: #111827; overflow: hidden; text-overflow: ellipsis; min-width: 0;">' + displayName + '</span>';
+                if (locationText) {
+                    // Long names truncate first; the location stays readable up to half the line
+                    html += '<span style="font-size: 12px; color: #6b7280; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; max-width: 50%;">from ' + locationText + '</span>';
+                }
+                html += '</div>';
+            }
+
+            // Second line: action, clamped to two lines so long product names can't stretch the card
+            html += '<div style="font-size: 13px; color: #4b5563; line-height: 1.4; margin-bottom: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">';
+            html += actionHtml;
+            html += '</div>';
             
-            // Review Content (support all field name variations)
-            const reviewText = notification.metadata && (
-                notification.metadata.review_text || 
-                notification.metadata.reviewContent || 
+            // Review Content (support all field name variations), clamped so long reviews can't stretch the card
+            const reviewText = notification.review_content || (notification.metadata && (
                 notification.metadata.review_content ||
-                (notification.metadata.event_data && notification.metadata.event_data.review_text)
-            );
-            if (showReviewContent && reviewText) {
-                html += '<div style="color: #6B7280; font-size: 12px; margin-bottom: 4px; font-style: italic; line-height: 1.3;">"' + reviewText + '"</div>';
+                notification.metadata.review ||
+                notification.metadata.comment ||
+                notification.metadata.review_text ||
+                notification.metadata.reviewContent
+            ));
+            if (showReviewContent && reviewText && eventType === 'review') {
+                html += '<div style="color: #4b5563; font-size: 12px; line-height: 1.4; margin: -2px 0 6px; padding-left: 8px; border-left: 2px solid #fde68a; font-style: italic; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">&ldquo;' + reviewText + '&rdquo;</div>';
             }
             
-            // Bottom row: Timestamp + Location + Branding
-            html += '<div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">';
-            html += '<span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981; flex-shrink: 0;"></span>';
-            if (showTimestamp) {
-                html += '<span style="color: #6b7280; font-size: 11px;">' + notification.timeAgo + '</span>';
+            // Bottom row: price chip + time on the left, branding pinned right
+            const eventAgeMs = Date.now() - new Date(notification.timestamp).getTime();
+            const isRecent = !isNaN(eventAgeMs) && eventAgeMs < 60 * 60 * 1000;
+            html += '<div style="display: flex; align-items: center; gap: 8px; min-width: 0;">';
+            if (priceText) {
+                html += '<span style="font-size: 12px; font-weight: 700; color: #047857; background: #ecfdf5; padding: 1px 7px; border-radius: 6px; font-variant-numeric: tabular-nums; white-space: nowrap;">' + priceText + '</span>';
             }
-            if (notification.showLocation && notification.location) {
-                html += '<span style="color: #9ca3af;">•</span>';
-                html += '<span style="color: #6b7280; font-size: 11px;">' + notification.location + '</span>';
+            if (showTimestamp && notification.timeAgo) {
+                html += '<span style="display: inline-flex; align-items: center; gap: 5px; color: #6b7280; font-size: 11px; white-space: nowrap;">';
+                // Green "live" dot only for events from the last hour
+                if (isRecent) {
+                    html += '<span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981; flex-shrink: 0;"></span>';
+                }
+                html += notification.timeAgo + '</span>';
+            }
+            if (!showCustomerName && locationText) {
+                html += '<span style="color: #6b7280; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">' + locationText + '</span>';
             }
             // Inline branding for classic card
             if (showPoweredBy) {
-                html += '<span style="color: #d1d5db; margin-left: auto;">•</span>';
-                html += '<a href="https://proofedge.io" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 3px; font-size: 10px; color: #9ca3af; text-decoration: none;">';
-                html += '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>';
+                html += '<a href="https://proofedge.io" target="_blank" rel="noopener noreferrer" style="margin-left: auto; display: inline-flex; align-items: center; gap: 3px; font-size: 10px; color: #9ca3af; text-decoration: none; white-space: nowrap; flex-shrink: 0;">';
+                html += '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>';
                 html += '<span>ProofEdge</span>';
                 html += '</a>';
             }
@@ -2069,13 +2229,21 @@ Deno.serve((req) => {
         // After inserting into the DOM, transition from the initial off-screen state
         // to the final visible state so the widget actually appears.
         const finalState = getAnimationFinalState(animationType, position);
-        // Use requestAnimationFrame to ensure initial styles are committed first
-        requestAnimationFrame(() => {
+        // Wait until the initial styles are committed first
+        afterPaint(() => {
+            // These layouts run their own entrance below; the generic one would fight it
+            if (isFloatingTag || isPuzzle || isStoryPop) return;
             if (finalState.transform) {
                 widgetElement.style.transform = finalState.transform;
             }
             if (finalState.opacity !== undefined) {
                 widgetElement.style.opacity = finalState.opacity;
+            }
+            // Start the countdown bar: commit its 0 width first so the width transition runs
+            const progressEl = widgetElement.querySelector('[data-proofpop-progress="bar"]');
+            if (progressEl) {
+                void progressEl.offsetWidth;
+                progressEl.style.width = '100%';
             }
         });
 
@@ -2134,46 +2302,39 @@ Deno.serve((req) => {
         
         // Add Puzzle animation for puzzle layout
         if (isPuzzle) {
-            // Animate pieces in after a short delay
-            requestAnimationFrame(() => {
-                setTimeout(() => {
-                    const pieces = widgetElement.querySelectorAll('[data-puzzle-piece]');
-                    pieces.forEach((piece) => {
-                        piece.style.transform = 'translateX(0) translateY(0)';
-                        piece.style.opacity = '1';
-                    });
-                }, 50);
+            const reduceMotion = prefersReducedMotion();
+            const pieces = widgetElement.querySelectorAll('[data-puzzle-piece]');
+            // The container itself just appears; the pieces carry the motion
+            widgetElement.style.transition = 'none';
+            widgetElement.style.transform = 'none';
+            widgetElement.style.opacity = '1';
+            if (reduceMotion) {
+                pieces.forEach((piece) => { piece.style.transition = 'opacity 0.3s ease-out'; piece.style.transform = 'none'; });
+            }
+            // Snap the pieces together once their start positions are painted
+            void widgetElement.offsetWidth;
+            afterPaint(() => {
+                pieces.forEach((piece) => {
+                    piece.style.transform = 'none';
+                    piece.style.opacity = '1';
+                });
             });
-            
-            // Add close button handler
+
             const closeBtn = widgetElement.querySelector('[data-puzzle-close]');
             if (closeBtn) {
                 closeBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    // Animate pieces out
-                    const pieces = widgetElement.querySelectorAll('[data-puzzle-piece]');
-                    const piece1 = pieces[0];
-                    const piece2 = pieces[1];
-                    const piece3 = pieces[2];
-                    if (piece1) { piece1.style.transform = 'translateX(-50px)'; piece1.style.opacity = '0'; }
-                    if (piece2) { piece2.style.transform = 'translateY(-50px)'; piece2.style.opacity = '0'; }
-                    if (piece3) { piece3.style.transform = 'translateX(50px)'; piece3.style.opacity = '0'; }
-                    
-                    setTimeout(() => {
-                        if (widgetElement.parentNode) {
-                            widgetElement.remove();
-                        }
-                        isDisplaying = false;
-                        currentNotificationElement = null;
-                    }, 500);
+                    trackAnalytics(notification.widget_id, 'close', {
+                        notification_title: notification.title,
+                        event_type: notification.event_type
+                    });
+                    dismissNotification(widgetElement, 'puzzle', 560);
                 });
-                
-                // Hover effect for close button
                 closeBtn.addEventListener('mouseenter', () => {
-                    closeBtn.style.background = 'rgba(0,0,0,0.5)';
+                    closeBtn.style.background = 'rgba(0,0,0,0.6)';
                 });
                 closeBtn.addEventListener('mouseleave', () => {
-                    closeBtn.style.background = 'rgba(0,0,0,0.3)';
+                    closeBtn.style.background = 'rgba(0,0,0,0.35)';
                 });
             }
         }
@@ -2241,54 +2402,71 @@ Deno.serve((req) => {
         
         // Add Floating Tag animation for floating-tag layout
         if (isFloatingTag) {
-            // Start hidden with blur
+            const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const isTop = position.indexOf('top') === 0;
+            const hiddenTransform = reduceMotion ? 'none' : 'translateY(' + (isTop ? '-12px' : '12px') + ') scale(0.96)';
+
+            // Start hidden, slightly offset and scaled down
             widgetElement.style.opacity = '0';
-            widgetElement.style.transform = 'translateY(16px)';
-            widgetElement.style.filter = 'blur(4px)';
-            widgetElement.style.transition = 'all 0.7s cubic-bezier(0.2, 0.8, 0.2, 1)';
-            
-            // Animate in after small delay
-            setTimeout(() => {
+            widgetElement.style.transform = hiddenTransform;
+            widgetElement.style.filter = reduceMotion ? 'none' : 'blur(4px)';
+            widgetElement.style.transition = 'opacity 0.45s ease-out, transform 0.55s cubic-bezier(0.16, 1, 0.3, 1), filter 0.45s ease-out, box-shadow 0.2s ease';
+            widgetElement.setAttribute('data-floating-hidden', hiddenTransform);
+
+            // Animate in once the hidden state has been painted
+            void widgetElement.offsetWidth;
+            afterPaint(() => {
                 widgetElement.style.opacity = '1';
-                widgetElement.style.transform = 'translateY(0)';
-                widgetElement.style.filter = 'blur(0)';
-            }, 100);
+                widgetElement.style.transform = 'none';
+                widgetElement.style.filter = 'none';
+            });
+
+            // Subtle lift on hover
+            if (!reduceMotion) {
+                widgetElement.addEventListener('mouseenter', () => {
+                    widgetElement.style.transform = 'translateY(-2px)';
+                    widgetElement.style.boxShadow = '0 14px 36px -8px rgba(15, 23, 42, 0.24), 0 2px 6px rgba(15, 23, 42, 0.08)';
+                });
+                widgetElement.addEventListener('mouseleave', () => {
+                    widgetElement.style.transform = 'none';
+                    widgetElement.style.boxShadow = '0 10px 30px -8px rgba(15, 23, 42, 0.18), 0 2px 6px rgba(15, 23, 42, 0.06)';
+                });
+            }
         }
         
         // Add Story Pop animation for story-pop layout
         if (isStoryPop) {
-            // Start hidden below
+            const reduceMotion = prefersReducedMotion();
+            const isTopStory = position.indexOf('top') === 0;
+            const storyHidden = reduceMotion ? 'none' : 'translateY(' + (isTopStory ? '-40px' : '40px') + ') scale(0.92)';
+            // Start hidden, rising from the edge it is anchored to
+            widgetElement.style.transition = 'none';
             widgetElement.style.opacity = '0';
-            widgetElement.style.transform = 'translateY(80px) scale(0.9)';
-            widgetElement.style.transition = 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
-            
-            // Animate in
-            setTimeout(() => {
+            widgetElement.style.transform = storyHidden;
+            widgetElement.style.transformOrigin = isTopStory ? 'top center' : 'bottom center';
+            widgetElement.setAttribute('data-story-hidden', storyHidden);
+            void widgetElement.offsetWidth;
+            afterPaint(() => {
+                widgetElement.style.transition = 'opacity 0.35s ease-out, transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
                 widgetElement.style.opacity = '1';
-                widgetElement.style.transform = 'translateY(0) scale(1)';
-            }, 100);
-            
-            // Add close button handler
+                widgetElement.style.transform = 'none';
+            });
+
             const closeBtn = widgetElement.querySelector('[data-story-close]');
             if (closeBtn) {
                 closeBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    widgetElement.style.opacity = '0';
-                    widgetElement.style.transform = 'translateY(80px) scale(0.9)';
-                    setTimeout(() => {
-                        if (widgetElement.parentNode) {
-                            widgetElement.remove();
-                        }
-                        isDisplaying = false;
-                        currentNotificationElement = null;
-                    }, 500);
+                    trackAnalytics(notification.widget_id, 'close', {
+                        notification_title: notification.title,
+                        event_type: notification.event_type
+                    });
+                    dismissNotification(widgetElement, 'story-pop', 400);
                 });
-                
                 closeBtn.addEventListener('mouseenter', () => {
-                    closeBtn.style.background = 'rgba(0,0,0,0.4)';
+                    closeBtn.style.background = 'rgba(0,0,0,0.6)';
                 });
                 closeBtn.addEventListener('mouseleave', () => {
-                    closeBtn.style.background = 'rgba(0,0,0,0.2)';
+                    closeBtn.style.background = 'rgba(0,0,0,0.35)';
                 });
             }
         }
@@ -2359,23 +2537,23 @@ Deno.serve((req) => {
 
         // Hide after duration
         setTimeout(() => {
-            if (isPuzzle) {
-                // Puzzle exit animation - pieces slide out
-                const pieces = widgetElement.querySelectorAll('[data-puzzle-piece]');
-                const piece1 = pieces[0];
-                const piece2 = pieces[1];
-                const piece3 = pieces[2];
-                if (piece1) { piece1.style.transform = 'translateX(-50px)'; piece1.style.opacity = '0'; }
-                if (piece2) { piece2.style.transform = 'translateY(-50px)'; piece2.style.opacity = '0'; }
-                if (piece3) { piece3.style.transform = 'translateX(50px)'; piece3.style.opacity = '0'; }
-            } else if (isPeekaboo) {
+            // Already closed by the visitor
+            if (widgetElement.getAttribute('data-proofpop-dismissed')) return;
+            if (isPuzzle || isStoryPop) {
+                // Pieces slide apart / card sinks back; removal waits for the motion to finish
+                dismissNotification(widgetElement, isPuzzle ? 'puzzle' : 'story-pop', 420);
+                return;
+            }
+            if (isPeekaboo) {
                 // Peekaboo exit animation - slide back off screen
                 widgetElement.style.transform = 'translateX(-100%)';
             } else if (isFloatingTag) {
-                // Floating Tag exit animation - fade down with blur
+                // Floating Tag exit animation - quick fade back the way it came, finishing before removal
+                const exitMs = Math.max(150, Math.min(fadeOutDuration, 400));
+                widgetElement.style.transition = 'opacity ' + exitMs + 'ms ease-in, transform ' + exitMs + 'ms ease-in, filter ' + exitMs + 'ms ease-in';
                 widgetElement.style.opacity = '0';
-                widgetElement.style.transform = 'translateY(16px)';
-                widgetElement.style.filter = 'blur(4px)';
+                widgetElement.style.transform = widgetElement.getAttribute('data-floating-hidden') || 'none';
+                widgetElement.style.filter = 'blur(2px)';
             } else if (isStoryPop) {
                 // Story Pop exit animation - slide down and scale
                 widgetElement.style.opacity = '0';
@@ -2404,9 +2582,11 @@ Deno.serve((req) => {
                 if (widgetElement.parentNode) {
                     widgetElement.remove();
                 }
-                // Mark as not displaying anymore
-                isDisplaying = false;
-                currentNotificationElement = null;
+                // Mark as not displaying anymore (unless a newer notification already took over)
+                if (currentNotificationElement === widgetElement) {
+                    isDisplaying = false;
+                    currentNotificationElement = null;
+                }
             }, fadeOutDuration);
         }, displayDuration);
         

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { ArrowLeft, Save, ChevronDown, ChevronUp, Monitor, Smartphone, Eye, Loader2, AlertCircle } from 'lucide-react';
 import { useWidgetConfig } from '../../hooks/useWidgetConfig';
+import { useToast } from '../../hooks/useToast';
+import { Toast } from '../Toast';
 import {
   SettingsSection,
   SettingsGroup,
@@ -190,7 +192,9 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
     updateConfig,
     saveConfig,
     resetConfig,
+    discardDraft,
     isDirty,
+    isDraft,
   } = useWidgetConfig({
     widgetId,
     onSaveSuccess: () => {
@@ -198,6 +202,8 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
       setTimeout(() => setShowSuccess(false), 3000);
     },
   });
+
+  const { toast, showToast, hideToast } = useToast();
 
   const toggleSection = (section: AccordionSection) => {
     const newExpanded = new Set(expandedSections);
@@ -210,7 +216,31 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
   };
 
   const handleSave = async () => {
+    hideToast();
     await saveConfig();
+  };
+
+  // Leaving without saving: draft notifications are discarded, unsaved edits are lost
+  const leaveWithoutSaving = async () => {
+    hideToast();
+    if (isDraft) {
+      await discardDraft();
+    }
+    onBack?.();
+  };
+
+  const handleBack = () => {
+    if (isDraft || isDirty) {
+      showToast(
+        isDraft
+          ? "This notification isn't saved yet. Click Save to keep it, or it will be discarded."
+          : "You have unsaved changes. Click Save to keep them.",
+        'warning',
+        { label: 'Leave without saving', onClick: leaveWithoutSaving }
+      );
+      return;
+    }
+    onBack?.();
   };
 
   if (loading) {
@@ -341,7 +371,7 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
           <div className="flex items-center space-x-4">
             {onBack && (
               <button
-                onClick={onBack}
+                onClick={handleBack}
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                 title="Go back"
               >
@@ -356,17 +386,19 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
 
           <div className="flex items-center space-x-3">
             {/* Status Badge */}
-            <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${config.isActive
-                ? 'bg-green-100 text-green-800'
-                : 'bg-gray-100 text-gray-800'
+            <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${isDraft
+                ? 'bg-yellow-100 text-yellow-800'
+                : config.isActive
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-gray-100 text-gray-800'
               }`}>
-              {config.isActive ? 'Active' : 'Not Active'}
+              {isDraft ? 'Draft – not saved' : config.isActive ? 'Active' : 'Not Active'}
             </span>
 
             {/* Save Button */}
             <button
               onClick={handleSave}
-              disabled={saving || !isDirty}
+              disabled={saving || (!isDirty && !isDraft)}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
             >
               {saving ? (
@@ -2468,15 +2500,15 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
       </div>
 
       {/* Dirty State Indicator */}
-      {isDirty && (
+      {(isDirty || isDraft) && (
         <div className="bg-yellow-50 border-t border-yellow-200 px-6 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-2 text-sm text-yellow-800">
             <AlertCircle className="w-4 h-4" />
-            <span>You have unsaved changes</span>
+            <span>{isDraft ? 'This notification is not saved yet — it will go live when you save' : 'You have unsaved changes'}</span>
           </div>
           <div className="flex items-center space-x-2">
             <button
-              onClick={resetConfig}
+              onClick={isDraft ? leaveWithoutSaving : resetConfig}
               className="text-sm text-yellow-700 hover:text-yellow-900 font-medium"
             >
               Discard
@@ -2491,6 +2523,15 @@ export function WidgetEditorWithPreview({ widgetId, onBack }: WidgetEditorWithPr
           </div>
         </div>
       )}
+
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        action={toast.action}
+        onClose={hideToast}
+        duration={8000}
+      />
     </div>
   );
 }

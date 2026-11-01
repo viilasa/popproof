@@ -192,7 +192,8 @@ export function TemplateSelector({
           site_id: selectedSiteId,
           name: template.name,
           type: 'notification',
-          is_active: true,
+          // Created as an inactive draft; the editor's Save button publishes it
+          is_active: false,
           notification_time_range: notificationTimeRange,
           position: mergedDesign.position.position,
           offset_x: mergedDesign.position.offsetX,
@@ -255,6 +256,7 @@ export function TemplateSelector({
           stack_on_mobile: mergedDisplay.responsive.stackOnMobile,
           reduced_motion_support: mergedDisplay.responsive.reducedMotionSupport,
           config: {
+            draft: true,
             template_id: template.id,
             template_name: template.name,
             preview: template.preview,
