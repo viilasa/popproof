@@ -76,3 +76,13 @@ Desktop.ini
 # TypeScript
 *.tsbuildinfo
 .cursor/
+
+# LaunchDay Kit
+launchdaykit/node_modules/
+launch/.env
+launch/assets/video/*.mp4
+launch/assets/audio/
+launch/assets/stock/
+launch/video/references/
+launch/video/drafts/
+launch/submit/.browser-profile/

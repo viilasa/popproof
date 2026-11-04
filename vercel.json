@@ -13,6 +13,9 @@
     }
   ],
   "rewrites": [
+    { "source": "/terms", "destination": "/terms/index.html" },
+    { "source": "/privacy", "destination": "/privacy/index.html" },
+    { "source": "/refund", "destination": "/refund/index.html" },
     {
       "source": "/(.*)",
       "destination": "/index.html"

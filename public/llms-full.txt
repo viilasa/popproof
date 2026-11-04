@@ -77,22 +77,19 @@ Choose which notification types to display, customize the appearance, and activa
 - Community support
 - ProofEdge branding on widget
 
-### Pro Plan – $29/month (Coming Soon)
-- Up to 25,000 visitors per month
+### Pro Plan – $9 to $36/month
+- 6,000 visitors/month ($9), 10,000 ($12), 15,000 ($16), 25,000 ($21) or 50,000 ($36)
 - 3 websites
-- All notification types
-- Advanced analytics and A/B testing
-- Priority email support
+- All widget styles
 - No ProofEdge branding
-
-### Growth Plan – $79/month (Coming Soon)
-- Unlimited visitors
-- Unlimited websites
-- Custom branding and white-label option
-- Full API access
-- Dedicated account manager
-- SLA guarantee
 - Priority support
+
+### Growth Plan – $59 to $210/month
+- 100,000 visitors/month ($59), 200,000 ($79), 400,000 ($120), 600,000 ($180) or 1,000,000 ($210)
+- Unlimited websites
+- All widget styles
+- Dedicated support
+- SLA guarantee
 
 ## Comparison: ProofEdge vs Competitors
 
@@ -134,7 +131,7 @@ A: ProofEdge works with any website including Shopify, WordPress, Webflow, Wix, 
 A: Yes. The Starter plan is completely free and includes up to 1,000 visitors per month.
 
 **Q: Can I remove ProofEdge branding?**
-A: Yes, branding removal is available on the Pro plan ($29/month) and above.
+A: Yes, branding removal is available on the Pro plan (from $9/month) and above.
 
 **Q: How does ProofEdge boost conversions?**
 A: By showing real-time social proof (purchases, signups, visitor counts), ProofEdge builds trust and creates authentic urgency, leading to conversion increases of up to 15%.
@@ -149,8 +146,6 @@ A: Yes. ProofEdge does not collect or store personal user data. All notification
 - **Support**: support@proofedge.io
 - **Founded**: 2025
 - **Headquarters**: United States
-- **Users**: 2,000+ brands worldwide
-
 ## All Page URLs
 
 - Homepage: https://www.proofedge.io

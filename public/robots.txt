@@ -15,21 +15,33 @@ Disallow: /admin/
 # Allow major search engine bots
 User-agent: Googlebot
 Allow: /
+Disallow: /api/
+Disallow: /admin/
 
 User-agent: Bingbot
 Allow: /
+Disallow: /api/
+Disallow: /admin/
 
 User-agent: Slurp
 Allow: /
+Disallow: /api/
+Disallow: /admin/
 
 User-agent: DuckDuckBot
 Allow: /
+Disallow: /api/
+Disallow: /admin/
 
 User-agent: Baiduspider
 Allow: /
+Disallow: /api/
+Disallow: /admin/
 
 User-agent: YandexBot
 Allow: /
+Disallow: /api/
+Disallow: /admin/
 
 # Allow AI/LLM crawlers for Generative Engine Optimization (GEO)
 User-agent: GPTBot

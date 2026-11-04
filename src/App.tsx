@@ -36,6 +36,29 @@ function AppContent() {
     return localStorage.getItem('proofedge_pending_plan');
   });
 
+  // index.html's canonical points at the home page; give each legal page its own URL and title
+  useEffect(() => {
+    const pages: Record<string, { path: string; title: string }> = {
+      terms: { path: '/terms', title: 'Terms of Service – ProofEdge' },
+      privacy: { path: '/privacy', title: 'Privacy Policy – ProofEdge' },
+      refund: { path: '/refund', title: 'Refund Policy – ProofEdge' },
+    };
+    const page = pages[authMode];
+    if (!page) return;
+    const url = `https://www.proofedge.io${page.path}`;
+    const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    const ogUrl = document.querySelector<HTMLMetaElement>('meta[property="og:url"]');
+    const prev = { title: document.title, canonical: canonical?.href, ogUrl: ogUrl?.content };
+    document.title = page.title;
+    if (canonical) canonical.href = url;
+    if (ogUrl) ogUrl.content = url;
+    return () => {
+      document.title = prev.title;
+      if (canonical && prev.canonical) canonical.href = prev.canonical;
+      if (ogUrl && prev.ogUrl) ogUrl.content = prev.ogUrl;
+    };
+  }, [authMode]);
+
   // Show loading spinner while checking auth state
   if (loading) {
     return (
