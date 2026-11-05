@@ -1285,7 +1285,7 @@ export default function LandingPage({ onShowLogin, onShowSignup, onShowTerms, on
                 <div className="text-blue-500 w-8 h-8" aria-hidden="true"><Logo className="w-8 h-8" /></div>
                 <span className="font-bold text-xl text-white">ProofEdge</span>
               </div>
-              <p className="text-gray-500 text-base">© 2025 ProofEdge. All rights reserved.</p>
+              <p className="text-gray-500 text-base">© 2026 ProofEdge. All rights reserved.</p>
             </div>
 
             {/* Essential Links */}
